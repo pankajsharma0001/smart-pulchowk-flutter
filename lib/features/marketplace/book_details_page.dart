@@ -67,10 +67,12 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     _loadDetails();
   }
 
-  Future<void> _loadDetails() async {
+  Future<void> _loadDetails({bool forceRefresh = false}) async {
+    // Always force-refresh request status: it's time-sensitive (seller may have
+    // accepted/rejected on their device and the buyer must see it immediately).
     final results = await Future.wait([
-      _api.getBookListingById(_book.id),
-      _api.getPurchaseRequestStatus(_book.id),
+      _api.getBookListingById(_book.id, forceRefresh: forceRefresh),
+      _api.getPurchaseRequestStatus(_book.id, forceRefresh: true),
       if (_book.seller?.id != null)
         _api.getSellerReputation(_book.seller!.id.toString())
       else
@@ -98,6 +100,8 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
 
     if (result['success'] == true) {
       _didChange = true;
+      // Refresh details to ensure consistency
+      _loadDetails(forceRefresh: true);
     } else if (mounted) {
       setState(() => _isSaved = wasSaved);
       _showSnackBar(result['message'] ?? 'Failed to update');
@@ -112,7 +116,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     if (result['success'] == true) {
       _showSnackBar('Request sent!');
       _didChange = true;
-      _loadDetails();
+      _loadDetails(forceRefresh: true);
     } else {
       _showSnackBar(result['message'] ?? 'Failed to send request');
     }

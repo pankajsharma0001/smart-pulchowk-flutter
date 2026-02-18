@@ -440,10 +440,14 @@ class ApiService {
   }
 
   /// Get a single book listing by ID.
-  Future<BookListing?> getBookListingById(int id) async {
+  Future<BookListing?> getBookListingById(
+    int id, {
+    bool forceRefresh = false,
+  }) async {
     return _cachedFetch<BookListing>(
       key: '${AppConstants.cacheBookDetail}$id',
       ttl: AppConstants.cacheExpiry,
+      forceRefresh: forceRefresh,
       fetcher: () async {
         final response = await _authGet('/books/listings/$id');
         if (response.statusCode == 200) {
@@ -555,10 +559,13 @@ class ApiService {
   }
 
   /// Get the current user's book listings.
-  Future<List<BookListing>> getMyBookListings() async {
+  Future<List<BookListing>> getMyBookListings({
+    bool forceRefresh = false,
+  }) async {
     return await _cachedFetch<List<BookListing>>(
           key: AppConstants.cacheMyListings,
           ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
           fetcher: () async {
             final response = await _authGet('/books/my-listings');
             if (response.statusCode == 200) {
@@ -820,10 +827,13 @@ class ApiService {
   }
 
   /// Get current user's outgoing purchase requests.
-  Future<List<BookPurchaseRequest>> getMyPurchaseRequests() async {
+  Future<List<BookPurchaseRequest>> getMyPurchaseRequests({
+    bool forceRefresh = false,
+  }) async {
     return await _cachedFetch<List<BookPurchaseRequest>>(
           key: AppConstants.cacheMyRequests,
           ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
           fetcher: () async {
             final response = await _authGet(AppConstants.myPurchaseRequests);
             if (response.statusCode == 200) {
@@ -844,10 +854,13 @@ class ApiService {
   }
 
   /// Get all incoming purchase requests for current user's listings.
-  Future<List<BookPurchaseRequest>> getIncomingPurchaseRequests() async {
+  Future<List<BookPurchaseRequest>> getIncomingPurchaseRequests({
+    bool forceRefresh = false,
+  }) async {
     return await _cachedFetch<List<BookPurchaseRequest>>(
           key: AppConstants.cacheIncomingRequests,
           ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
           fetcher: () async {
             final response = await _authGet('/books/requests/incoming');
             if (response.statusCode == 200) {
@@ -868,10 +881,16 @@ class ApiService {
   }
 
   /// Get status of user's request for a specific listing.
-  Future<BookPurchaseRequest?> getPurchaseRequestStatus(int listingId) async {
+  Future<BookPurchaseRequest?> getPurchaseRequestStatus(
+    int listingId, {
+    bool forceRefresh = false,
+  }) async {
     return _cachedFetch<BookPurchaseRequest>(
       key: '${AppConstants.cacheRequestStatus}$listingId',
-      ttl: AppConstants.cacheExpiry,
+      ttl: const Duration(
+        seconds: 30,
+      ), // Short TTL: status changes are time-sensitive
+      forceRefresh: forceRefresh,
       fetcher: () async {
         final response = await _authGet(
           '/books/listings/$listingId/request-status',
@@ -904,6 +923,7 @@ class ApiService {
       if (json['success'] == true) {
         _invalidateCache(AppConstants.cacheIncomingRequests);
         _invalidateCache(AppConstants.cacheMyRequests);
+        _invalidateCache('notifications_list'); // New
         if (listingId != null) {
           _invalidateCache('${AppConstants.cacheBookDetail}$listingId');
           _invalidateCache('${AppConstants.cacheRequestStatus}$listingId');
@@ -1206,10 +1226,13 @@ class ApiService {
   // ── Notification Endpoints ──────────────────────────────────────────────
 
   /// Get paginated in-app notifications.
-  Future<List<InAppNotification>> getNotifications() async {
+  Future<List<InAppNotification>> getNotifications({
+    bool forceRefresh = false,
+  }) async {
     final result = await ApiService._cachedFetch<List<InAppNotification>>(
       key: 'notifications_list',
       ttl: const Duration(minutes: 5),
+      forceRefresh: forceRefresh,
       fetcher: () async {
         final response = await _authGet('/notifications');
         if (response.statusCode == 200) {

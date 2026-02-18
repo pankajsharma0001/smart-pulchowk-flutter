@@ -27,7 +27,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Future<void> _loadNotifications({bool silent = false}) async {
     if (!silent) setState(() => _isLoading = true);
     try {
-      final data = await _api.getNotifications();
+      final data = await _api.getNotifications(forceRefresh: silent);
       if (mounted) {
         setState(() {
           _notifications = data;

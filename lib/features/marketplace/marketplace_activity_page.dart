@@ -92,9 +92,9 @@ class _SellingViewState extends State<_SellingView> {
     _load();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool forceRefresh = false}) async {
     setState(() => _isLoading = true);
-    final results = await _api.getMyBookListings();
+    final results = await _api.getMyBookListings(forceRefresh: forceRefresh);
     if (mounted) {
       setState(() {
         _listings = results;
@@ -118,7 +118,7 @@ class _SellingViewState extends State<_SellingView> {
     }
 
     return RefreshIndicator(
-      onRefresh: _load,
+      onRefresh: () => _load(forceRefresh: true),
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
         itemCount: _listings.length,
@@ -133,7 +133,7 @@ class _SellingViewState extends State<_SellingView> {
                 builder: (_) => BookDetailsPage(listing: _listings[i]),
               ),
             );
-            if (changed == true) _load();
+            if (changed == true) _load(forceRefresh: true);
           },
           onEdit: () async {
             final changed = await Navigator.push<bool>(
@@ -142,7 +142,7 @@ class _SellingViewState extends State<_SellingView> {
                 builder: (_) => SellBookPage(existingListing: _listings[i]),
               ),
             );
-            if (changed == true) _load();
+            if (changed == true) _load(forceRefresh: true);
           },
           onDelete: () => _delete(_listings[i]),
           onMarkSold: _listings[i].status != BookStatus.sold
@@ -175,7 +175,7 @@ class _SellingViewState extends State<_SellingView> {
     if (confirm == true) {
       final res = await _api.deleteBookListing(book.id);
       if (res['success'] == true) {
-        _load();
+        _load(forceRefresh: true);
       } else {
         _snack(res['message'] ?? 'Failed');
       }
@@ -205,7 +205,7 @@ class _SellingViewState extends State<_SellingView> {
     if (confirm == true) {
       final res = await _api.markBookAsSold(book.id);
       if (res['success'] == true) {
-        _load();
+        _load(forceRefresh: true);
       } else {
         _snack(res['message'] ?? 'Failed');
       }
@@ -340,9 +340,11 @@ class _InquiriesViewState extends State<_InquiriesView> {
     _load();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool forceRefresh = false}) async {
     setState(() => _isLoading = true);
-    final results = await _api.getIncomingPurchaseRequests();
+    final results = await _api.getIncomingPurchaseRequests(
+      forceRefresh: forceRefresh,
+    );
     if (mounted) {
       setState(() {
         _requests = results;
@@ -359,7 +361,7 @@ class _InquiriesViewState extends State<_InquiriesView> {
     );
     if (!mounted) return;
     if (res['success'] == true) {
-      _load();
+      _load(forceRefresh: true);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(accept ? 'Accepted request' : 'Rejected request'),
@@ -818,9 +820,11 @@ class _RequestsViewState extends State<_RequestsView> {
     _load();
   }
 
-  Future<void> _load() async {
+  Future<void> _load({bool forceRefresh = false}) async {
     setState(() => _isLoading = true);
-    final results = await _api.getMyPurchaseRequests();
+    final results = await _api.getMyPurchaseRequests(
+      forceRefresh: forceRefresh,
+    );
     if (mounted) {
       setState(() {
         _requests = results;
@@ -832,12 +836,12 @@ class _RequestsViewState extends State<_RequestsView> {
 
   Future<void> _cancel(BookPurchaseRequest r) async {
     final res = await _api.cancelPurchaseRequest(r.id);
-    if (res['success'] == true) _load();
+    if (res['success'] == true) _load(forceRefresh: true);
   }
 
   Future<void> _delete(BookPurchaseRequest r) async {
     final res = await _api.deletePurchaseRequest(r.id);
-    if (res['success'] == true) _load();
+    if (res['success'] == true) _load(forceRefresh: true);
   }
 
   void _viewContact(BookPurchaseRequest r) async {
