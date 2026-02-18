@@ -299,12 +299,12 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
                   child: _buildBookGrid(isDark),
                 ),
         ),
-        floatingActionButton: Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? 32 : 85,
-          ),
-          child: _buildFAB(cs),
-        ),
+        floatingActionButton: MediaQuery.of(context).viewInsets.bottom > 0
+            ? null
+            : Padding(
+                padding: const EdgeInsets.only(bottom: 65),
+                child: _buildFAB(cs),
+              ),
       ),
     );
   }

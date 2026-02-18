@@ -258,7 +258,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
           slivers: [
             // ── PREMIUM IMAGE GALLERY ──────────────────────────────────────
             SliverAppBar(
-              expandedHeight: 400,
+              expandedHeight: 440,
               pinned: true,
               stretch: true,
               backgroundColor: isDark
@@ -295,7 +295,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                   StretchMode.zoomBackground,
                   StretchMode.blurBackground,
                 ],
-                background: _buildImageGallery(isDark),
+                background: _buildImageGallery(isDark, cs),
               ),
             ),
 
@@ -318,7 +318,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Status & Condition Badges
+                      // ── BADGES + VIEW COUNT ──────────────────────────────
                       Row(
                         children: [
                           _badge(
@@ -334,31 +334,44 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                             isOutlined: true,
                           ),
                           const Spacer(),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.remove_red_eye_outlined,
-                                size: 14,
-                                color: isDark
-                                    ? AppColors.textMutedDark
-                                    : AppColors.textMuted,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${_book.viewCount} views',
-                                style: AppTextStyles.caption.copyWith(
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.06)
+                                  : Colors.black.withValues(alpha: 0.04),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.remove_red_eye_outlined,
+                                  size: 13,
                                   color: isDark
                                       ? AppColors.textMutedDark
                                       : AppColors.textMuted,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 5),
+                                Text(
+                                  '${_book.viewCount} views',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: isDark
+                                        ? AppColors.textMutedDark
+                                        : AppColors.textMuted,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
 
-                      // Title & Price Header
+                      // ── TITLE & AUTHOR ───────────────────────────────────
                       Text(
                         _book.title,
                         style: AppTextStyles.h2.copyWith(
@@ -367,49 +380,89 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                               : AppColors.textPrimary,
                           fontSize: 26,
                           letterSpacing: -0.5,
+                          height: 1.2,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'by ${_book.author}',
-                        style: AppTextStyles.h5.copyWith(
-                          color: isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondary,
-                          fontWeight: FontWeight.w400,
-                        ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.person_outline_rounded,
+                            size: 14,
+                            color: isDark
+                                ? AppColors.textMutedDark
+                                : AppColors.textMuted,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            _book.author,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
 
-                      // Modern Price display
+                      // ── PRICE CARD ────────────────────────────────────────
                       Container(
+                        width: double.infinity,
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
+                          horizontal: 20,
+                          vertical: 16,
                         ),
                         decoration: BoxDecoration(
-                          color: cs.primary.withValues(alpha: 0.08),
-                          borderRadius: AppRadius.mdAll,
+                          gradient: LinearGradient(
+                            colors: [
+                              cs.primary.withValues(alpha: 0.12),
+                              cs.primary.withValues(alpha: 0.05),
+                            ],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
+                          borderRadius: AppRadius.lgAll,
                           border: Border.all(
-                            color: cs.primary.withValues(alpha: 0.15),
+                            color: cs.primary.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
-                              'Price:',
-                              style: AppTextStyles.labelMedium.copyWith(
-                                color: cs.primary,
-                              ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'PRICE',
+                                  style: AppTextStyles.overline.copyWith(
+                                    color: cs.primary.withValues(alpha: 0.7),
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _book.formattedPrice,
+                                  style: AppTextStyles.h2.copyWith(
+                                    color: cs.primary,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 28,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _book.formattedPrice,
-                              style: AppTextStyles.h4.copyWith(
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: cs.primary.withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                Icons.sell_rounded,
                                 color: cs.primary,
-                                fontWeight: FontWeight.w800,
-                                fontSize: 22,
+                                size: 22,
                               ),
                             ),
                           ],
@@ -418,7 +471,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                       const SizedBox(height: 32),
 
                       // ── SELLER TRUST PROFILE ──────────────────────────────
-                      _sectionHeader('Seller Trust Profile', isDark),
+                      _sectionHeader('Seller', isDark),
                       const SizedBox(height: 12),
                       _buildSellerTrustProfile(
                         context,
@@ -433,23 +486,39 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                           _book.description!.isNotEmpty) ...[
                         _sectionHeader('Description', isDark),
                         const SizedBox(height: 12),
-                        Text(
-                          _book.description!,
-                          style: AppTextStyles.bodyLarge.copyWith(
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
                             color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondary,
-                            height: 1.6,
+                                ? Colors.white.withValues(alpha: 0.04)
+                                : Colors.black.withValues(alpha: 0.02),
+                            borderRadius: AppRadius.lgAll,
+                            border: Border(
+                              left: BorderSide(
+                                color: cs.primary.withValues(alpha: 0.5),
+                                width: 3,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            _book.description!,
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                              height: 1.65,
+                            ),
                           ),
                         ),
                         const SizedBox(height: 32),
                       ],
 
                       // ── SPECIFICATIONS ────────────────────────────────────
-                      _sectionHeader('Specifications', isDark),
+                      _sectionHeader('Details', isDark),
                       const SizedBox(height: 16),
-                      _buildSpecificationGrid(isDark),
-                      const SizedBox(height: 120), // Extra space for bottom bar
+                      _buildSpecificationGrid(isDark, cs),
+                      const SizedBox(height: 120),
                     ],
                   ),
                 ),
@@ -463,12 +532,25 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
   }
 
   Widget _sectionHeader(String title, bool isDark) {
-    return Text(
-      title,
-      style: AppTextStyles.h4.copyWith(
-        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-        fontWeight: FontWeight.w700,
-      ),
+    return Row(
+      children: [
+        Container(
+          width: 4,
+          height: 20,
+          decoration: BoxDecoration(
+            gradient: AppColors.primaryGradient,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Text(
+          title,
+          style: AppTextStyles.h4.copyWith(
+            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 
@@ -744,7 +826,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     width: 1,
   );
 
-  Widget _buildSpecificationGrid(bool isDark) {
+  Widget _buildSpecificationGrid(bool isDark, ColorScheme cs) {
     final specs = <_SpecItem>[
       if (_book.isbn != null)
         _SpecItem(Icons.qr_code_rounded, 'ISBN', _book.isbn!),
@@ -764,62 +846,60 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     return Wrap(
       spacing: 12,
       runSpacing: 12,
-      children: specs.map((s) => _buildSpecCard(s, isDark)).toList(),
+      children: specs.map((s) => _buildSpecCard(s, isDark, cs)).toList(),
     );
   }
 
-  Widget _buildSpecCard(_SpecItem item, bool isDark) {
+  Widget _buildSpecCard(_SpecItem item, bool isDark, ColorScheme cs) {
     return Container(
       width: (MediaQuery.of(context).size.width - 52) / 2,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: AppRadius.lgAll,
+        boxShadow: isDark ? null : AppShadows.xs,
         border: Border.all(
           color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.black.withValues(alpha: 0.05),
+              ? Colors.white.withValues(alpha: 0.06)
+              : Colors.black.withValues(alpha: 0.04),
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(8),
+              color: cs.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(item.icon, size: 18, color: AppColors.primary),
+            child: Icon(item.icon, size: 16, color: cs.primary),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.label,
-                  style: AppTextStyles.caption.copyWith(fontSize: 10),
-                ),
-                Text(
-                  item.value,
-                  style: AppTextStyles.labelMedium.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimary,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+          const SizedBox(height: 10),
+          Text(
+            item.label.toUpperCase(),
+            style: AppTextStyles.overline.copyWith(
+              color: isDark ? AppColors.textMutedDark : AppColors.textMuted,
+              letterSpacing: 0.8,
+              fontSize: 9,
             ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            item.value,
+            style: AppTextStyles.labelMedium.copyWith(
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildImageGallery(bool isDark) {
+  Widget _buildImageGallery(bool isDark, ColorScheme cs) {
     final images = _book.images ?? [];
     if (images.isEmpty) {
       return Container(
@@ -896,10 +976,33 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
           ),
         ),
 
-        // Custom indicator
+        // Bottom gradient fade into content card
+        Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          height: 100,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.transparent,
+                  (isDark
+                          ? AppColors.backgroundDark
+                          : AppColors.backgroundLight)
+                      .withValues(alpha: 0.85),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Page indicator dots
         if (images.length > 1)
           Positioned(
-            bottom: 40, // Lowered to clear the rounded body better
+            bottom: 52,
             left: 0,
             right: 0,
             child: Row(
@@ -908,19 +1011,19 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                 images.length,
                 (i) => AnimatedContainer(
                   duration: AppAnimations.fast,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  width: _currentImageIndex == i ? 24 : 8,
+                  margin: const EdgeInsets.symmetric(horizontal: 3),
+                  width: _currentImageIndex == i ? 20 : 6,
                   height: 6,
                   decoration: BoxDecoration(
                     color: _currentImageIndex == i
-                        ? Colors.white
-                        : Colors.white.withValues(alpha: 0.4),
+                        ? cs.primary
+                        : Colors.white.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(100),
                     boxShadow: [
                       if (_currentImageIndex == i)
                         BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 4,
+                          color: cs.primary.withValues(alpha: 0.4),
+                          blurRadius: 6,
                         ),
                     ],
                   ),
@@ -931,12 +1034,12 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
 
         // Image count badge
         Positioned(
-          bottom: 40,
+          bottom: 48,
           right: 20,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.6),
+              color: Colors.black.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
@@ -959,15 +1062,15 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
         20,
         20,
         20,
-        26 + MediaQuery.of(context).padding.bottom,
+        24 + MediaQuery.of(context).padding.bottom,
       ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
           ),
         ],
       ),

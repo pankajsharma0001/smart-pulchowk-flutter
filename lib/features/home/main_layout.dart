@@ -330,6 +330,7 @@ class MainLayoutState extends State<MainLayout>
       child: Stack(
         children: [
           Scaffold(
+            resizeToAvoidBottomInset: false,
             extendBody: true,
             extendBodyBehindAppBar: true,
             appBar: CustomAppBar(
