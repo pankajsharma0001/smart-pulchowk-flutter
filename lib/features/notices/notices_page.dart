@@ -211,79 +211,91 @@ class _NoticesPageState extends State<NoticesPage> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      appBar: AppBar(
-        title: Text(
-          'Notices',
-          style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w900),
-        ),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: const [SizedBox(width: AppSpacing.md)],
-      ),
-      body: Column(
-        children: [
-          _buildSearchBar(isDark),
-          _buildFilters(isDark),
-          if (_stats != null && _stats!.newCount > 0)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.stars_rounded,
-                      color: Color(0xFF10B981),
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${_stats!.newCount} new notices in the last 7 days',
-                      style: AppTextStyles.labelSmall.copyWith(
-                        color: const Color(0xFF10B981),
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                await Future.wait([
-                  _loadData(forceRefresh: true),
-                  _api.refreshUserRole(),
-                ]);
-              },
-              color: AppColors.primary,
-              child: _isLoading ? _buildLoading() : _buildContent(isDark),
-            ),
+        appBar: AppBar(
+          title: Text(
+            'Notices',
+            style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w900),
           ),
-        ],
-      ),
-      floatingActionButton: _userRole == 'notice_manager'
-          ? Container(
-              margin: const EdgeInsets.only(bottom: 80),
-              child: FloatingActionButton.extended(
-                onPressed: () => _openNoticeEditor(),
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                icon: const Icon(Icons.add_rounded),
-                label: const Text(
-                  'Add Notice',
-                  style: TextStyle(fontWeight: FontWeight.w900),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          actions: const [SizedBox(width: AppSpacing.md)],
+        ),
+        body: Column(
+          children: [
+            _buildSearchBar(isDark),
+            _buildFilters(isDark),
+            if (_stats != null && _stats!.newCount > 0)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.stars_rounded,
+                        color: Color(0xFF10B981),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${_stats!.newCount} new notices in the last 7 days',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: const Color(0xFF10B981),
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            )
-          : null,
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await Future.wait([
+                    _loadData(forceRefresh: true),
+                    _api.refreshUserRole(),
+                  ]);
+                },
+                color: AppColors.primary,
+                child: _isLoading ? _buildLoading() : _buildContent(isDark),
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: _userRole == 'notice_manager'
+            ? AnimatedScale(
+                scale: isKeyboardOpen ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutBack,
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 80),
+                  child: FloatingActionButton.extended(
+                    onPressed: isKeyboardOpen
+                        ? null
+                        : () => _openNoticeEditor(),
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    icon: const Icon(Icons.add_rounded),
+                    label: const Text(
+                      'Add Notice',
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ),
+              )
+            : null,
+      ),
     );
   }
 
