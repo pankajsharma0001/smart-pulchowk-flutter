@@ -234,3 +234,45 @@ class Submission {
     );
   }
 }
+
+/// Teacher submission - includes student info for teacher's view
+class TeacherSubmission {
+  final int id;
+  final int assignmentId;
+  final String studentId;
+  final String? studentName;
+  final String? comment;
+  final String fileUrl;
+  final String status;
+  final DateTime submittedAt;
+  final String? fileName;
+
+  TeacherSubmission({
+    required this.id,
+    required this.assignmentId,
+    required this.studentId,
+    this.studentName,
+    this.comment,
+    required this.fileUrl,
+    required this.status,
+    required this.submittedAt,
+    this.fileName,
+  });
+
+  factory TeacherSubmission.fromJson(Map<String, dynamic> json) {
+    final student = json['student'] as Map<String, dynamic>?;
+    return TeacherSubmission(
+      id: json['id'] as int,
+      assignmentId: json['assignmentId'] as int,
+      studentId: json['studentId']?.toString() ?? '',
+      studentName: student?['name'] as String?,
+      comment: json['comment'] as String?,
+      fileUrl: json['fileUrl'] as String? ?? '',
+      status: json['status'] as String? ?? 'submitted',
+      submittedAt: json['submittedAt'] != null
+          ? DateTime.parse(json['submittedAt'] as String)
+          : DateTime.now(),
+      fileName: json['fileName'] as String?,
+    );
+  }
+}

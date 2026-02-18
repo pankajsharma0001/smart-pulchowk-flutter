@@ -1457,4 +1457,100 @@ class ApiService {
       return {'success': false, 'message': 'Error: $e'};
     }
   }
+
+  // ── Teacher Classroom Endpoints ──────────────────────────────────────────
+
+  /// Get teacher's subjects with their assignments.
+  Future<List<Subject>> getTeacherSubjects({bool forceRefresh = false}) async {
+    return await _cachedFetch<List<Subject>>(
+          key: 'cls_teacher_subjects',
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet('/classroom/teacher/subjects');
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true && json['subjects'] != null) {
+                return json['subjects'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
+              .map((e) => Subject.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        ) ??
+        [];
+  }
+
+  /// Add a subject to the teacher's teaching list.
+  Future<Map<String, dynamic>> addTeacherSubject(int subjectId) async {
+    try {
+      final response = await _authPost(
+        '/classroom/teacher/subjects',
+        body: {'subjectId': subjectId},
+      );
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCache('cls_teacher_subjects');
+      }
+      return {'success': json['success'] == true, 'message': json['message']};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Create a new assignment for a subject.
+  Future<Map<String, dynamic>> createAssignment({
+    required int subjectId,
+    required String title,
+    String? description,
+    required String type, // 'classwork' or 'homework'
+    DateTime? dueAt,
+  }) async {
+    try {
+      final body = {
+        'subjectId': subjectId,
+        'title': title,
+        'description': description,
+        'type': type,
+        'dueAt': dueAt?.toIso8601String(),
+      }..removeWhere((k, v) => v == null);
+
+      final response = await _authPost(
+        AppConstants.classroomAssignments,
+        body: body,
+      );
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCache('cls_teacher_subjects');
+        _invalidateCache(AppConstants.cacheClassroomMySubjects);
+      }
+      return {'success': json['success'] == true, 'message': json['message']};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Get all submissions for an assignment (teacher view).
+  Future<List<TeacherSubmission>> getAssignmentSubmissions(
+    int assignmentId,
+  ) async {
+    try {
+      final response = await _authGet(
+        '/classroom/assignments/$assignmentId/submissions',
+      );
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        if (json['success'] == true && json['submissions'] != null) {
+          return (json['submissions'] as List)
+              .map((e) => TeacherSubmission.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching submissions: $e');
+    }
+    return [];
+  }
 }

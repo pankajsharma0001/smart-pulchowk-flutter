@@ -198,7 +198,7 @@ class MainLayoutState extends State<MainLayout>
         } else if (_userRole == 'notice manager') {
           return const NotificationsPage();
         }
-        return const ClassroomPage();
+        return ClassroomPage(userRole: _userRole);
       case 3:
         return const BookMarketplacePage();
       case 4:
@@ -706,13 +706,21 @@ class _QuickMenu extends StatelessWidget {
   }
 
   Widget _buildGrid(BuildContext context) {
-    final List<_QuickMenuItemData> items = [
-      _QuickMenuItemData(
-        icon: Icons.school_rounded,
-        label: 'Classroom',
-        index: 2,
-        color: const Color(0xFF6366F1),
-      ),
+    final List<_QuickMenuItemData> items = [];
+
+    // Classroom is only shown for non-admin roles
+    if (userRole != 'admin') {
+      items.add(
+        _QuickMenuItemData(
+          icon: Icons.school_rounded,
+          label: 'Classroom',
+          index: 2,
+          color: const Color(0xFF6366F1),
+        ),
+      );
+    }
+
+    items.addAll([
       _QuickMenuItemData(
         icon: Icons.notifications_active_rounded,
         label: 'Notices',
@@ -743,7 +751,7 @@ class _QuickMenu extends StatelessWidget {
         index: 10,
         color: const Color(0xFF64748B),
       ),
-    ];
+    ]);
 
     if (userRole == 'admin') {
       items.add(

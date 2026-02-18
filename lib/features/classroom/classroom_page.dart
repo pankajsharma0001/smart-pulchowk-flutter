@@ -8,7 +8,8 @@ import 'package:smart_pulchowk/core/models/classroom.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 
 class ClassroomPage extends StatefulWidget {
-  const ClassroomPage({super.key});
+  final String userRole;
+  const ClassroomPage({super.key, this.userRole = 'student'});
 
   @override
   State<ClassroomPage> createState() => _ClassroomPageState();
@@ -97,6 +98,16 @@ class _ClassroomPageState extends State<ClassroomPage>
 
   @override
   Widget build(BuildContext context) {
+    // Teacher gets their own dashboard
+    if (widget.userRole == 'teacher') {
+      return const _TeacherClassroomPage();
+    }
+
+    // Other non-student roles get a restricted message
+    if (widget.userRole != 'student') {
+      return _buildRoleRestrictedView();
+    }
+
     if (_isLoading) return _buildShimmerBody();
 
     if (_errorMessage != null) {
@@ -506,6 +517,57 @@ class _ClassroomPageState extends State<ClassroomPage>
       child: Text(
         'No subjects found for this semester.',
         style: AppTextStyles.bodyMedium.copyWith(color: Colors.grey),
+      ),
+    );
+  }
+
+  Widget _buildRoleRestrictedView() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final roleLabel = widget.userRole == 'teacher'
+        ? 'Teacher'
+        : widget.userRole == 'notice manager'
+        ? 'Notice Manager'
+        : widget.userRole;
+
+    return Scaffold(
+      appBar: const CustomAppBar(title: 'Classroom'),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.xl),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? const Color(0xFF1E293B)
+                      : const Color(0xFFF1F5F9),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.school_rounded,
+                  size: 56,
+                  color: AppColors.primary.withValues(alpha: 0.4),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xl),
+              Text(
+                'Students Only',
+                style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                'The Classroom feature is available for students only. Your current role ($roleLabel) does not have access to assignments and subjects.',
+                textAlign: TextAlign.center,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: Colors.grey,
+                  height: 1.5,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1116,5 +1178,1188 @@ class _AssignmentCardState extends State<_AssignmentCard>
       "Dec",
     ];
     return "${date.day} ${months[date.month - 1]}";
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEACHER CLASSROOM DASHBOARD
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _TeacherClassroomPage extends StatefulWidget {
+  const _TeacherClassroomPage();
+
+  @override
+  State<_TeacherClassroomPage> createState() => _TeacherClassroomPageState();
+}
+
+class _TeacherClassroomPageState extends State<_TeacherClassroomPage> {
+  final ApiService _apiService = ApiService();
+
+  // Data
+  List<Subject> _teacherSubjects = [];
+  List<Faculty> _faculties = [];
+  List<Subject> _availableSubjects = [];
+  bool _isLoading = true;
+  String? _errorMessage;
+
+  // Submissions per assignment (expanded view)
+  final Map<int, List<TeacherSubmission>> _submissionsMap = {};
+  final Map<int, bool> _submissionsLoading = {};
+
+  // Create Assignment form
+  int? _selectedSubjectId;
+  String _assignmentType = 'classwork';
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _descController = TextEditingController();
+  DateTime? _dueAt;
+  bool _isCreating = false;
+  String? _createError;
+
+  // Add Subject form
+  Faculty? _selectedFaculty;
+  int _selectedSemester = 1;
+  int? _selectedAvailableSubjectId;
+  bool _isAddingSubject = false;
+  String? _addSubjectError;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData({bool forceRefresh = false}) async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+    try {
+      final results = await Future.wait([
+        _apiService.getTeacherSubjects(forceRefresh: forceRefresh),
+        _apiService.getFaculties(),
+      ]);
+      if (mounted) {
+        setState(() {
+          _teacherSubjects = results[0] as List<Subject>;
+          _faculties = results[1] as List<Faculty>;
+          if (_teacherSubjects.isNotEmpty && _selectedSubjectId == null) {
+            _selectedSubjectId = _teacherSubjects.first.id;
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadAvailableSubjects() async {
+    if (_selectedFaculty == null) return;
+    final subjects = await _apiService.getSubjectsByFaculty(
+      _selectedFaculty!.id,
+      semester: _selectedSemester,
+    );
+    if (mounted) {
+      setState(() {
+        _availableSubjects = subjects;
+        _selectedAvailableSubjectId = subjects.isNotEmpty
+            ? subjects.first.id
+            : null;
+      });
+    }
+  }
+
+  Future<void> _toggleSubmissions(int assignmentId) async {
+    if (_submissionsMap.containsKey(assignmentId)) {
+      setState(() => _submissionsMap.remove(assignmentId));
+      return;
+    }
+    setState(() => _submissionsLoading[assignmentId] = true);
+    final subs = await _apiService.getAssignmentSubmissions(assignmentId);
+    if (mounted) {
+      setState(() {
+        _submissionsMap[assignmentId] = subs;
+        _submissionsLoading.remove(assignmentId);
+      });
+    }
+  }
+
+  Future<void> _createAssignment() async {
+    if (_selectedSubjectId == null || _titleController.text.trim().isEmpty) {
+      setState(() => _createError = 'Please fill in all required fields.');
+      return;
+    }
+    setState(() {
+      _isCreating = true;
+      _createError = null;
+    });
+    haptics.mediumImpact();
+    final result = await _apiService.createAssignment(
+      subjectId: _selectedSubjectId!,
+      title: _titleController.text.trim(),
+      description: _descController.text.trim().isEmpty
+          ? null
+          : _descController.text.trim(),
+      type: _assignmentType,
+      dueAt: _dueAt,
+    );
+    if (mounted) {
+      setState(() => _isCreating = false);
+      if (result['success'] == true) {
+        haptics.success();
+        _titleController.clear();
+        _descController.clear();
+        setState(() => _dueAt = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Assignment published!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadData(forceRefresh: true);
+      } else {
+        setState(() => _createError = result['message'] ?? 'Failed to create');
+      }
+    }
+  }
+
+  Future<void> _addSubject() async {
+    if (_selectedAvailableSubjectId == null) return;
+    setState(() {
+      _isAddingSubject = true;
+      _addSubjectError = null;
+    });
+    haptics.mediumImpact();
+    final result = await _apiService.addTeacherSubject(
+      _selectedAvailableSubjectId!,
+    );
+    if (mounted) {
+      setState(() => _isAddingSubject = false);
+      if (result['success'] == true) {
+        haptics.success();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Subject added!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        _loadData(forceRefresh: true);
+      } else {
+        setState(() => _addSubjectError = result['message'] ?? 'Failed to add');
+      }
+    }
+  }
+
+  // ── Stats ────────────────────────────────────────────────────────────────
+
+  int get _subjectCount => _teacherSubjects.length;
+  int get _taskCount =>
+      _teacherSubjects.fold(0, (s, sub) => s + (sub.assignments?.length ?? 0));
+  int get _classworkCount => _teacherSubjects.fold(
+    0,
+    (s, sub) =>
+        s + (sub.assignments?.where((a) => a.type == 'classwork').length ?? 0),
+  );
+  int get _homeworkCount => _teacherSubjects.fold(
+    0,
+    (s, sub) =>
+        s + (sub.assignments?.where((a) => a.type == 'homework').length ?? 0),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        appBar: const CustomAppBar(title: 'Classroom'),
+        body: ShimmerWrapper(
+          child: ListView(
+            padding: const EdgeInsets.all(AppSpacing.base),
+            children: [
+              GridView.count(
+                crossAxisCount: 4,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: AppSpacing.sm,
+                childAspectRatio: 1.2,
+                children: List.generate(
+                  4,
+                  (_) => const Skeleton(borderRadius: AppRadius.md),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.base),
+              const Skeleton(height: 220, borderRadius: AppRadius.lg),
+              const SizedBox(height: AppSpacing.md),
+              const Skeleton(height: 180, borderRadius: AppRadius.lg),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_errorMessage != null) {
+      return Scaffold(
+        appBar: const CustomAppBar(title: 'Classroom'),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(_errorMessage!, style: AppTextStyles.bodyMedium),
+              const SizedBox(height: AppSpacing.md),
+              ElevatedButton(
+                onPressed: () => _loadData(forceRefresh: true),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      appBar: const CustomAppBar(title: 'Classroom'),
+      body: RefreshIndicator(
+        onRefresh: () => _loadData(forceRefresh: true),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.base,
+            AppSpacing.base,
+            AppSpacing.base,
+            100,
+          ),
+          children: [
+            // ── Teacher badge ──
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                  borderRadius: AppRadius.lgAll,
+                  border: Border.all(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF3B82F6),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'TEACHER',
+                      style: AppTextStyles.overline.copyWith(
+                        color: const Color(0xFF3B82F6),
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: AppSpacing.base),
+
+            // ── Stats Grid ──
+            GridView.count(
+              crossAxisCount: 4,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: AppSpacing.sm,
+              childAspectRatio: 0.9,
+              children: [
+                _buildTeacherStatCard(
+                  'Subjects',
+                  '$_subjectCount',
+                  const Color(0xFF3B82F6),
+                ),
+                _buildTeacherStatCard(
+                  'Tasks',
+                  '$_taskCount',
+                  const Color(0xFF6366F1),
+                ),
+                _buildTeacherStatCard(
+                  'Classwork',
+                  '$_classworkCount',
+                  const Color(0xFF8B5CF6),
+                ),
+                _buildTeacherStatCard(
+                  'Homework',
+                  '$_homeworkCount',
+                  const Color(0xFF10B981),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.base),
+
+            // ── Create Assignment Card ──
+            _buildSectionCard(
+              isDark: isDark,
+              title: 'Create Assignment',
+              subtitle: 'Post new work for students',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_createError != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.1),
+                        borderRadius: AppRadius.smAll,
+                        border: Border.all(
+                          color: AppColors.error.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        _createError!,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ),
+                  if (_teacherSubjects.isEmpty)
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                        borderRadius: AppRadius.smAll,
+                      ),
+                      child: Text(
+                        'Add a subject first.',
+                        style: AppTextStyles.caption.copyWith(
+                          color: const Color(0xFFF59E0B),
+                        ),
+                      ),
+                    ),
+
+                  // Subject dropdown
+                  _buildLabel('Subject'),
+                  _buildDropdown<int?>(
+                    value: _selectedSubjectId,
+                    hint: _teacherSubjects.isEmpty ? 'None' : 'Select',
+                    items: _teacherSubjects
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s.id,
+                            child: Text(
+                              s.title,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedSubjectId = v),
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Type + Due Date row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLabel('Type'),
+                            _buildDropdown<String>(
+                              value: _assignmentType,
+                              items: const [
+                                DropdownMenuItem(
+                                  value: 'classwork',
+                                  child: Text('Classwork'),
+                                ),
+                                DropdownMenuItem(
+                                  value: 'homework',
+                                  child: Text('Homework'),
+                                ),
+                              ],
+                              onChanged: (v) =>
+                                  setState(() => _assignmentType = v!),
+                              isDark: isDark,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildLabel('Due Date'),
+                            GestureDetector(
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: DateTime.now().add(
+                                    const Duration(days: 7),
+                                  ),
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now().add(
+                                    const Duration(days: 365),
+                                  ),
+                                );
+                                if (picked != null && mounted) {
+                                  setState(() => _dueAt = picked);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isDark
+                                      ? const Color(0xFF0F172A)
+                                      : Colors.grey[50],
+                                  borderRadius: AppRadius.smAll,
+                                  border: Border.all(
+                                    color: isDark
+                                        ? const Color(0xFF334155)
+                                        : Colors.grey.shade200,
+                                  ),
+                                ),
+                                child: Text(
+                                  _dueAt != null
+                                      ? '${_dueAt!.day}/${_dueAt!.month}/${_dueAt!.year}'
+                                      : 'Optional',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: _dueAt != null ? null : Colors.grey,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Title
+                  _buildLabel('Title *'),
+                  _buildTextField(
+                    controller: _titleController,
+                    hint: 'Lab Report 1',
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Description
+                  _buildLabel('Description'),
+                  _buildTextField(
+                    controller: _descController,
+                    hint: 'Instructions...',
+                    maxLines: 2,
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+
+                  // Publish button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isCreating || _teacherSubjects.isEmpty
+                          ? null
+                          : _createAssignment,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF3B82F6),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppRadius.smAll,
+                        ),
+                      ),
+                      child: Text(
+                        _isCreating ? 'Publishing...' : 'Publish',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            // ── Add Subject Card ──
+            _buildSectionCard(
+              isDark: isDark,
+              title: 'Add Subject',
+              subtitle: 'Assign yourself to teach',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_addSubjectError != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      padding: const EdgeInsets.all(AppSpacing.sm),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withValues(alpha: 0.1),
+                        borderRadius: AppRadius.smAll,
+                        border: Border.all(
+                          color: AppColors.error.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        _addSubjectError!,
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.error,
+                        ),
+                      ),
+                    ),
+
+                  // Faculty
+                  _buildLabel('Faculty'),
+                  _buildDropdown<Faculty?>(
+                    value: _selectedFaculty,
+                    hint: 'Select',
+                    items: _faculties
+                        .map(
+                          (f) => DropdownMenuItem(
+                            value: f,
+                            child: Text(
+                              f.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (f) {
+                      setState(() {
+                        _selectedFaculty = f;
+                        _selectedSemester = 1;
+                        _availableSubjects = [];
+                        _selectedAvailableSubjectId = null;
+                      });
+                      _loadAvailableSubjects();
+                    },
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Semester
+                  _buildLabel('Semester'),
+                  _buildDropdown<int>(
+                    value: _selectedSemester,
+                    hint: 'Select',
+                    items: List.generate(
+                      _selectedFaculty?.semestersCount ?? 8,
+                      (i) => DropdownMenuItem(
+                        value: i + 1,
+                        child: Text('Semester ${i + 1}'),
+                      ),
+                    ),
+                    onChanged: (v) {
+                      setState(() {
+                        _selectedSemester = v!;
+                        _availableSubjects = [];
+                        _selectedAvailableSubjectId = null;
+                      });
+                      _loadAvailableSubjects();
+                    },
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+
+                  // Subject
+                  _buildLabel('Subject'),
+                  _buildDropdown<int?>(
+                    value: _selectedAvailableSubjectId,
+                    hint: _availableSubjects.isEmpty
+                        ? 'Choose context first'
+                        : 'Select',
+                    items: _availableSubjects
+                        .map(
+                          (s) => DropdownMenuItem(
+                            value: s.id,
+                            child: Text(
+                              s.title,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) =>
+                        setState(() => _selectedAvailableSubjectId = v),
+                    isDark: isDark,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed:
+                          _isAddingSubject ||
+                              _selectedAvailableSubjectId == null
+                          ? null
+                          : _addSubject,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isDark
+                            ? const Color(0xFF1E293B)
+                            : const Color(0xFF0F172A),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: AppRadius.smAll,
+                        ),
+                      ),
+                      child: Text(
+                        _isAddingSubject ? 'Adding...' : 'Add Subject',
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.base),
+
+            // ── Managed Subjects ──
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Managed Subjects',
+                  style: AppTextStyles.labelLarge.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.1),
+                    borderRadius: AppRadius.smAll,
+                  ),
+                  child: Text(
+                    '$_subjectCount Total',
+                    style: AppTextStyles.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+
+            if (_teacherSubjects.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDark : Colors.white,
+                  borderRadius: AppRadius.lgAll,
+                  border: Border.all(
+                    color: Colors.grey.withValues(alpha: 0.2),
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.book_outlined,
+                      size: 40,
+                      color: Colors.grey.withValues(alpha: 0.4),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      'No subjects assigned',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: Colors.grey,
+                      ),
+                    ),
+                    Text(
+                      'Use "Add Subject" to get started.',
+                      style: AppTextStyles.caption.copyWith(color: Colors.grey),
+                    ),
+                  ],
+                ),
+              )
+            else
+              ...(_teacherSubjects.map(
+                (subject) => _buildSubjectCard(subject, isDark),
+              )),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTeacherStatCard(String label, String value, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: AppRadius.mdAll,
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            value,
+            style: AppTextStyles.h4.copyWith(
+              color: color,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: AppTextStyles.overline.copyWith(
+              color: Colors.grey,
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectionCard({
+    required bool isDark,
+    required String title,
+    required String subtitle,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.base),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: AppRadius.lgAll,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: AppTextStyles.labelLarge.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          Text(
+            subtitle,
+            style: AppTextStyles.caption.copyWith(color: Colors.grey),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubjectCard(Subject subject, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: AppRadius.lgAll,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Subject header
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        subject.title,
+                        style: AppTextStyles.labelLarge.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        '${subject.code ?? 'NO-CODE'} • Semester ${subject.semesterNumber}',
+                        style: AppTextStyles.caption.copyWith(
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.1),
+                    borderRadius: AppRadius.smAll,
+                  ),
+                  child: Text(
+                    '${subject.assignments?.length ?? 0} tasks',
+                    style: AppTextStyles.caption.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Assignments list
+          if (subject.assignments != null && subject.assignments!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.all(AppSpacing.sm),
+              child: Column(
+                children: subject.assignments!.map((assignment) {
+                  final isLoading = _submissionsLoading[assignment.id] == true;
+                  final submissions = _submissionsMap[assignment.id];
+                  final isExpanded = submissions != null;
+                  final isClasswork = assignment.type == 'classwork';
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    padding: const EdgeInsets.all(AppSpacing.sm),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF1E293B)
+                          : const Color(0xFFF8FAFC),
+                      borderRadius: AppRadius.mdAll,
+                      border: Border.all(
+                        color: isExpanded
+                            ? const Color(0xFF3B82F6).withValues(alpha: 0.3)
+                            : Colors.grey.withValues(alpha: 0.1),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isClasswork
+                                    ? const Color(
+                                        0xFF3B82F6,
+                                      ).withValues(alpha: 0.1)
+                                    : const Color(
+                                        0xFF8B5CF6,
+                                      ).withValues(alpha: 0.1),
+                                borderRadius: AppRadius.xsAll,
+                                border: Border.all(
+                                  color: isClasswork
+                                      ? const Color(
+                                          0xFF3B82F6,
+                                        ).withValues(alpha: 0.3)
+                                      : const Color(
+                                          0xFF8B5CF6,
+                                        ).withValues(alpha: 0.3),
+                                ),
+                              ),
+                              child: Text(
+                                assignment.type.toUpperCase(),
+                                style: AppTextStyles.overline.copyWith(
+                                  color: isClasswork
+                                      ? const Color(0xFF3B82F6)
+                                      : const Color(0xFF8B5CF6),
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 8,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            if (assignment.dueAt != null)
+                              Text(
+                                'Due ${_formatShortDate(assignment.dueAt!)}',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: Colors.grey,
+                                  fontSize: 10,
+                                ),
+                              ),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: () => _toggleSubmissions(assignment.id),
+                              child: Text(
+                                isLoading
+                                    ? 'Loading...'
+                                    : isExpanded
+                                    ? 'Hide'
+                                    : 'View',
+                                style: AppTextStyles.caption.copyWith(
+                                  color: const Color(0xFF3B82F6),
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          assignment.title,
+                          style: AppTextStyles.labelMedium.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+
+                        // Submissions list
+                        if (isExpanded) ...[
+                          const SizedBox(height: AppSpacing.sm),
+                          const Divider(height: 1),
+                          const SizedBox(height: AppSpacing.sm),
+                          if (submissions.isEmpty)
+                            Text(
+                              'No submissions yet.',
+                              style: AppTextStyles.caption.copyWith(
+                                color: Colors.grey,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            )
+                          else
+                            ...submissions.map(
+                              (sub) => Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.sm,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 28,
+                                      height: 28,
+                                      decoration: BoxDecoration(
+                                        color: const Color(
+                                          0xFF3B82F6,
+                                        ).withValues(alpha: 0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          (sub.studentName?.isNotEmpty == true
+                                                  ? sub.studentName![0]
+                                                  : 'S')
+                                              .toUpperCase(),
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: const Color(0xFF3B82F6),
+                                            fontWeight: FontWeight.w800,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: AppSpacing.sm),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            sub.studentName ?? sub.studentId,
+                                            style: AppTextStyles.labelSmall
+                                                .copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                          ),
+                                          Text(
+                                            _formatShortDate(sub.submittedAt),
+                                            style: AppTextStyles.caption
+                                                .copyWith(
+                                                  color: Colors.grey,
+                                                  fontSize: 9,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (sub.fileUrl.isNotEmpty)
+                                      GestureDetector(
+                                        onTap: () {
+                                          // TODO: open file URL
+                                        },
+                                        child: Text(
+                                          'View',
+                                          style: AppTextStyles.caption.copyWith(
+                                            color: const Color(0xFF3B82F6),
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLabel(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        text.toUpperCase(),
+        style: AppTextStyles.overline.copyWith(
+          color: Colors.grey,
+          fontWeight: FontWeight.w600,
+          fontSize: 9,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDropdown<T>({
+    required T value,
+    String? hint,
+    required List<DropdownMenuItem<T>> items,
+    required void Function(T?) onChanged,
+    required bool isDark,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : Colors.grey[50],
+        borderRadius: AppRadius.smAll,
+        border: Border.all(
+          color: isDark ? const Color(0xFF334155) : Colors.grey.shade200,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<T>(
+          value: items.any((item) => item.value == value) ? value : null,
+          hint: hint != null
+              ? Text(
+                  hint,
+                  style: AppTextStyles.caption.copyWith(color: Colors.grey),
+                )
+              : null,
+          isExpanded: true,
+          dropdownColor: isDark ? const Color(0xFF1E293B) : Colors.white,
+          style: AppTextStyles.caption,
+          items: items,
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String hint,
+    int maxLines = 1,
+    required bool isDark,
+  }) {
+    return TextField(
+      controller: controller,
+      maxLines: maxLines,
+      style: AppTextStyles.caption,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: AppTextStyles.caption.copyWith(color: Colors.grey),
+        filled: true,
+        fillColor: isDark ? const Color(0xFF0F172A) : Colors.grey[50],
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: AppRadius.smAll,
+          borderSide: BorderSide(
+            color: isDark ? const Color(0xFF334155) : Colors.grey.shade200,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: AppRadius.smAll,
+          borderSide: BorderSide(
+            color: isDark ? const Color(0xFF334155) : Colors.grey.shade200,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: AppRadius.smAll,
+          borderSide: const BorderSide(color: Color(0xFF3B82F6)),
+        ),
+      ),
+    );
+  }
+
+  String _formatShortDate(DateTime date) {
+    final months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${date.day} ${months[date.month - 1]}';
   }
 }
