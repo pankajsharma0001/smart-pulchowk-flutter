@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
@@ -956,9 +957,9 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     return Container(
       padding: EdgeInsets.fromLTRB(
         20,
-        16,
         20,
-        16 + MediaQuery.of(context).padding.bottom,
+        20,
+        26 + MediaQuery.of(context).padding.bottom,
       ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
@@ -1007,6 +1008,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     if (_book.isOwner) {
       return FilledButton.icon(
         onPressed: () async {
+          HapticFeedback.lightImpact();
           final result = await Navigator.push<bool>(
             context,
             MaterialPageRoute(
@@ -1020,8 +1022,8 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          minimumSize: const Size(double.infinity, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          minimumSize: const Size(double.infinity, 56),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
         ),
       );
@@ -1040,13 +1042,17 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
           children: [
             Expanded(
               child: FilledButton.icon(
-                onPressed: () => _viewContact(_myRequest!),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  _viewContact(_myRequest!);
+                },
                 icon: const Icon(Icons.contact_support_rounded, size: 20),
-                label: const Text('CONTACT SELLER'),
+                label: const Text('CONTACT'),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  minimumSize: const Size(0, 56),
                   shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
                 ),
               ),
@@ -1054,13 +1060,17 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
             const SizedBox(width: 12),
             Expanded(
               child: OutlinedButton.icon(
-                onPressed: () => _rateSeller(_myRequest!),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  _rateSeller(_myRequest!);
+                },
                 icon: const Icon(Icons.star_outline_rounded, size: 20),
-                label: const Text('RATE SELLER'),
+                label: const Text('RATE'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.orange,
                   side: const BorderSide(color: Colors.orange),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  minimumSize: const Size(0, 56),
                   shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
                 ),
               ),
@@ -1093,14 +1103,17 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     }
 
     return FilledButton.icon(
-      onPressed: _sendPurchaseRequest,
+      onPressed: () {
+        HapticFeedback.lightImpact();
+        _sendPurchaseRequest();
+      },
       icon: const Icon(Icons.shopping_cart_checkout_rounded, size: 20),
       label: const Text('SEND PURCHASE REQUEST'),
       style: FilledButton.styleFrom(
         backgroundColor: cs.primary,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        minimumSize: const Size(double.infinity, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        minimumSize: const Size(double.infinity, 56),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
         elevation: 8,
         shadowColor: cs.primary.withValues(alpha: 0.4),

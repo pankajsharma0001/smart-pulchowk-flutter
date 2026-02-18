@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
@@ -147,24 +148,6 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
     _loadBooks(refresh: true);
   }
 
-  void _onCategorySelected(int? categoryId) {
-    setState(() => _selectedCategoryId = categoryId);
-    _loadBooks(refresh: true);
-  }
-
-  void _onConditionSelected(BookCondition? condition) {
-    setState(() => _selectedCondition = condition);
-    _loadBooks(refresh: true);
-  }
-
-  void _onPriceRangeChanged(double? min, double? max) {
-    setState(() {
-      _minPrice = min;
-      _maxPrice = max;
-    });
-    _loadBooks(refresh: true);
-  }
-
   void _clearFilters() {
     setState(() {
       _searchQuery = null;
@@ -178,9 +161,36 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
     _loadBooks(refresh: true);
   }
 
-  void _onSortChanged(String sortBy) {
-    setState(() => _sortBy = sortBy);
-    _loadBooks(refresh: true);
+  void _showFilterBottomSheet(bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      showDragHandle: false,
+      builder: (_) => _FilterBottomSheet(
+        isDark: isDark,
+        categories: _categories,
+        initialCategoryId: _selectedCategoryId,
+        initialCondition: _selectedCondition,
+        initialMinPrice: _minPrice,
+        initialMaxPrice: _maxPrice,
+        initialSortBy: _sortBy,
+        totalResults: _books.length, // Should ideally be from pagination total
+        onApply: (catId, condition, min, max, sort) {
+          setState(() {
+            _selectedCategoryId = catId;
+            _selectedCondition = condition;
+            _minPrice = min;
+            _maxPrice = max;
+            _sortBy = sort;
+          });
+          _loadBooks(refresh: true);
+        },
+        onClear: () {
+          _clearFilters();
+        },
+      ),
+    );
   }
 
   @override
@@ -192,6 +202,7 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         backgroundColor: isDark
             ? AppColors.backgroundDark
             : AppColors.backgroundLight,
@@ -252,20 +263,30 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
                 searchController: _searchController,
                 focusNode: _searchFocusNode,
                 onSearch: _onSearch,
-                categories: _categories,
-                selectedCategoryId: _selectedCategoryId,
-                onCategorySelected: _onCategorySelected,
-                selectedCondition: _selectedCondition,
-                onConditionSelected: _onConditionSelected,
-                minPrice: _minPrice,
-                maxPrice: _maxPrice,
-                onPriceRangeChanged: _onPriceRangeChanged,
-                onClearAll: _clearFilters,
-                sortBy: _sortBy,
-                onSortChanged: _onSortChanged,
                 isDark: isDark,
+                hasActiveFilters:
+                    _selectedCategoryId != null ||
+                    _selectedCondition != null ||
+                    _minPrice != null ||
+                    _maxPrice != null ||
+                    _sortBy != 'newest',
+                onFilterTap: () => _showFilterBottomSheet(isDark),
               ),
             ),
+            // Category Quick Filters
+            if (_categories.isNotEmpty)
+              SliverToBoxAdapter(
+                child: _CategoryQuickFilters(
+                  categories: _categories,
+                  selectedId: _selectedCategoryId,
+                  onSelect: (id) {
+                    setState(() => _selectedCategoryId = id);
+                    _loadBooks(refresh: true);
+                  },
+                  isDark: isDark,
+                  cs: cs,
+                ),
+              ),
           ],
           body: _isLoading
               ? _buildShimmerGrid(isDark)
@@ -279,7 +300,9 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
                 ),
         ),
         floatingActionButton: Padding(
-          padding: const EdgeInsets.only(bottom: 85),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom > 0 ? 32 : 85,
+          ),
           child: _buildFAB(cs),
         ),
       ),
@@ -428,376 +451,124 @@ class _ActionButton extends StatelessWidget {
 // SEARCH + FILTER BAR
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _SearchFilterBar extends StatefulWidget {
+class _SearchFilterBar extends StatelessWidget {
   final TextEditingController searchController;
   final FocusNode focusNode;
   final ValueChanged<String> onSearch;
-  final List<BookCategory> categories;
-  final int? selectedCategoryId;
-  final ValueChanged<int?> onCategorySelected;
-  final BookCondition? selectedCondition;
-  final ValueChanged<BookCondition?> onConditionSelected;
-  final double? minPrice;
-  final double? maxPrice;
-  final void Function(double? min, double? max) onPriceRangeChanged;
-  final VoidCallback onClearAll;
-  final String sortBy;
-  final ValueChanged<String> onSortChanged;
+  final bool hasActiveFilters;
+  final VoidCallback onFilterTap;
   final bool isDark;
 
   const _SearchFilterBar({
     required this.searchController,
     required this.focusNode,
     required this.onSearch,
-    required this.categories,
-    required this.selectedCategoryId,
-    required this.onCategorySelected,
-    required this.selectedCondition,
-    required this.onConditionSelected,
-    required this.minPrice,
-    required this.maxPrice,
-    required this.onPriceRangeChanged,
-    required this.onClearAll,
-    required this.sortBy,
-    required this.onSortChanged,
+    required this.hasActiveFilters,
+    required this.onFilterTap,
     required this.isDark,
   });
 
   @override
-  State<_SearchFilterBar> createState() => _SearchFilterBarState();
-}
-
-class _SearchFilterBarState extends State<_SearchFilterBar> {
-  bool _isExpanded = false;
-
-  void _toggleExpanded() {
-    setState(() => _isExpanded = !_isExpanded);
-  }
-
-  @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final isDark = widget.isDark;
 
-    return Column(
-      children: [
-        // ── Search & Toggle ──────────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-          child: Row(
-            children: [
-              Expanded(
-                child: ListenableBuilder(
-                  listenable: widget.focusNode,
-                  builder: (context, child) {
-                    final hasFocus = widget.focusNode.hasFocus;
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: ListenableBuilder(
+              listenable: focusNode,
+              builder: (context, child) {
+                final hasFocus = focusNode.hasFocus;
+                return AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? AppColors.surfaceContainerDark
+                        : AppColors.surfaceContainerLight,
+                    borderRadius: AppRadius.fullAll,
+                    border: Border.all(
+                      color: hasFocus
+                          ? cs.primary
+                          : isDark
+                          ? AppColors.borderDark.withValues(alpha: 0.3)
+                          : AppColors.borderLight.withValues(alpha: 0.5),
+                      width: hasFocus ? 1.5 : 1,
+                    ),
+                    boxShadow: hasFocus
+                        ? [
+                            BoxShadow(
+                              color: cs.primary.withValues(alpha: 0.1),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : null,
+                  ),
+                  child: TextField(
+                    controller: searchController,
+                    focusNode: focusNode,
+                    onSubmitted: onSearch,
+                    cursorColor: cs.primary,
+                    decoration: InputDecoration(
+                      filled: false,
+                      hintText: 'Search books, authors...',
+                      hintStyle: AppTextStyles.bodyMedium.copyWith(
                         color: isDark
-                            ? AppColors.surfaceContainerDark
-                            : AppColors.surfaceContainerLight,
-                        borderRadius: AppRadius.fullAll,
-                        border: Border.all(
-                          color: hasFocus
-                              ? cs.primary
-                              : isDark
-                              ? AppColors.borderDark.withValues(alpha: 0.3)
-                              : AppColors.borderLight.withValues(alpha: 0.5),
-                          width: hasFocus ? 1.5 : 1,
-                        ),
-                        boxShadow: hasFocus
-                            ? [
-                                BoxShadow(
-                                  color: cs.primary.withValues(alpha: 0.1),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
+                            ? AppColors.textMutedDark
+                            : AppColors.textMuted.withValues(alpha: 0.7),
                       ),
-                      child: TextField(
-                        controller: widget.searchController,
-                        focusNode: widget.focusNode,
-                        onSubmitted: widget.onSearch,
-                        cursorColor: cs.primary,
-                        decoration: InputDecoration(
-                          filled: false,
-                          hintText: 'Search books, authors...',
-                          hintStyle: AppTextStyles.bodyMedium.copyWith(
-                            color: isDark
-                                ? AppColors.textMutedDark
-                                : AppColors.textMuted.withValues(alpha: 0.7),
-                          ),
-                          prefixIcon: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            child: Icon(
-                              Icons.search_rounded,
-                              size: 20,
-                              color: hasFocus
-                                  ? cs.primary
-                                  : isDark
-                                  ? AppColors.textMutedDark
-                                  : AppColors.textMuted,
-                            ),
-                          ),
-                          suffixIcon: ListenableBuilder(
-                            listenable: widget.searchController,
-                            builder: (context, _) {
-                              if (widget.searchController.text.isEmpty) {
-                                return const SizedBox.shrink();
-                              }
-                              return IconButton(
-                                icon: const Icon(Icons.close_rounded, size: 18),
-                                onPressed: () {
-                                  widget.searchController.clear();
-                                  widget.onSearch('');
-                                },
-                              );
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        size: 20,
+                        color: hasFocus
+                            ? cs.primary
+                            : isDark
+                            ? AppColors.textMutedDark
+                            : AppColors.textMuted,
+                      ),
+                      suffixIcon: ListenableBuilder(
+                        listenable: searchController,
+                        builder: (context, _) {
+                          if (searchController.text.isEmpty) {
+                            return const SizedBox.shrink();
+                          }
+                          return IconButton(
+                            icon: const Icon(Icons.close_rounded, size: 18),
+                            onPressed: () {
+                              searchController.clear();
+                              onSearch('');
                             },
-                          ),
-                          border: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 13,
-                          ),
-                        ),
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: isDark
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimary,
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              _FilterToggleButton(
-                isExpanded: _isExpanded,
-                onTap: _toggleExpanded,
-                isDark: isDark,
-                hasActiveFilters:
-                    widget.selectedCategoryId != null ||
-                    widget.selectedCondition != null ||
-                    widget.minPrice != null ||
-                    widget.maxPrice != null ||
-                    widget.sortBy != 'newest' ||
-                    widget.searchController.text.isNotEmpty,
-              ),
-            ],
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 13,
+                      ),
+                    ),
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
-
-        // ── Expanded Filters ──────────────────────────────────────────
-        AnimatedSize(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOutQuart,
-          child: _isExpanded
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    // Categories
-                    if (widget.categories.isNotEmpty)
-                      SizedBox(
-                        height: 38,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: widget.categories.length + 1,
-                          itemBuilder: (context, index) {
-                            if (index == 0) {
-                              return _FilterChip(
-                                label: 'All',
-                                isSelected: widget.selectedCategoryId == null,
-                                onTap: () => widget.onCategorySelected(null),
-                                isDark: isDark,
-                                cs: cs,
-                              );
-                            }
-                            final cat = widget.categories[index - 1];
-                            return _FilterChip(
-                              label: cat.name,
-                              isSelected: widget.selectedCategoryId == cat.id,
-                              onTap: () => widget.onCategorySelected(
-                                widget.selectedCategoryId == cat.id
-                                    ? null
-                                    : cat.id,
-                              ),
-                              isDark: isDark,
-                              cs: cs,
-                            );
-                          },
-                        ),
-                      ),
-                    const SizedBox(height: 12),
-                    // Conditions
-                    SizedBox(
-                      height: 38,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        children: [
-                          _FilterChip(
-                            label: 'All Conditions',
-                            isSelected: widget.selectedCondition == null,
-                            onTap: () => widget.onConditionSelected(null),
-                            isDark: isDark,
-                            cs: cs,
-                          ),
-                          ...BookCondition.values.map(
-                            (c) => _FilterChip(
-                              label: c.displayName,
-                              isSelected: widget.selectedCondition == c,
-                              onTap: () => widget.onConditionSelected(
-                                widget.selectedCondition == c ? null : c,
-                              ),
-                              isDark: isDark,
-                              cs: cs,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Price Ranges
-                    SizedBox(
-                      height: 38,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        children: [
-                          _FilterChip(
-                            label: 'Any Price',
-                            isSelected:
-                                widget.minPrice == null &&
-                                widget.maxPrice == null,
-                            onTap: () => widget.onPriceRangeChanged(null, null),
-                            isDark: isDark,
-                            cs: cs,
-                          ),
-                          _FilterChip(
-                            label: '< 500',
-                            isSelected:
-                                widget.minPrice == null &&
-                                widget.maxPrice == 500,
-                            onTap: () => widget.onPriceRangeChanged(null, 500),
-                            isDark: isDark,
-                            cs: cs,
-                          ),
-                          _FilterChip(
-                            label: '500 - 1500',
-                            isSelected:
-                                widget.minPrice == 500 &&
-                                widget.maxPrice == 1500,
-                            onTap: () => widget.onPriceRangeChanged(500, 1500),
-                            isDark: isDark,
-                            cs: cs,
-                          ),
-                          _FilterChip(
-                            label: '1500 - 3000',
-                            isSelected:
-                                widget.minPrice == 1500 &&
-                                widget.maxPrice == 3000,
-                            onTap: () => widget.onPriceRangeChanged(1500, 3000),
-                            isDark: isDark,
-                            cs: cs,
-                          ),
-                          _FilterChip(
-                            label: '3000+',
-                            isSelected:
-                                widget.minPrice == 3000 &&
-                                widget.maxPrice == null,
-                            onTap: () => widget.onPriceRangeChanged(3000, null),
-                            isDark: isDark,
-                            cs: cs,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    // Sorting
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.sort_rounded,
-                            size: 16,
-                            color: isDark ? Colors.white54 : Colors.black45,
-                          ),
-                          const SizedBox(width: 8),
-                          _SortChip(
-                            label: 'Newest',
-                            value: 'newest',
-                            currentValue: widget.sortBy,
-                            onTap: widget.onSortChanged,
-                            isDark: isDark,
-                            cs: cs,
-                          ),
-                          _SortChip(
-                            label: 'Price ↑',
-                            value: 'price_asc',
-                            currentValue: widget.sortBy,
-                            onTap: widget.onSortChanged,
-                            isDark: isDark,
-                            cs: cs,
-                          ),
-                          _SortChip(
-                            label: 'Price ↓',
-                            value: 'price_desc',
-                            currentValue: widget.sortBy,
-                            onTap: widget.onSortChanged,
-                            isDark: isDark,
-                            cs: cs,
-                          ),
-                          _SortChip(
-                            label: 'Title',
-                            value: 'title',
-                            currentValue: widget.sortBy,
-                            onTap: widget.onSortChanged,
-                            isDark: isDark,
-                            cs: cs,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Clear All
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: TextButton.icon(
-                          onPressed: () {
-                            widget.onClearAll();
-                            setState(() => _isExpanded = false);
-                          },
-                          icon: const Icon(Icons.refresh_rounded, size: 18),
-                          label: const Text('Clear All Filters'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: cs.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: AppRadius.mdAll,
-                              side: BorderSide(
-                                color: cs.primary.withValues(alpha: 0.2),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                )
-              : const SizedBox.shrink(),
-        ),
-      ],
+          const SizedBox(width: 8),
+          _FilterToggleButton(
+            onTap: onFilterTap,
+            isDark: isDark,
+            hasActiveFilters: hasActiveFilters,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -805,13 +576,11 @@ class _SearchFilterBarState extends State<_SearchFilterBar> {
 // ── Supporting Widgets ──────────────────────────────────────────────
 
 class _FilterToggleButton extends StatelessWidget {
-  final bool isExpanded;
   final VoidCallback onTap;
   final bool isDark;
   final bool hasActiveFilters;
 
   const _FilterToggleButton({
-    required this.isExpanded,
     required this.onTap,
     required this.isDark,
     required this.hasActiveFilters,
@@ -819,7 +588,6 @@ class _FilterToggleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     return InteractiveWrapper(
       onTap: onTap,
       borderRadius: AppRadius.fullAll,
@@ -827,34 +595,27 @@ class _FilterToggleButton extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: isExpanded
-              ? cs.primary
-              : isDark
+          color: isDark
               ? AppColors.surfaceContainerDark
               : AppColors.surfaceContainerLight,
           shape: BoxShape.circle,
           border: Border.all(
-            color: isExpanded
-                ? cs.primary
-                : isDark
+            color: isDark
                 ? AppColors.borderDark.withValues(alpha: 0.3)
                 : AppColors.borderLight.withValues(alpha: 0.5),
           ),
-          boxShadow: isExpanded ? AppShadows.glow(cs.primary) : null,
         ),
         child: Stack(
           clipBehavior: Clip.none,
           children: [
             Icon(
-              isExpanded ? Icons.close_rounded : Icons.tune_rounded,
+              Icons.tune_rounded,
               size: 20,
-              color: isExpanded
-                  ? Colors.white
-                  : isDark
+              color: isDark
                   ? AppColors.textSecondaryDark
                   : AppColors.textSecondary,
             ),
-            if (hasActiveFilters && !isExpanded)
+            if (hasActiveFilters)
               Positioned(
                 right: -2,
                 top: -2,
@@ -868,107 +629,6 @@ class _FilterToggleButton extends StatelessWidget {
                 ),
               ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-  final bool isDark;
-  final ColorScheme cs;
-
-  const _FilterChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-    required this.isDark,
-    required this.cs,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: ChoiceChip(
-        label: Text(label),
-        selected: isSelected,
-        onSelected: (_) => onTap(),
-        selectedColor: cs.primaryContainer,
-        labelStyle: AppTextStyles.labelMedium.copyWith(
-          color: isSelected
-              ? cs.primary
-              : (isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondary),
-          fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-        ),
-        side: BorderSide(
-          color: isSelected
-              ? cs.primary.withValues(alpha: 0.3)
-              : (isDark
-                    ? AppColors.borderDark.withValues(alpha: 0.2)
-                    : AppColors.borderLight.withValues(alpha: 0.4)),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        visualDensity: VisualDensity.compact,
-      ),
-    );
-  }
-}
-
-class _SortChip extends StatelessWidget {
-  final String label;
-  final String value;
-  final String currentValue;
-  final ValueChanged<String> onTap;
-  final bool isDark;
-  final ColorScheme cs;
-
-  const _SortChip({
-    required this.label,
-    required this.value,
-    required this.currentValue,
-    required this.onTap,
-    required this.isDark,
-    required this.cs,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isSelected = value == currentValue;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: GestureDetector(
-        onTap: () => onTap(value),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? cs.primary.withValues(alpha: 0.1)
-                : Colors.transparent,
-            borderRadius: AppRadius.fullAll,
-            border: Border.all(
-              color: isSelected
-                  ? cs.primary
-                  : (isDark ? Colors.white12 : Colors.black12),
-            ),
-          ),
-          child: Text(
-            label,
-            style: AppTextStyles.labelSmall.copyWith(
-              color: isSelected
-                  ? cs.primary
-                  : (isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondary),
-              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            ),
-          ),
         ),
       ),
     );
@@ -1388,6 +1048,647 @@ class _ShimmerCardState extends State<_ShimmerCard>
           ),
         );
       },
+    );
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+// FILTER BOTTOM SHEET
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _FilterBottomSheet extends StatefulWidget {
+  final bool isDark;
+  final List<BookCategory> categories;
+  final int? initialCategoryId;
+  final BookCondition? initialCondition;
+  final double? initialMinPrice;
+  final double? initialMaxPrice;
+  final String initialSortBy;
+  final int totalResults;
+  final void Function(int?, BookCondition?, double?, double?, String) onApply;
+  final VoidCallback onClear;
+
+  const _FilterBottomSheet({
+    required this.isDark,
+    required this.categories,
+    required this.initialCategoryId,
+    required this.initialCondition,
+    required this.initialMinPrice,
+    required this.initialMaxPrice,
+    required this.initialSortBy,
+    required this.totalResults,
+    required this.onApply,
+    required this.onClear,
+  });
+
+  @override
+  State<_FilterBottomSheet> createState() => _FilterBottomSheetState();
+}
+
+class _FilterBottomSheetState extends State<_FilterBottomSheet> {
+  int? _selectedCategoryId;
+  BookCondition? _selectedCondition;
+  late TextEditingController _minPriceController;
+  late TextEditingController _maxPriceController;
+  late String _sortBy;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategoryId = widget.initialCategoryId;
+    _selectedCondition = widget.initialCondition;
+    _minPriceController = TextEditingController(
+      text: widget.initialMinPrice?.toString() ?? '',
+    );
+    _maxPriceController = TextEditingController(
+      text: widget.initialMaxPrice?.toString() ?? '',
+    );
+    _sortBy = widget.initialSortBy;
+  }
+
+  @override
+  void dispose() {
+    _minPriceController.dispose();
+    _maxPriceController.dispose();
+    super.dispose();
+  }
+
+  int get _activeFiltersCount {
+    int count = 0;
+    if (_selectedCategoryId != null) count++;
+    if (_selectedCondition != null) count++;
+    if (_minPriceController.text.isNotEmpty) count++;
+    if (_maxPriceController.text.isNotEmpty) count++;
+    if (_sortBy != 'newest') count++;
+    return count;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = widget.isDark;
+    final cs = Theme.of(context).colorScheme;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final systemPadding = MediaQuery.of(context).padding.bottom;
+
+    // Buffer for the custom bottom navbar which is approx 85px to clear the floating button
+    final navbarOffset = bottomInset > 0 ? 12.0 : 40.0;
+
+    return Container(
+      padding: EdgeInsets.only(
+        bottom: bottomInset + systemPadding + navbarOffset,
+      ),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Drag handle
+          Center(
+            child: Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white24 : Colors.black12,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+
+          // Header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Row(
+              children: [
+                Text(
+                  'Filters',
+                  style: AppTextStyles.h3.copyWith(
+                    color: isDark ? Colors.white : Colors.black87,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (_activeFiltersCount > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cs.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$_activeFiltersCount active',
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: cs.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // Scrollable Body
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Category Section
+                  _SectionHeader(title: 'CATEGORY', isDark: isDark),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _FilterToggle(
+                        label: 'All',
+                        isSelected: _selectedCategoryId == null,
+                        onTap: () => setState(() => _selectedCategoryId = null),
+                        isDark: isDark,
+                        cs: cs,
+                      ),
+                      ...widget.categories.map(
+                        (cat) => _FilterToggle(
+                          label: cat.name,
+                          isSelected: _selectedCategoryId == cat.id,
+                          onTap: () =>
+                              setState(() => _selectedCategoryId = cat.id),
+                          isDark: isDark,
+                          cs: cs,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Condition Section
+                  _SectionHeader(title: 'CONDITION', isDark: isDark),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _FilterToggle(
+                        label: 'All',
+                        isSelected: _selectedCondition == null,
+                        onTap: () => setState(() => _selectedCondition = null),
+                        isDark: isDark,
+                        cs: cs,
+                      ),
+                      ...BookCondition.values.map(
+                        (c) => _FilterToggle(
+                          label: c.displayName,
+                          isSelected: _selectedCondition == c,
+                          onTap: () => setState(() => _selectedCondition = c),
+                          isDark: isDark,
+                          cs: cs,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Price Range Section
+                  _SectionHeader(title: 'PRICE RANGE', isDark: isDark),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _PriceField(
+                          controller: _minPriceController,
+                          hint: 'Min',
+                          isDark: isDark,
+                          cs: cs,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _PriceField(
+                          controller: _maxPriceController,
+                          hint: 'Max',
+                          isDark: isDark,
+                          cs: cs,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Sort Section
+                  _SectionHeader(title: 'SORT BY', isDark: isDark),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _FilterToggle(
+                        label: 'Newest',
+                        isSelected: _sortBy == 'newest',
+                        onTap: () => setState(() => _sortBy = 'newest'),
+                        isDark: isDark,
+                        cs: cs,
+                      ),
+                      _FilterToggle(
+                        label: 'Price: Low to High',
+                        isSelected: _sortBy == 'price_asc',
+                        onTap: () => setState(() => _sortBy = 'price_asc'),
+                        isDark: isDark,
+                        cs: cs,
+                      ),
+                      _FilterToggle(
+                        label: 'Price: High to Low',
+                        isSelected: _sortBy == 'price_desc',
+                        onTap: () => setState(() => _sortBy = 'price_desc'),
+                        isDark: isDark,
+                        cs: cs,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Footer (Cleaned up, no top border to avoid 'two bars' issue)
+          Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF0F172A) : Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: (isDark ? Colors.black : Colors.black12).withValues(
+                    alpha: 0.1,
+                  ),
+                  blurRadius: 10,
+                  offset: const Offset(0, -4),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextButton(
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      widget.onClear();
+                      Navigator.pop(context);
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: isDark ? Colors.white12 : Colors.black12,
+                        ),
+                      ),
+                    ),
+                    child: Text(
+                      'Clear All',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: isDark ? Colors.white70 : Colors.black87,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  flex: 2,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          cs.primary,
+                          cs.primary.withValues(alpha: 0.85),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      boxShadow: AppShadows.glow(cs.primary, intensity: 0.25),
+                    ),
+                    child: ElevatedButton(
+                      onPressed: () {
+                        HapticFeedback.mediumImpact();
+                        final min = double.tryParse(_minPriceController.text);
+                        final max = double.tryParse(_maxPriceController.text);
+                        widget.onApply(
+                          _selectedCategoryId,
+                          _selectedCondition,
+                          min,
+                          max,
+                          _sortBy,
+                        );
+                        Navigator.pop(context);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        foregroundColor: Colors.white,
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Show Results',
+                        style: AppTextStyles.labelLarge.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final bool isDark;
+
+  const _SectionHeader({required this.title, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        title,
+        style: AppTextStyles.overline.copyWith(
+          color: isDark ? Colors.white54 : Colors.black45,
+          letterSpacing: 1.2,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterToggle extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final bool isDark;
+  final ColorScheme cs;
+
+  const _FilterToggle({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    required this.isDark,
+    required this.cs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? cs.primary.withValues(alpha: 0.1)
+              : (isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.black.withValues(alpha: 0.05)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? cs.primary
+                : (isDark ? Colors.white12 : Colors.black12),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isSelected) ...[
+              Icon(Icons.check_rounded, size: 16, color: cs.primary),
+              const SizedBox(width: 8),
+            ],
+            Text(
+              label,
+              style: AppTextStyles.labelMedium.copyWith(
+                color: isSelected
+                    ? cs.primary
+                    : (isDark ? Colors.white70 : Colors.black87),
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CATEGORY QUICK FILTERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _CategoryQuickFilters extends StatelessWidget {
+  final List<BookCategory> categories;
+  final int? selectedId;
+  final ValueChanged<int?> onSelect;
+  final bool isDark;
+  final ColorScheme cs;
+
+  const _CategoryQuickFilters({
+    required this.categories,
+    required this.selectedId,
+    required this.onSelect,
+    required this.isDark,
+    required this.cs,
+  });
+
+  String _getEmoji(String name) {
+    name = name.toLowerCase();
+    if (name.contains('all')) return '✨';
+    if (name.contains('text')) return '📖';
+    if (name.contains('note')) return '📝';
+    if (name.contains('insight')) return '💡';
+    if (name.contains('manual')) return '📗';
+    if (name.contains('entrance') || name.contains('prepar')) return '🎓';
+    if (name.contains('reference')) return '📚';
+    if (name.contains('novel') || name.contains('fiction')) return '📕';
+    if (name.contains('career') || name.contains('job')) return '💼';
+    return '📦';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 48,
+      margin: const EdgeInsets.only(bottom: 16, top: 2),
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        scrollDirection: Axis.horizontal,
+        itemCount: categories.length + 1,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final isAll = index == 0;
+          final category = isAll ? null : categories[index - 1];
+          final id = category?.id;
+          final isSelected = selectedId == id;
+          final label = isAll ? 'All' : category!.name;
+
+          return _QuickFilterChip(
+            label: label,
+            emoji: _getEmoji(label),
+            isSelected: isSelected,
+            isDark: isDark,
+            cs: cs,
+            onTap: () {
+              HapticFeedback.selectionClick();
+              onSelect(id);
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _QuickFilterChip extends StatelessWidget {
+  final String label;
+  final String emoji;
+  final bool isSelected;
+  final bool isDark;
+  final ColorScheme cs;
+  final VoidCallback onTap;
+
+  const _QuickFilterChip({
+    required this.label,
+    required this.emoji,
+    required this.isSelected,
+    required this.isDark,
+    required this.cs,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InteractiveWrapper(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? cs.primary.withValues(alpha: 0.15)
+              : (isDark
+                    ? AppColors.surfaceContainerDark
+                    : AppColors.surfaceContainerLight),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isSelected
+                ? cs.primary
+                : (isDark
+                      ? AppColors.borderDark.withValues(alpha: 0.5)
+                      : AppColors.borderLight.withValues(alpha: 0.8)),
+            width: isSelected ? 1.5 : 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: cs.primary.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 14)),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: AppTextStyles.labelMedium.copyWith(
+                color: isSelected
+                    ? cs.primary
+                    : (isDark ? Colors.white70 : Colors.black87),
+                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                letterSpacing: 0.1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PriceField extends StatelessWidget {
+  final TextEditingController controller;
+  final String hint;
+  final bool isDark;
+  final ColorScheme cs;
+
+  const _PriceField({
+    required this.controller,
+    required this.hint,
+    required this.isDark,
+    required this.cs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      cursorColor: cs.primary,
+      style: AppTextStyles.bodyMedium.copyWith(
+        color: isDark ? Colors.white : Colors.black87,
+      ),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: AppTextStyles.bodyMedium.copyWith(
+          color: isDark ? Colors.white38 : Colors.black38,
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        filled: true,
+        fillColor: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : Colors.black.withValues(alpha: 0.05),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDark ? Colors.white12 : Colors.black12,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDark ? Colors.white12 : Colors.black12,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: cs.primary, width: 1.5),
+        ),
+      ),
     );
   }
 }
