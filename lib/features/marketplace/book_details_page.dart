@@ -1230,7 +1230,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     if (!mounted) return;
 
     final contactInfo = (res['success'] == true)
-        ? res['data']?.toString()
+        ? res['data'] as Map<String, dynamic>?
         : null;
     final hasContactInfo = contactInfo != null && contactInfo.isNotEmpty;
 
@@ -1244,27 +1244,18 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
 
     showModalBottomSheet(
       context: context,
+      showDragHandle: true,
       backgroundColor: isDark ? AppColors.cardDark : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white24 : Colors.black12,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
               const SizedBox(height: 16),
               Text(
                 'Contact ${seller.name}',
@@ -1391,64 +1382,74 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     );
   }
 
-  IconData _getContactIcon(String contactInfo) {
-    final lower = contactInfo.toLowerCase();
-    if (lower.startsWith('whatsapp')) return Icons.chat_rounded;
-    if (lower.startsWith('messenger')) return Icons.facebook_rounded;
-    if (lower.startsWith('phone')) return Icons.call_rounded;
-    if (lower.startsWith('telegram')) return Icons.telegram_rounded;
-    if (lower.startsWith('email')) return Icons.email_rounded;
+  IconData _getContactIcon(Map<String, dynamic> info) {
+    final method = info['primaryContactMethod']?.toString().toLowerCase() ?? '';
+    if (method.contains('whatsapp')) return Icons.chat_rounded;
+    if (method.contains('messenger')) return Icons.facebook_rounded;
+    if (method.contains('phone')) return Icons.call_rounded;
+    if (method.contains('telegram')) return Icons.telegram_rounded;
+    if (method.contains('email')) return Icons.email_rounded;
     return Icons.contact_mail_rounded;
   }
 
-  Color _getContactColor(String contactInfo) {
-    final lower = contactInfo.toLowerCase();
-    if (lower.startsWith('whatsapp')) return const Color(0xFF25D366);
-    if (lower.startsWith('messenger')) return const Color(0xFF0084FF);
-    if (lower.startsWith('phone')) return Colors.green;
-    if (lower.startsWith('telegram')) return const Color(0xFF0088CC);
-    if (lower.startsWith('email')) return Colors.redAccent;
+  Color _getContactColor(Map<String, dynamic> info) {
+    final method = info['primaryContactMethod']?.toString().toLowerCase() ?? '';
+    if (method.contains('whatsapp')) return const Color(0xFF25D366);
+    if (method.contains('messenger')) return const Color(0xFF0084FF);
+    if (method.contains('phone')) return Colors.green;
+    if (method.contains('telegram')) return const Color(0xFF0088CC);
+    if (method.contains('email')) return Colors.redAccent;
     return AppColors.primary;
   }
 
-  String _getContactMethodName(String contactInfo) {
-    if (contactInfo.contains(': ')) {
-      return contactInfo.split(': ').first;
-    }
+  String _getContactMethodName(Map<String, dynamic> info) {
+    final method = info['primaryContactMethod']?.toString().toLowerCase() ?? '';
+    if (method.contains('whatsapp')) return 'WhatsApp';
+    if (method.contains('messenger')) return 'Messenger';
+    if (method.contains('phone')) return 'Phone Call';
+    if (method.contains('telegram')) return 'Telegram';
+    if (method.contains('email')) return 'Email';
     return 'External Contact';
   }
 
-  String _getContactValue(String contactInfo) {
-    if (contactInfo.contains(': ')) {
-      return contactInfo.split(': ').sublist(1).join(': ');
+  String _getContactValue(Map<String, dynamic> info) {
+    final method = info['primaryContactMethod']?.toString().toLowerCase() ?? '';
+    if (method.contains('whatsapp')) return info['whatsapp']?.toString() ?? '';
+    if (method.contains('messenger')) {
+      return info['facebookMessenger']?.toString() ?? '';
     }
-    return contactInfo;
+    if (method.contains('phone')) return info['phoneNumber']?.toString() ?? '';
+    if (method.contains('telegram')) {
+      return info['telegramUsername']?.toString() ?? '';
+    }
+    if (method.contains('email')) return info['email']?.toString() ?? '';
+    return info['otherContactDetails']?.toString() ?? '';
   }
 
-  void _launchContact(String contactInfo) {
-    final value = _getContactValue(contactInfo);
-    final method = contactInfo.toLowerCase();
-    Uri? uri;
+  void _launchContact(Map<String, dynamic> info) {
+    final method = info['primaryContactMethod']?.toString().toLowerCase() ?? '';
+    final value = _getContactValue(info);
+    if (value.isEmpty) return;
 
-    if (method.startsWith('whatsapp')) {
-      final phone = value.replaceAll(RegExp(r'[^\d+]'), '');
+    Uri? uri;
+    if (method.contains('whatsapp')) {
+      final phone = value.replaceAll(RegExp(r'[^\d]'), '');
       uri = Uri.parse('https://wa.me/$phone');
-    } else if (method.startsWith('phone')) {
+    } else if (method.contains('phone')) {
       uri = Uri.parse('tel:$value');
-    } else if (method.startsWith('email')) {
+    } else if (method.contains('email')) {
       uri = Uri.parse('mailto:$value');
-    } else if (method.startsWith('telegram')) {
+    } else if (method.contains('telegram')) {
       final username = value.replaceAll('@', '');
       uri = Uri.parse('https://t.me/$username');
-    } else if (method.startsWith('messenger')) {
+    } else if (method.contains('messenger')) {
       uri = Uri.parse('https://m.me/${Uri.encodeComponent(value)}');
+    } else {
+      _showSnackBar('Contact Info: $value');
+      return;
     }
 
-    if (uri != null) {
-      launchUrl(uri, mode: LaunchMode.externalApplication);
-    } else {
-      _showSnackBar('Contact: $contactInfo');
-    }
+    launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   void _rateSeller(BookPurchaseRequest r) async {
