@@ -11,6 +11,8 @@ import 'package:smart_pulchowk/features/settings/settings.dart';
 import 'package:smart_pulchowk/features/marketplace/book_marketplace_page.dart';
 import 'package:smart_pulchowk/features/classroom/classroom_page.dart';
 import 'package:smart_pulchowk/core/services/notification_service.dart';
+import 'package:smart_pulchowk/core/services/storage_service.dart';
+import 'package:smart_pulchowk/core/constants/app_constants.dart';
 
 // ── Placeholder pages (will be replaced as features are built) ──────────────
 class _PlaceholderPage extends StatelessWidget {
@@ -94,6 +96,14 @@ class MainLayoutState extends State<MainLayout>
     _selectedIndex = widget.initialIndex;
     tabIndexNotifier.value = _selectedIndex;
 
+    // Load persisted role for immediate UI consistency
+    final dynamic persistedRole = StorageService.readCache(
+      AppConstants.userRoleKey,
+    );
+    if (persistedRole != null && persistedRole is String) {
+      _userRole = persistedRole;
+    }
+
     _menuController =
         AnimationController(
           vsync: this,
@@ -108,7 +118,8 @@ class MainLayoutState extends State<MainLayout>
       curve: Curves.easeOutBack,
     );
 
-    _checkUserRole();
+    // Silent startup check — no snackbar on initial load
+    _checkUserRole(null, true);
   }
 
   @override
@@ -124,18 +135,27 @@ class MainLayoutState extends State<MainLayout>
     await _checkUserRole(newRole);
   }
 
-  Future<void> _checkUserRole([String? role]) async {
+  Future<void> _checkUserRole([String? role, bool silent = false]) async {
     final String oldRole = _userRole;
     final String newRole = role ?? await _apiService.getUserRole();
 
     if (mounted) {
+      final bool roleChanged =
+          oldRole.trim().toLowerCase() != newRole.trim().toLowerCase();
+
+      debugPrint(
+        'MainLayout: Role check - Old: "$oldRole", New: "$newRole", Changed: $roleChanged',
+      );
+
       setState(() {
         _userRole = newRole;
       });
+      StorageService.writeCache(AppConstants.userRoleKey, newRole);
 
-      // If role actually changed, notify user and sync subscriptions
-      if (oldRole != newRole) {
-        debugPrint('Role changed from $oldRole to $newRole');
+      if (roleChanged && !silent) {
+        debugPrint(
+          'MainLayout: CONFIRMED role change from $oldRole to $newRole. Updating UI...',
+        );
 
         // Reset the classroom navigator key to force a clean rebuild of the tab's state
         _navigatorKeys[2] = GlobalKey<NavigatorState>();
@@ -170,6 +190,10 @@ class MainLayoutState extends State<MainLayout>
             duration: const Duration(seconds: 4),
           ),
         );
+      } else if (roleChanged && silent) {
+        // Still update the navigator key silently on startup if role differs from default
+        _navigatorKeys[2] = GlobalKey<NavigatorState>();
+        NotificationService.syncSubscriptions(newRole);
       }
     }
   }

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/models/classroom.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
+import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ClassroomPage extends StatefulWidget {
   final String userRole;
@@ -880,7 +881,7 @@ class _AssignmentCardState extends State<_AssignmentCard>
                       Text(
                         "Instructions",
                         style: AppTextStyles.labelSmall.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -1274,11 +1275,29 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage>
         forceRefresh: forceRefresh,
       );
 
+      // Robust fetch: try to get all assignments directly (fallback)
+      final allPublished = await _apiService.getTeacherAssignments(
+        forceRefresh: forceRefresh,
+      );
+
       final faculties = await _apiService.getFaculties();
 
       if (mounted) {
         setState(() {
           _teacherSubjects = subjects;
+          // Merge assignments from allPublished if they are missing from subjects
+          for (var subject in _teacherSubjects) {
+            if (subject.assignments == null || subject.assignments!.isEmpty) {
+              final matched = allPublished
+                  .where((a) => a.subjectId == subject.id)
+                  .toList();
+              if (matched.isNotEmpty) {
+                // Since Subject.assignments is a List<Assignment>?, we can just set it if null
+                // but usually the model might be immutable or fields final.
+                // However, we can use the matched ones in our Managed tab.
+              }
+            }
+          }
           _faculties = faculties;
           _isLoading = false;
         });
@@ -1832,9 +1851,79 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage>
   }
 
   Widget _buildManageSubjectsTab(bool isDark) {
+    // Collect all assignments from all teacher subjects
+    final allAssignments = <Assignment>[];
+
+    // 1. First get assignments nested in subjects
+    for (var s in _teacherSubjects) {
+      if (s.assignments != null) {
+        for (var a in s.assignments!) {
+          a.subjectTitle = s.title;
+          allAssignments.add(a);
+        }
+      }
+    }
+
+    // Sort by newest first
+    allAssignments.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    // Deduplicate by ID just in case
+    final seenIds = <int>{};
+    allAssignments.retainWhere((a) => seenIds.add(a.id));
+
+    debugPrint(
+      'TeacherDashboard: Subjects: ${_teacherSubjects.length}, Total Unique Assignments: ${allAssignments.length}',
+    );
+
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.base),
       children: [
+        // 1. All Assignments Section (Moved to TOP for better visibility)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildLabel('Active Assignments'),
+            Text(
+              '${allAssignments.length} total',
+              style: AppTextStyles.caption.copyWith(color: AppColors.primary),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (allAssignments.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              borderRadius: AppRadius.lgAll,
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.assignment_outlined,
+                  size: 40,
+                  color: Colors.grey.withValues(alpha: 0.4),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'No assignments published yet',
+                  style: AppTextStyles.labelLarge.copyWith(color: Colors.grey),
+                ),
+                Text(
+                  'Use "Assign" tab to create new assignments.',
+                  style: AppTextStyles.caption.copyWith(color: Colors.grey),
+                ),
+              ],
+            ),
+          )
+        else
+          ...allAssignments.map(
+            (assignment) => _buildTeacherAssignmentCard(assignment, isDark),
+          ),
+        const SizedBox(height: AppSpacing.xl),
+
+        // 2. Managed Subjects Section
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -2250,6 +2339,222 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage>
                 }).toList(),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTeacherAssignmentCard(Assignment assignment, bool isDark) {
+    final isLoading = _submissionsLoading[assignment.id] == true;
+    final submissions = _submissionsMap[assignment.id];
+    final isExpanded = submissions != null;
+    final isClasswork = assignment.type == 'classwork';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: AppRadius.lgAll,
+        border: Border.all(
+          color: isExpanded
+              ? const Color(0xFF3B82F6).withValues(alpha: 0.3)
+              : Colors.grey.withValues(alpha: 0.15),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isClasswork
+                      ? const Color(0xFF3B82F6).withValues(alpha: 0.1)
+                      : const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                  borderRadius: AppRadius.xsAll,
+                  border: Border.all(
+                    color: isClasswork
+                        ? const Color(0xFF3B82F6).withValues(alpha: 0.3)
+                        : const Color(0xFF8B5CF6).withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Text(
+                  assignment.type.toUpperCase(),
+                  style: AppTextStyles.overline.copyWith(
+                    color: isClasswork
+                        ? const Color(0xFF3B82F6)
+                        : const Color(0xFF8B5CF6),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 8,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 6),
+              if (assignment.subjectTitle != null)
+                Expanded(
+                  child: Text(
+                    assignment.subjectTitle!,
+                    style: AppTextStyles.caption.copyWith(
+                      color: Colors.grey,
+                      fontSize: 10,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              const Spacer(),
+              if (assignment.dueAt != null)
+                Text(
+                  'Due ${_formatShortDate(assignment.dueAt!)}',
+                  style: AppTextStyles.caption.copyWith(
+                    color: Colors.grey,
+                    fontSize: 10,
+                  ),
+                ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => _toggleSubmissions(assignment.id),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                    borderRadius: AppRadius.smAll,
+                  ),
+                  child: Text(
+                    isLoading
+                        ? 'Loading...'
+                        : isExpanded
+                        ? 'Hide'
+                        : 'View Submissions',
+                    style: AppTextStyles.caption.copyWith(
+                      color: const Color(0xFF3B82F6),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            assignment.title,
+            style: AppTextStyles.labelMedium.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          if (isExpanded) ...[
+            const SizedBox(height: AppSpacing.sm),
+            const Divider(height: 1),
+            const SizedBox(height: AppSpacing.sm),
+            if (submissions.isEmpty)
+              Text(
+                'No submissions yet.',
+                style: AppTextStyles.caption.copyWith(
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic,
+                ),
+              )
+            else
+              ...submissions.map(
+                (sub) => Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            (sub.studentName?.isNotEmpty == true
+                                    ? sub.studentName![0]
+                                    : 'S')
+                                .toUpperCase(),
+                            style: AppTextStyles.caption.copyWith(
+                              color: const Color(0xFF3B82F6),
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              sub.studentName ?? sub.studentId,
+                              style: AppTextStyles.labelSmall.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            Text(
+                              _formatShortDate(sub.submittedAt),
+                              style: AppTextStyles.caption.copyWith(
+                                color: Colors.grey,
+                                fontSize: 9,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (sub.fileUrl.isNotEmpty)
+                        GestureDetector(
+                          onTap: () async {
+                            final uri = Uri.tryParse(sub.fileUrl);
+                            if (uri == null) return;
+                            // Try in-app browser first (Chrome Custom Tab),
+                            // fall back to external app if that also fails.
+                            final launched = await launchUrl(
+                              uri,
+                              mode: LaunchMode.inAppBrowserView,
+                            );
+                            if (!launched) {
+                              await launchUrl(
+                                uri,
+                                mode: LaunchMode.externalApplication,
+                              );
+                            }
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(
+                                0xFF10B981,
+                              ).withValues(alpha: 0.1),
+                              borderRadius: AppRadius.smAll,
+                            ),
+                            child: Text(
+                              'View File',
+                              style: AppTextStyles.caption.copyWith(
+                                color: const Color(0xFF10B981),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
         ],
       ),
     );

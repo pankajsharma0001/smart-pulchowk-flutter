@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
-import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/models/chat.dart';
 import 'package:smart_pulchowk/core/models/classroom.dart';
 import 'package:smart_pulchowk/core/models/notification.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
+import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http_parser/http_parser.dart';
@@ -1552,5 +1552,42 @@ class ApiService {
       debugPrint('Error fetching submissions: $e');
     }
     return [];
+  }
+
+  /// Get all assignments published by the teacher.
+  Future<List<Assignment>> getTeacherAssignments({
+    bool forceRefresh = false,
+  }) async {
+    return await _cachedFetch<List<Assignment>>(
+          key: 'cls_teacher_all_assignments',
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            // First, try getting them from subjects (most common case)
+            final subjects = await getTeacherSubjects(
+              forceRefresh: forceRefresh,
+            );
+            final nested = subjects
+                .expand((s) => s.assignments ?? <Assignment>[])
+                .toList();
+
+            // If we found assignments nested, return them
+            if (nested.isNotEmpty) return nested;
+
+            // Fallback: Try a direct assignments endpoint if nested fetch failed
+            final response = await _authGet(AppConstants.classroomAssignments);
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true && json['assignments'] != null) {
+                return json['assignments'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
+              .map((e) => Assignment.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        ) ??
+        [];
   }
 }
