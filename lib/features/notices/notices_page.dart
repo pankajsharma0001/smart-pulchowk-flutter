@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
@@ -5,6 +6,9 @@ import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/models/notice.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
+import 'package:smart_pulchowk/core/widgets/staggered_scale_fade.dart';
+import 'package:smart_pulchowk/core/widgets/pdf_viewer.dart';
+import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class NoticesPage extends StatefulWidget {
@@ -16,46 +20,87 @@ class NoticesPage extends StatefulWidget {
 
 class _NoticesPageState extends State<NoticesPage> {
   final ApiService _api = ApiService();
+  final ScrollController _scrollController = ScrollController();
+  final ScrollController _categoryScrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _offset = 0;
+  static const int _limit = 15;
+
   List<Notice> _notices = [];
   NoticeStats? _stats;
-
   String? _selectedCategory;
-  String _selectedLevel = 'be'; // Default to Bachelor
 
   final List<Map<String, dynamic>> _categories = [
     {'label': 'All', 'value': null, 'icon': Icons.all_inclusive_rounded},
-    {
-      'label': 'Routines',
-      'value': 'routines',
-      'icon': Icons.calendar_today_rounded,
-    },
-    {'label': 'Results', 'value': 'results', 'icon': Icons.grading_rounded},
+    {'label': 'Results', 'value': 'results', 'icon': Icons.assignment_rounded},
     {
       'label': 'Forms',
       'value': 'application_forms',
-      'icon': Icons.assignment_rounded,
+      'icon': Icons.description_rounded,
     },
     {
-      'label': 'Exam Centers',
+      'label': 'Centers',
       'value': 'exam_centers',
-      'icon': Icons.place_rounded,
+      'icon': Icons.location_on_rounded,
     },
+    {'label': 'General', 'value': 'general', 'icon': Icons.info_rounded},
   ];
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _categoryScrollController.dispose();
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _hasMore &&
+        !_isLoading) {
+      _loadMore();
+    }
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _loadData();
+    });
   }
 
   Future<void> _loadData({bool forceRefresh = false}) async {
-    setState(() => _isLoading = true);
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _offset = 0;
+      _hasMore = true;
+    });
+
     try {
       final results = await Future.wait([
         _api.getNotices(
           category: _selectedCategory,
-          level: _selectedLevel,
+          search: _searchController.text.trim().isEmpty
+              ? null
+              : _searchController.text.trim(),
+          limit: _limit,
+          offset: 0,
           forceRefresh: forceRefresh,
         ),
         _api.getNoticeStats(forceRefresh: forceRefresh),
@@ -66,11 +111,42 @@ class _NoticesPageState extends State<NoticesPage> {
           _notices = results[0] as List<Notice>;
           _stats = results[1] as NoticeStats?;
           _isLoading = false;
+          _offset = _notices.length;
+          _hasMore = _notices.length >= _limit;
         });
       }
     } catch (e) {
       debugPrint('Error loading notices: $e');
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final newNotices = await _api.getNotices(
+        category: _selectedCategory,
+        search: _searchController.text.trim().isEmpty
+            ? null
+            : _searchController.text.trim(),
+        limit: _limit,
+        offset: _offset,
+      );
+
+      if (mounted) {
+        setState(() {
+          _notices.addAll(newNotices);
+          _offset += newNotices.length;
+          _isLoadingMore = false;
+          _hasMore = newNotices.length >= _limit;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading more notices: $e');
+      if (mounted) setState(() => _isLoadingMore = false);
     }
   }
 
@@ -98,10 +174,11 @@ class _NoticesPageState extends State<NoticesPage> {
       ),
       body: Column(
         children: [
+          _buildSearchBar(isDark),
           _buildFilters(isDark),
           if (_stats != null && _stats!.newCount > 0)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
@@ -139,114 +216,149 @@ class _NoticesPageState extends State<NoticesPage> {
     );
   }
 
+  Widget _buildSearchBar(bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : Colors.black.withValues(alpha: 0.03),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDark
+                ? Colors.white10
+                : Colors.black.withValues(alpha: 0.05),
+          ),
+        ),
+        child: TextField(
+          controller: _searchController,
+          onChanged: _onSearchChanged,
+          style: AppTextStyles.bodyMedium,
+          decoration: InputDecoration(
+            hintText: 'Search notices...',
+            hintStyle: AppTextStyles.bodyMedium.copyWith(
+              color: AppColors.textMuted,
+            ),
+            prefixIcon: Icon(
+              Icons.search_rounded,
+              size: 20,
+              color: AppColors.textMuted,
+            ),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 18),
+                    onPressed: () {
+                      _searchController.clear();
+                      _loadData();
+                    },
+                  )
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFilters(bool isDark) {
     return Column(
       children: [
-        // Level Switch (BE / MSc)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            children: [
-              _buildLevelChip('BE', 'be', isDark),
-              const SizedBox(width: 8),
-              _buildLevelChip('MSc', 'msc', isDark),
-            ],
-          ),
-        ),
         // Categories horizontal scroll
         SizedBox(
-          height: 50,
+          height: 44,
           child: ListView.builder(
+            controller: _categoryScrollController,
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
             itemCount: _categories.length,
             itemBuilder: (context, index) {
               final cat = _categories[index];
               final isSelected = _selectedCategory == cat['value'];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                child: ChoiceChip(
-                  label: Text(cat['label']),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      haptics.selectionClick();
-                      setState(() {
-                        _selectedCategory = cat['value'];
-                      });
-                      _loadData();
-                    }
-                  },
-                  avatar: Icon(
-                    cat['icon'],
-                    size: 16,
-                    color: isSelected
-                        ? Colors.white
-                        : (isDark ? Colors.white70 : Colors.black87),
-                  ),
-                  selectedColor: AppColors.primary,
-                  backgroundColor: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.black.withValues(alpha: 0.05),
-                  labelStyle: AppTextStyles.labelSmall.copyWith(
-                    color: isSelected
-                        ? Colors.white
-                        : (isDark ? Colors.white : Colors.black87),
-                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  side: BorderSide.none,
-                ),
+
+              // Determine count
+              String countSuffix = '';
+              if (_stats != null) {
+                if (cat['value'] == null && _stats!.total > 0) {
+                  countSuffix = ' (${_stats!.total})';
+                } else if (cat['value'] == 'results' && _stats!.results > 0) {
+                  countSuffix = ' (${_stats!.results})';
+                } else if (cat['value'] == 'application_forms' &&
+                    _stats!.applicationForms > 0) {
+                  countSuffix = ' (${_stats!.applicationForms})';
+                } else if (cat['value'] == 'exam_centers' &&
+                    _stats!.examCenters > 0) {
+                  countSuffix = ' (${_stats!.examCenters})';
+                } else if (cat['value'] == 'general' && _stats!.general > 0) {
+                  countSuffix = ' (${_stats!.general})';
+                }
+              }
+
+              return Builder(
+                builder: (BuildContext itemContext) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: ChoiceChip(
+                      label: Text('${cat['label']}$countSuffix'),
+                      selected: isSelected,
+                      showCheckmark: false,
+                      onSelected: (selected) {
+                        if (selected) {
+                          haptics.selectionClick();
+                          setState(() {
+                            _selectedCategory = cat['value'];
+                          });
+                          _loadData();
+
+                          // Auto-scroll to ensure the chip is visible
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (itemContext.mounted) {
+                              Scrollable.ensureVisible(
+                                itemContext,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                                alignment: 0.5,
+                              );
+                            }
+                          });
+                        }
+                      },
+                      avatar: Icon(
+                        cat['icon'],
+                        size: 16,
+                        color: isSelected
+                            ? Colors.white
+                            : (isDark ? Colors.white70 : Colors.black87),
+                      ),
+                      selectedColor: AppColors.primary,
+                      backgroundColor: isDark
+                          ? Colors.white.withValues(alpha: 0.05)
+                          : Colors.black.withValues(alpha: 0.05),
+                      labelStyle: AppTextStyles.labelSmall.copyWith(
+                        color: isSelected
+                            ? Colors.white
+                            : (isDark ? Colors.white : Colors.black87),
+                        fontWeight: isSelected
+                            ? FontWeight.w800
+                            : FontWeight.w600,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      side: BorderSide.none,
+                    ),
+                  );
+                },
               );
             },
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
       ],
-    );
-  }
-
-  Widget _buildLevelChip(String label, String value, bool isDark) {
-    final isSelected = _selectedLevel == value;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          if (!isSelected) {
-            haptics.selectionClick();
-            setState(() => _selectedLevel = value);
-            _loadData();
-          }
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.primary.withValues(alpha: 0.15)
-                : (isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.black.withValues(alpha: 0.03)),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? AppColors.primary : Colors.transparent,
-              width: 1.5,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: AppTextStyles.labelMedium.copyWith(
-                color: isSelected
-                    ? AppColors.primary
-                    : (isDark ? Colors.white70 : Colors.black54),
-                fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -269,38 +381,62 @@ class _NoticesPageState extends State<NoticesPage> {
 
   Widget _buildContent(bool isDark) {
     if (_notices.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.notifications_off_rounded,
-              size: 64,
-              color: AppColors.textMuted.withValues(alpha: 0.4),
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.notifications_off_rounded,
+                  size: 64,
+                  color: AppColors.textMuted.withValues(alpha: 0.4),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                Text(
+                  'No notices found',
+                  style: AppTextStyles.h4.copyWith(color: AppColors.textMuted),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+                Text(
+                  'Try changing your filters or refresh.',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textMuted,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'No notices found',
-              style: AppTextStyles.h4.copyWith(color: AppColors.textMuted),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Try changing your filters or refresh.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textMuted,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
 
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
-      itemCount: _notices.length,
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: _notices.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == _notices.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
         final notice = _notices[index];
-        return _NoticeCard(notice: notice, isDark: isDark);
+        return StaggeredScaleFade(
+          key: ValueKey('notice_${notice.id}'),
+          index: index,
+          child: _NoticeCard(notice: notice, isDark: isDark),
+        );
       },
     );
   }
@@ -312,11 +448,38 @@ class _NoticeCard extends StatelessWidget {
 
   const _NoticeCard({required this.notice, required this.isDark});
 
-  Future<void> _launchUrl(String? url) async {
+  void _handleAttachmentView(BuildContext context) {
+    if (notice.attachmentUrl == null || notice.attachmentUrl!.isEmpty) return;
+
+    haptics.lightImpact();
+
+    if (notice.isPdf) {
+      Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (context) =>
+              CustomPdfViewer(url: notice.attachmentUrl!, title: notice.title),
+        ),
+      );
+    } else if (notice.isImage) {
+      Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (context) =>
+              FullScreenImageViewer(imageUrls: [notice.attachmentUrl!]),
+        ),
+      );
+    } else {
+      // Fallback for unknown file types
+      _launchExternalUrl(notice.attachmentUrl);
+    }
+  }
+
+  Future<void> _launchExternalUrl(String? url) async {
     if (url == null || url.isEmpty) return;
-    final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
+    try {
+      final uri = Uri.parse(url.trim());
       await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('Could not launch $url: $e');
     }
   }
 
@@ -344,7 +507,7 @@ class _NoticeCard extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _handleTap(context),
+          onTap: () => _handleAttachmentView(context),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -366,13 +529,38 @@ class _NoticeCard extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            notice.categoryDisplay,
-                            style: AppTextStyles.labelSmall.copyWith(
-                              color: notice.color,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5,
-                            ),
+                          Row(
+                            children: [
+                              Text(
+                                notice.categoryDisplay,
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: notice.color,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              if (notice.isNew) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF10B981),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    'NEW',
+                                    style: AppTextStyles.labelSmall.copyWith(
+                                      color: Colors.white,
+                                      fontSize: 8,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                           Text(
                             date,
@@ -419,9 +607,14 @@ class _NoticeCard extends StatelessWidget {
                     children: [
                       _buildActionButton(
                         context,
-                        icon: Icons.description_rounded,
-                        label: 'View Attachment',
-                        onTap: () => _launchUrl(notice.attachmentUrl),
+                        icon: notice.isPdf
+                            ? Icons.picture_as_pdf_rounded
+                            : (notice.isImage
+                                  ? Icons.image_rounded
+                                  : Icons.description_rounded),
+                        label:
+                            'View Attachment ${notice.isPdf ? "[PDF]" : (notice.isImage ? "[IMG]" : "")}',
+                        onTap: () => _handleAttachmentView(context),
                         isPrimary: true,
                       ),
                       if (notice.sourceUrl != null) ...[
@@ -430,7 +623,7 @@ class _NoticeCard extends StatelessWidget {
                           context,
                           icon: Icons.launch_rounded,
                           label: 'Source',
-                          onTap: () => _launchUrl(notice.sourceUrl),
+                          onTap: () => _launchExternalUrl(notice.sourceUrl),
                         ),
                       ],
                     ],
@@ -480,11 +673,15 @@ class _NoticeCard extends StatelessWidget {
                 color: isPrimary ? AppColors.primary : AppColors.textMuted,
               ),
               const SizedBox(width: 6),
-              Text(
-                label,
-                style: AppTextStyles.labelSmall.copyWith(
-                  color: isPrimary ? AppColors.primary : AppColors.textMuted,
-                  fontWeight: FontWeight.w700,
+              Flexible(
+                child: Text(
+                  label,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: isPrimary ? AppColors.primary : AppColors.textMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -492,14 +689,5 @@ class _NoticeCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  void _handleTap(BuildContext context) {
-    haptics.lightImpact();
-    if (notice.attachmentUrl != null) {
-      _launchUrl(notice.attachmentUrl);
-    } else if (notice.sourceUrl != null) {
-      _launchUrl(notice.sourceUrl);
-    }
   }
 }

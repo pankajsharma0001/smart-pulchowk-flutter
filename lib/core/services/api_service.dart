@@ -1598,15 +1598,21 @@ class ApiService {
         [];
   }
 
-  /// Get all notices (with optional filtering)
+  /// Get all notices (with optional filtering and pagination)
   Future<List<Notice>> getNotices({
     String? category,
     String? level,
+    String? search,
+    int? limit,
+    int? offset,
     bool forceRefresh = false,
   }) async {
     final queryParams = <String, String>{};
     if (category != null) queryParams['category'] = category;
     if (level != null) queryParams['level'] = level;
+    if (search != null) queryParams['search'] = search;
+    if (limit != null) queryParams['limit'] = limit.toString();
+    if (offset != null) queryParams['offset'] = offset.toString();
 
     final queryString = queryParams.isNotEmpty
         ? '?${Uri(queryParameters: queryParams).query}'

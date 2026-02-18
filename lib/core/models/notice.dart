@@ -56,15 +56,13 @@ class Notice {
   IconData get icon {
     switch (category.toLowerCase()) {
       case 'results':
-        return Icons.grading_rounded;
-      case 'application_forms':
         return Icons.assignment_rounded;
+      case 'application_forms':
+        return Icons.description_rounded;
       case 'exam_centers':
-        return Icons.place_rounded;
-      case 'routines':
-        return Icons.calendar_today_rounded;
+        return Icons.location_on_rounded;
       default:
-        return Icons.notifications_active_rounded;
+        return Icons.info_rounded;
     }
   }
 
@@ -76,8 +74,6 @@ class Notice {
         return const Color(0xFF6366F1); // Indigo
       case 'exam_centers':
         return const Color(0xFFF59E0B); // Amber
-      case 'routines':
-        return const Color(0xFFEC4899); // Pink
       default:
         return const Color(0xFF8B5CF6); // Violet
     }
@@ -88,14 +84,32 @@ class Notice {
       case 'results':
         return 'Results';
       case 'application_forms':
-        return 'Application Forms';
+        return 'Forms';
       case 'exam_centers':
-        return 'Exam Centers';
-      case 'routines':
-        return 'Routines';
+        return 'Centers';
       default:
         return 'General';
     }
+  }
+
+  bool get isNew {
+    final now = DateTime.now();
+    final difference = now.difference(createdAt);
+    return difference.inDays <= 7;
+  }
+
+  bool get isPdf {
+    if (attachmentUrl == null) return false;
+    return attachmentUrl!.toLowerCase().contains('.pdf');
+  }
+
+  bool get isImage {
+    if (attachmentUrl == null) return false;
+    final url = attachmentUrl!.toLowerCase();
+    return url.contains('.jpg') ||
+        url.contains('.jpeg') ||
+        url.contains('.png') ||
+        url.contains('.webp');
   }
 }
 
@@ -106,6 +120,10 @@ class NoticeStats {
   final int mscResults;
   final int beRoutines;
   final int mscRoutines;
+  final int results;
+  final int applicationForms;
+  final int examCenters;
+  final int general;
 
   NoticeStats({
     required this.total,
@@ -114,6 +132,10 @@ class NoticeStats {
     required this.mscResults,
     required this.beRoutines,
     required this.mscRoutines,
+    required this.results,
+    required this.applicationForms,
+    required this.examCenters,
+    required this.general,
   });
 
   factory NoticeStats.fromJson(Map<String, dynamic> json) {
@@ -124,6 +146,10 @@ class NoticeStats {
       mscResults: json['mscResults'] as int? ?? 0,
       beRoutines: json['beRoutines'] as int? ?? 0,
       mscRoutines: json['mscRoutines'] as int? ?? 0,
+      results: json['results'] as int? ?? 0,
+      applicationForms: json['applicationForms'] as int? ?? 0,
+      examCenters: json['examCenters'] as int? ?? 0,
+      general: json['general'] as int? ?? 0,
     );
   }
 
@@ -134,5 +160,9 @@ class NoticeStats {
     'mscResults': mscResults,
     'beRoutines': beRoutines,
     'mscRoutines': mscRoutines,
+    'results': results,
+    'applicationForms': applicationForms,
+    'examCenters': examCenters,
+    'general': general,
   };
 }

@@ -21,16 +21,23 @@ class _CustomPdfViewerState extends State<CustomPdfViewer> {
   PdfController? _pdfController;
   bool _isLoading = true;
   String? _errorMessage;
+  bool _isUiVisible = true;
 
   @override
   void initState() {
     super.initState();
     _loadPdf();
-    // Hide status and navigation bars for immersive viewing
-    // Using a slight delay to ensure the route transition is underway
-    Future.delayed(const Duration(milliseconds: 100), () {
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    });
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  }
+
+  @override
+  void dispose() {
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: SystemUiOverlay.values,
+    );
+    _pdfController?.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPdf() async {
@@ -67,120 +74,118 @@ class _CustomPdfViewerState extends State<CustomPdfViewer> {
   }
 
   @override
-  void dispose() {
-    _pdfController?.dispose();
-    // Restore status and navigation bars
-    SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.manual,
-      overlays: SystemUiOverlay.values,
-    );
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // PDF Content
-          if (_isLoading)
-            const Center(child: CircularProgressIndicator(color: Colors.white))
-          else if (_errorMessage != null)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                child: Text(
-                  _errorMessage!,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: Colors.white70,
+      body: GestureDetector(
+        onTap: () => setState(() => _isUiVisible = !_isUiVisible),
+        child: Stack(
+          children: [
+            // PDF Content
+            if (_isLoading)
+              const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              )
+            else if (_errorMessage != null)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xl),
+                  child: Text(
+                    _errorMessage!,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: Colors.white70,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
                 ),
+              )
+            else if (_pdfController != null)
+              PdfView(
+                controller: _pdfController!,
+                scrollDirection: Axis.vertical,
               ),
-            )
-          else if (_pdfController != null)
-            PdfView(
-              controller: _pdfController!,
-              scrollDirection: Axis.vertical,
-            ),
 
-          // Header
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 10,
-            left: 20,
-            right: 20,
-            child: Row(
-              children: [
-                InteractiveWrapper(
-                  onTap: () => Navigator.pop(context),
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.close_rounded, color: Colors.white),
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.5),
+            // Header (Back & Title)
+            if (_isUiVisible)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 10,
+                left: 20,
+                right: 20,
+                child: Row(
+                  children: [
+                    InteractiveWrapper(
+                      onTap: () => Navigator.pop(context),
                       borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      widget.title,
-                      style: AppTextStyles.labelMedium.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.close_rounded,
+                          color: Colors.white,
+                        ),
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Page Number Indicator
-          if (!_isLoading && _pdfController != null)
-            Positioned(
-              bottom: 40,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: PdfPageNumber(
-                  controller: _pdfController!,
-                  builder: (context, loadingState, page, pagesCount) =>
-                      Container(
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
+                          horizontal: 16,
+                          vertical: 8,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          '$page / $pagesCount',
-                          style: const TextStyle(
+                          widget.title,
+                          style: AppTextStyles.labelMedium.copyWith(
                             color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
                           ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-        ],
+
+            // Page Number Indicator
+            if (_isUiVisible && !_isLoading && _pdfController != null)
+              Positioned(
+                bottom: 40,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: PdfPageNumber(
+                    controller: _pdfController!,
+                    builder: (context, loadingState, page, pagesCount) =>
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            '$page / $pagesCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
