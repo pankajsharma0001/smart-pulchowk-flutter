@@ -7,6 +7,8 @@ import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
+import 'package:smart_pulchowk/core/widgets/pdf_viewer.dart';
 
 class ClassroomPage extends StatefulWidget {
   final String userRole;
@@ -1376,6 +1378,44 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage>
     }
   }
 
+  Future<void> _viewFile(String url, {String? title}) async {
+    final lowerUrl = url.toLowerCase();
+    final isPdf = lowerUrl.endsWith('.pdf') || lowerUrl.contains('pdf');
+    final isImage =
+        lowerUrl.endsWith('.jpg') ||
+        lowerUrl.endsWith('.jpeg') ||
+        lowerUrl.endsWith('.png') ||
+        lowerUrl.endsWith('.webp') ||
+        lowerUrl.contains('image');
+
+    if (isImage) {
+      Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (context) => FullScreenImageViewer(imageUrls: [url]),
+        ),
+      );
+    } else if (isPdf) {
+      Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (context) =>
+              CustomPdfViewer(url: url, title: title ?? 'PDF Document'),
+        ),
+      );
+    } else {
+      // Fallback to URL launcher for unknown types
+      final uri = Uri.tryParse(url);
+      if (uri != null) {
+        final launched = await launchUrl(
+          uri,
+          mode: LaunchMode.inAppBrowserView,
+        );
+        if (!launched) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        }
+      }
+    }
+  }
+
   Future<void> _addSubject() async {
     if (_selectedAvailableSubjectId == null) return;
     setState(() {
@@ -2155,9 +2195,6 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage>
               padding: const EdgeInsets.all(AppSpacing.sm),
               child: Column(
                 children: subject.assignments!.map((assignment) {
-                  final isLoading = _submissionsLoading[assignment.id] == true;
-                  final submissions = _submissionsMap[assignment.id];
-                  final isExpanded = submissions != null;
                   final isClasswork = assignment.type == 'classwork';
 
                   return Container(
@@ -2169,9 +2206,7 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage>
                           : const Color(0xFFF8FAFC),
                       borderRadius: AppRadius.mdAll,
                       border: Border.all(
-                        color: isExpanded
-                            ? const Color(0xFF3B82F6).withValues(alpha: 0.3)
-                            : Colors.grey.withValues(alpha: 0.1),
+                        color: Colors.grey.withValues(alpha: 0.1),
                       ),
                     ),
                     child: Column(
@@ -2223,21 +2258,6 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage>
                                   fontSize: 10,
                                 ),
                               ),
-                            const Spacer(),
-                            GestureDetector(
-                              onTap: () => _toggleSubmissions(assignment.id),
-                              child: Text(
-                                isLoading
-                                    ? 'Loading...'
-                                    : isExpanded
-                                    ? 'Hide'
-                                    : 'View',
-                                style: AppTextStyles.caption.copyWith(
-                                  color: const Color(0xFF3B82F6),
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -2247,92 +2267,6 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage>
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-
-                        // Submissions list
-                        if (isExpanded) ...[
-                          const SizedBox(height: AppSpacing.sm),
-                          const Divider(height: 1),
-                          const SizedBox(height: AppSpacing.sm),
-                          if (submissions.isEmpty)
-                            Text(
-                              'No submissions yet.',
-                              style: AppTextStyles.caption.copyWith(
-                                color: Colors.grey,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            )
-                          else
-                            ...submissions.map(
-                              (sub) => Padding(
-                                padding: const EdgeInsets.only(
-                                  bottom: AppSpacing.sm,
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 28,
-                                      height: 28,
-                                      decoration: BoxDecoration(
-                                        color: const Color(
-                                          0xFF3B82F6,
-                                        ).withValues(alpha: 0.1),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Center(
-                                        child: Text(
-                                          (sub.studentName?.isNotEmpty == true
-                                                  ? sub.studentName![0]
-                                                  : 'S')
-                                              .toUpperCase(),
-                                          style: AppTextStyles.caption.copyWith(
-                                            color: const Color(0xFF3B82F6),
-                                            fontWeight: FontWeight.w800,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: AppSpacing.sm),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            sub.studentName ?? sub.studentId,
-                                            style: AppTextStyles.labelSmall
-                                                .copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                          ),
-                                          Text(
-                                            _formatShortDate(sub.submittedAt),
-                                            style: AppTextStyles.caption
-                                                .copyWith(
-                                                  color: Colors.grey,
-                                                  fontSize: 9,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    if (sub.fileUrl.isNotEmpty)
-                                      GestureDetector(
-                                        onTap: () {
-                                          // TODO: open file URL
-                                        },
-                                        child: Text(
-                                          'View',
-                                          style: AppTextStyles.caption.copyWith(
-                                            color: const Color(0xFF3B82F6),
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                        ],
                       ],
                     ),
                   );
@@ -2514,22 +2448,11 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage>
                       ),
                       if (sub.fileUrl.isNotEmpty)
                         GestureDetector(
-                          onTap: () async {
-                            final uri = Uri.tryParse(sub.fileUrl);
-                            if (uri == null) return;
-                            // Try in-app browser first (Chrome Custom Tab),
-                            // fall back to external app if that also fails.
-                            final launched = await launchUrl(
-                              uri,
-                              mode: LaunchMode.inAppBrowserView,
-                            );
-                            if (!launched) {
-                              await launchUrl(
-                                uri,
-                                mode: LaunchMode.externalApplication,
-                              );
-                            }
-                          },
+                          onTap: () => _viewFile(
+                            sub.fileUrl,
+                            title:
+                                '${sub.studentName ?? 'Student'}\'s Submission',
+                          ),
                           child: Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,

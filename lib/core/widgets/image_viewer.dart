@@ -27,8 +27,9 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: widget.initialIndex);
-    // Hide status and navigation bars with a slight delay to ensure the widget is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Hide status and navigation bars for immersive viewing
+    // Using a slight delay to ensure the route transition is underway
+    Future.delayed(const Duration(milliseconds: 100), () {
       SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     });
   }
