@@ -147,7 +147,7 @@ class NotificationService {
 
   /// Sync device topic subscriptions with user preferences in SharedPreferences.
   /// This ensures that new logins or app installs respect the user's settings.
-  static Future<void> syncSubscriptions() async {
+  static Future<void> syncSubscriptions([String? userRole]) async {
     try {
       final hasPerm = await hasPermission();
       if (!hasPerm) {
@@ -159,6 +159,8 @@ class NotificationService {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) return;
 
+      final role = userRole ?? await ApiService().getUserRole();
+
       final topics = {
         'events': prefs.getBool('notify_events') ?? true,
         'books': prefs.getBool('notify_books') ?? true,
@@ -168,7 +170,7 @@ class NotificationService {
         'classroom': prefs.getBool('notify_classroom') ?? true,
       };
 
-      debugPrint('Syncing FCM subscriptions: $topics');
+      debugPrint('Syncing FCM subscriptions for $role: $topics');
 
       final futures = <Future<void>>[];
       topics.forEach((topic, enabled) {
@@ -178,6 +180,13 @@ class NotificationService {
           futures.add(unsubscribeFromTopic(topic));
         }
       });
+
+      // Special handling for admin topic
+      if (role == 'admin') {
+        futures.add(subscribeToTopic('admins'));
+      } else {
+        futures.add(unsubscribeFromTopic('admins'));
+      }
 
       await Future.wait(futures);
 

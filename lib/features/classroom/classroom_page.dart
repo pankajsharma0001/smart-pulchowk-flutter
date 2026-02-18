@@ -5,6 +5,7 @@ import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/models/classroom.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
+import 'package:smart_pulchowk/features/home/main_layout.dart';
 
 class ClassroomPage extends StatefulWidget {
   final String userRole;
@@ -40,6 +41,9 @@ class _ClassroomPageState extends State<ClassroomPage>
   }
 
   Future<void> _loadData({bool forceRefresh = false}) async {
+    if (forceRefresh && mounted) {
+      MainLayout.of(context)?.refreshUserRole();
+    }
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -1248,6 +1252,9 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage> {
   }
 
   Future<void> _loadData({bool forceRefresh = false}) async {
+    if (forceRefresh && mounted) {
+      MainLayout.of(context)?.refreshUserRole();
+    }
     setState(() {
       _isLoading = true;
       _errorMessage = null;

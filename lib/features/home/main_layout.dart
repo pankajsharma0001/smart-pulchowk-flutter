@@ -10,6 +10,7 @@ import 'package:smart_pulchowk/features/notifications/notifications.dart';
 import 'package:smart_pulchowk/features/settings/settings.dart';
 import 'package:smart_pulchowk/features/marketplace/book_marketplace_page.dart';
 import 'package:smart_pulchowk/features/classroom/classroom_page.dart';
+import 'package:smart_pulchowk/core/services/notification_service.dart';
 
 // ── Placeholder pages (will be replaced as features are built) ──────────────
 class _PlaceholderPage extends StatelessWidget {
@@ -113,16 +114,59 @@ class MainLayoutState extends State<MainLayout>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _apiService.refreshUserRole().then((_) => _checkUserRole());
+      refreshUserRole();
     }
   }
 
-  Future<void> _checkUserRole() async {
-    final role = await _apiService.getUserRole();
+  /// Refetches the user role and updates the state if it has changed.
+  Future<void> refreshUserRole() async {
+    final newRole = await _apiService.getUserRole();
+    await _checkUserRole(newRole);
+  }
+
+  Future<void> _checkUserRole([String? role]) async {
+    final String oldRole = _userRole;
+    final String newRole = role ?? await _apiService.getUserRole();
+
     if (mounted) {
       setState(() {
-        _userRole = role;
+        _userRole = newRole;
       });
+
+      // If role actually changed, notify user and sync subscriptions
+      if (oldRole != newRole) {
+        debugPrint('Role changed from $oldRole to $newRole');
+        haptics.success();
+        NotificationService.syncSubscriptions(newRole);
+
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.stars_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Text(
+                    'Role updated to ${newRole.toUpperCase()}! Refreshing dashboard...',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            margin: const EdgeInsets.all(AppSpacing.md),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
     }
   }
 
