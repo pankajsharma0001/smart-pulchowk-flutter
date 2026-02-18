@@ -136,6 +136,10 @@ class MainLayoutState extends State<MainLayout>
       // If role actually changed, notify user and sync subscriptions
       if (oldRole != newRole) {
         debugPrint('Role changed from $oldRole to $newRole');
+
+        // Reset the classroom navigator key to force a clean rebuild of the tab's state
+        _navigatorKeys[2] = GlobalKey<NavigatorState>();
+
         haptics.success();
         NotificationService.syncSubscriptions(newRole);
 
@@ -239,7 +243,7 @@ class MainLayoutState extends State<MainLayout>
             title: 'Admin',
             icon: Icons.admin_panel_settings_rounded,
           );
-        } else if (_userRole == 'notice manager') {
+        } else if (_userRole == 'notice_manager') {
           return const NotificationsPage();
         }
         return ClassroomPage(userRole: _userRole);
@@ -310,6 +314,9 @@ class MainLayoutState extends State<MainLayout>
   }
 
   IconData _getCenterIcon() {
+    debugPrint(
+      'MainLayout: _selectedIndex=$_selectedIndex, _userRole=$_userRole',
+    );
     // If a submenu page is selected, show its specific icon
     switch (_selectedIndex) {
       case 2:
@@ -336,7 +343,7 @@ class MainLayoutState extends State<MainLayout>
     if (_userRole == 'admin') {
       return Icons.admin_panel_settings_rounded;
     }
-    if (_userRole == 'notice manager') {
+    if (_userRole == 'notice_manager') {
       return Icons.notifications_active_rounded;
     }
     return Icons.grid_view_rounded;

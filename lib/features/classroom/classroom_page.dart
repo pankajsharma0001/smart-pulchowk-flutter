@@ -42,7 +42,9 @@ class _ClassroomPageState extends State<ClassroomPage>
 
   Future<void> _loadData({bool forceRefresh = false}) async {
     if (forceRefresh && mounted) {
-      MainLayout.of(context)?.refreshUserRole();
+      debugPrint('ClassroomPage: Manual refresh initiated. Syncing role...');
+      await MainLayout.of(context)?.refreshUserRole();
+      if (!mounted) return;
     }
     setState(() {
       _isLoading = true;
@@ -101,6 +103,7 @@ class _ClassroomPageState extends State<ClassroomPage>
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('ClassroomPage: build with role=${widget.userRole}');
     // Teacher gets their own dashboard
     if (widget.userRole == 'teacher') {
       return const _TeacherClassroomPage();
@@ -1253,7 +1256,9 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage> {
 
   Future<void> _loadData({bool forceRefresh = false}) async {
     if (forceRefresh && mounted) {
-      MainLayout.of(context)?.refreshUserRole();
+      debugPrint('ClassroomPage: Manual refresh initiated. Syncing role...');
+      await MainLayout.of(context)?.refreshUserRole();
+      if (!mounted) return;
     }
     setState(() {
       _isLoading = true;

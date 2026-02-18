@@ -5,12 +5,16 @@ import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_pulchowk/core/services/navigation_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Service to handle FCM and local notifications.
 class NotificationService {
   NotificationService._();
 
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  static final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
   static final StreamController<Map<String, dynamic>> _chatStreamController =
       StreamController<Map<String, dynamic>>.broadcast();
 
@@ -28,6 +32,32 @@ class NotificationService {
       );
       debugPrint(
         'User granted notification permission: ${settings.authorizationStatus}',
+      );
+
+      // Initialize local notifications
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const DarwinInitializationSettings initializationSettingsDarwin =
+          DarwinInitializationSettings();
+      const InitializationSettings initializationSettings =
+          InitializationSettings(
+            android: initializationSettingsAndroid,
+            iOS: initializationSettingsDarwin,
+          );
+      await _localNotifications.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: (details) {
+          if (details.payload != null) {
+            try {
+              final data = Map<String, dynamic>.from(
+                Uri.splitQueryString(details.payload!),
+              );
+              NavigationService.handleNotificationPayload(data);
+            } catch (e) {
+              debugPrint('Error handling local notification click: $e');
+            }
+          }
+        },
       );
 
       // 1. Listen to background notification clicks (App in background)
@@ -53,6 +83,32 @@ class NotificationService {
         if (message.notification != null) {
           debugPrint(
             'Message also contained a notification: ${message.notification}',
+          );
+
+          // Show local notification for foreground visibility in status bar
+          _localNotifications.show(
+            message.hashCode,
+            message.notification?.title,
+            message.notification?.body,
+            const NotificationDetails(
+              android: AndroidNotificationDetails(
+                'high_importance_channel',
+                'High Importance Notifications',
+                importance: Importance.max,
+                priority: Priority.high,
+                showWhen: true,
+              ),
+              iOS: DarwinNotificationDetails(
+                presentAlert: true,
+                presentBadge: true,
+                presentSound: true,
+              ),
+            ),
+            payload: Uri(
+              queryParameters: message.data.map(
+                (k, v) => MapEntry(k, v.toString()),
+              ),
+            ).query,
           );
         }
 
