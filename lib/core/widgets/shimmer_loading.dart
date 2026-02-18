@@ -25,8 +25,8 @@ class Skeleton extends StatelessWidget {
       margin: margin,
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.1)
-            : Colors.black.withValues(alpha: 0.05),
+            ? Colors.white.withValues(alpha: 0.25)
+            : Colors.black.withValues(alpha: 0.20),
         borderRadius: BorderRadius.circular(borderRadius),
       ),
     );
@@ -44,11 +44,11 @@ class ShimmerWrapper extends StatelessWidget {
 
     return Shimmer.fromColors(
       baseColor: isDark
-          ? Colors.white.withValues(alpha: 0.05)
-          : Colors.black.withValues(alpha: 0.05),
+          ? Colors.white.withValues(alpha: 0.15)
+          : Colors.black.withValues(alpha: 0.15),
       highlightColor: isDark
-          ? Colors.white.withValues(alpha: 0.1)
-          : Colors.black.withValues(alpha: 0.02),
+          ? Colors.white.withValues(alpha: 0.25)
+          : Colors.black.withValues(alpha: 0.10),
       period: const Duration(milliseconds: 1500),
       child: child,
     );

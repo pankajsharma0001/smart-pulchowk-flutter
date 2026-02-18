@@ -1344,25 +1344,23 @@ class ApiService {
   Future<Map<String, dynamic>> getMyClassroomSubjects({
     bool forceRefresh = false,
   }) async {
-    try {
-      final key = AppConstants.cacheClassroomMySubjects;
-      if (!forceRefresh) {
-        final cached = getCached<Map<String, dynamic>>(key);
-        if (cached != null) return cached;
-      }
-
-      final response = await _authGet(AppConstants.classroomMySubjects);
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
-        if (json['success'] == true) {
-          _setCache(key, json, AppConstants.cacheExpiry);
-          return json;
-        }
-      }
-      return {'success': false, 'message': 'Failed to fetch subjects'};
-    } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
-    }
+    return await _cachedFetch<Map<String, dynamic>>(
+          key: AppConstants.cacheClassroomMySubjects,
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet(AppConstants.classroomMySubjects);
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true) {
+                return json;
+              }
+            }
+            return null;
+          },
+          parser: (data) => data as Map<String, dynamic>,
+        ) ??
+        {'success': false, 'message': 'Failed to fetch subjects'};
   }
 
   /// Update or create student profile.
@@ -1534,24 +1532,30 @@ class ApiService {
 
   /// Get all submissions for an assignment (teacher view).
   Future<List<TeacherSubmission>> getAssignmentSubmissions(
-    int assignmentId,
-  ) async {
-    try {
-      final response = await _authGet(
-        '/classroom/assignments/$assignmentId/submissions',
-      );
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
-        if (json['success'] == true && json['submissions'] != null) {
-          return (json['submissions'] as List)
+    int assignmentId, {
+    bool forceRefresh = false,
+  }) async {
+    return await _cachedFetch<List<TeacherSubmission>>(
+          key: 'cls_submissions_$assignmentId',
+          ttl: const Duration(minutes: 2), // Frequent updates needed
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet(
+              '/classroom/assignments/$assignmentId/submissions',
+            );
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true && json['submissions'] != null) {
+                return json['submissions'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
               .map((e) => TeacherSubmission.fromJson(e as Map<String, dynamic>))
-              .toList();
-        }
-      }
-    } catch (e) {
-      debugPrint('Error fetching submissions: $e');
-    }
-    return [];
+              .toList(),
+        ) ??
+        [];
   }
 
   /// Get all assignments published by the teacher.
@@ -1571,8 +1575,10 @@ class ApiService {
                 .expand((s) => s.assignments ?? <Assignment>[])
                 .toList();
 
-            // If we found assignments nested, return them
-            if (nested.isNotEmpty) return nested;
+            // If we found assignments nested, return them as raw maps for the parser/cache
+            if (nested.isNotEmpty) {
+              return nested.map((a) => a.toJson()).toList();
+            }
 
             // Fallback: Try a direct assignments endpoint if nested fetch failed
             final response = await _authGet(AppConstants.classroomAssignments);

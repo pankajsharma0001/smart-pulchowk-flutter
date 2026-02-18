@@ -600,34 +600,38 @@ class _ClassroomPageState extends State<ClassroomPage>
 
   Widget _buildShimmerBody() {
     return ShimmerWrapper(
-      child: Column(
+      child: ListView(
+        padding: const EdgeInsets.all(AppSpacing.base),
+        physics: const NeverScrollableScrollPhysics(),
         children: [
-          Padding(
-            padding: const EdgeInsets.all(AppSpacing.base),
-            child: GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: AppSpacing.sm,
-              crossAxisSpacing: AppSpacing.sm,
-              childAspectRatio: 2.2,
-              children: List.generate(
-                4,
-                (_) => const Skeleton(borderRadius: AppRadius.md),
-              ),
+          // Header shimmer title area already handled by appBar header or similar depends on implementation
+          const Skeleton(
+            height: 24,
+            width: 150,
+            margin: EdgeInsets.only(bottom: 20),
+          ),
+
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: AppSpacing.sm,
+            crossAxisSpacing: AppSpacing.sm,
+            childAspectRatio: 2.2,
+            children: List.generate(
+              4,
+              (_) => const Skeleton(borderRadius: AppRadius.md),
             ),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.base),
-            child: Skeleton(height: 48, borderRadius: AppRadius.lg),
-          ),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.all(AppSpacing.base),
-              itemCount: 5,
-              separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-              itemBuilder: (_, _) =>
-                  const Skeleton(height: 100, borderRadius: AppRadius.lg),
+          const SizedBox(height: AppSpacing.base),
+          const Skeleton(height: 48, borderRadius: AppRadius.lg),
+          const SizedBox(height: AppSpacing.md),
+          ...List.generate(
+            3,
+            (_) => const Skeleton(
+              height: 120,
+              borderRadius: AppRadius.lg,
+              margin: EdgeInsets.only(bottom: AppSpacing.md),
             ),
           ),
         ],
@@ -1465,22 +1469,36 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage>
       return ShimmerWrapper(
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.base),
+          physics: const NeverScrollableScrollPhysics(),
           children: [
+            _buildPageHeader(context, 'Teacher'),
+            const SizedBox(height: AppSpacing.md),
+            // Stats grid shimmer
             GridView.count(
-              crossAxisCount: 4,
+              crossAxisCount: 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               crossAxisSpacing: AppSpacing.sm,
-              childAspectRatio: 0.9,
+              mainAxisSpacing: AppSpacing.sm,
+              childAspectRatio: 2.5,
               children: List.generate(
                 4,
                 (_) => const Skeleton(borderRadius: AppRadius.md),
               ),
             ),
-            const SizedBox(height: AppSpacing.base),
-            const Skeleton(height: 50, borderRadius: AppRadius.md),
-            const SizedBox(height: AppSpacing.base),
-            const Skeleton(height: 100, borderRadius: AppRadius.md),
+            const SizedBox(height: AppSpacing.lg),
+            // Tab bar shimmer
+            const Skeleton(height: 50, borderRadius: AppRadius.lg),
+            const SizedBox(height: AppSpacing.lg),
+            // Content shimmer
+            ...List.generate(
+              3,
+              (_) => const Skeleton(
+                height: 150,
+                borderRadius: AppRadius.lg,
+                margin: EdgeInsets.only(bottom: AppSpacing.md),
+              ),
+            ),
           ],
         ),
       );

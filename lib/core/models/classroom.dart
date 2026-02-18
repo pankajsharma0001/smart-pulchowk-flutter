@@ -192,6 +192,18 @@ class Assignment {
     if (dueAt == null) return false;
     return DateTime.now().isAfter(dueAt!) && submission == null;
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'subjectId': subjectId,
+    'teacherId': teacherId,
+    'title': title,
+    'description': description,
+    'type': type,
+    'dueAt': dueAt?.toIso8601String(),
+    'createdAt': createdAt.toIso8601String(),
+    'submission': submission?.toJson(),
+  };
 }
 
 /// Submission model - student's work for an assignment
@@ -233,6 +245,18 @@ class Submission {
       fileSize: json['fileSize'] as int?,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'assignmentId': assignmentId,
+    'studentId': studentId,
+    'comment': comment,
+    'fileUrl': fileUrl,
+    'status': status,
+    'submittedAt': submittedAt.toIso8601String(),
+    'fileName': fileName,
+    'fileSize': fileSize,
+  };
 }
 
 /// Teacher submission - includes student info for teacher's view
@@ -275,4 +299,16 @@ class TeacherSubmission {
       fileName: json['fileName'] as String?,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'assignmentId': assignmentId,
+    'studentId': studentId,
+    'studentName': studentName,
+    'comment': comment,
+    'fileUrl': fileUrl,
+    'status': status,
+    'submittedAt': submittedAt.toIso8601String(),
+    'fileName': fileName,
+  };
 }
