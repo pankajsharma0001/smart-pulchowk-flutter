@@ -9,6 +9,7 @@ import 'package:smart_pulchowk/features/home/home_page.dart';
 import 'package:smart_pulchowk/features/notifications/notifications.dart';
 import 'package:smart_pulchowk/features/settings/settings.dart';
 import 'package:smart_pulchowk/features/marketplace/book_marketplace_page.dart';
+import 'package:smart_pulchowk/features/classroom/classroom_page.dart';
 
 // ── Placeholder pages (will be replaced as features are built) ──────────────
 class _PlaceholderPage extends StatelessWidget {
@@ -197,10 +198,7 @@ class MainLayoutState extends State<MainLayout>
         } else if (_userRole == 'notice manager') {
           return const NotificationsPage();
         }
-        return const _PlaceholderPage(
-          title: 'Classroom',
-          icon: Icons.grid_view_rounded,
-        );
+        return const ClassroomPage();
       case 3:
         return const BookMarketplacePage();
       case 4:

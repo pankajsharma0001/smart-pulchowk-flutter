@@ -234,6 +234,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
         'Price: Rs. ${_book.price}\n'
         'Condition: ${_book.condition.name}\n\n'
         'Download the app to see more!';
+    // ignore: deprecated_member_use
     Share.share(text, subject: 'Book Listing: ${_book.title}');
   }
 

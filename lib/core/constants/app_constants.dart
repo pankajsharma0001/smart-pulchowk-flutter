@@ -25,6 +25,12 @@ class AppConstants {
   static const String trustReports = '/books/trust/reports';
   static const String trustMyReports = '/books/trust/reports/my';
 
+  // ── Classroom Endpoints ────────────────────────────────────────────────────
+  static const String classroomFaculties = '/classroom/faculties';
+  static const String classroomSubjects = '/classroom/subjects';
+  static const String classroomMySubjects = '/classroom/me/subjects';
+  static const String classroomAssignments = '/classroom/assignments';
+
   // ── Storage Keys ──────────────────────────────────────────────────────────
   static const String dbUserIdKey = 'db_user_id';
   static const String userRoleKey = 'user_role';
@@ -59,4 +65,10 @@ class AppConstants {
   static const String cacheBookDetail = 'mkt_book_detail_';
   static const String cacheRequestStatus = 'mkt_request_status_';
   static const String cacheMessages = 'mkt_messages_';
+
+  // ── Classroom Cache Keys ───────────────────────────────────────────────
+  static const String cacheClassroomFaculties = 'cls_faculties';
+  static const String cacheClassroomMySubjects = 'cls_my_subjects';
+  static const String cacheClassroomSubjectDetails = 'cls_subject_';
+  static const String cacheClassroomAssignments = 'cls_assignments_';
 }

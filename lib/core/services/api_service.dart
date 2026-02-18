@@ -1278,4 +1278,114 @@ class ApiService {
       return false;
     }
   }
+
+  // ── Classroom Endpoints ──────────────────────────────────────────────────
+
+  /// Get list of all faculties.
+  Future<List<Faculty>> getFaculties({bool forceRefresh = false}) async {
+    return await _cachedFetch<List<Faculty>>(
+          key: AppConstants.cacheClassroomFaculties,
+          ttl: AppConstants.longCacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet(AppConstants.classroomFaculties);
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true && json['faculties'] != null) {
+                return json['faculties'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
+              .map((e) => Faculty.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        ) ??
+        [];
+  }
+
+  /// Get subjects for a faculty and optional semester.
+  Future<List<Subject>> getSubjectsByFaculty(
+    int facultyId, {
+    int? semester,
+    bool forceRefresh = false,
+  }) async {
+    final queryParams = {'facultyId': facultyId.toString()};
+    if (semester != null) queryParams['semester'] = semester.toString();
+
+    return await _cachedFetch<List<Subject>>(
+          key:
+              '${AppConstants.cacheClassroomSubjectDetails}${facultyId}_$semester',
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet(
+              AppConstants.classroomSubjects,
+              queryParams: queryParams,
+            );
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true && json['subjects'] != null) {
+                return json['subjects'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
+              .map((e) => Subject.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        ) ??
+        [];
+  }
+
+  /// Get my current subjects (based on profile).
+  Future<Map<String, dynamic>> getMyClassroomSubjects({
+    bool forceRefresh = false,
+  }) async {
+    try {
+      final key = AppConstants.cacheClassroomMySubjects;
+      if (!forceRefresh) {
+        final cached = getCached<Map<String, dynamic>>(key);
+        if (cached != null) return cached;
+      }
+
+      final response = await _authGet(AppConstants.classroomMySubjects);
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        if (json['success'] == true) {
+          _setCache(key, json, AppConstants.cacheExpiry);
+          return json;
+        }
+      }
+      return {'success': false, 'message': 'Failed to fetch subjects'};
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Update or create student profile.
+  Future<Map<String, dynamic>> upsertStudentProfile({
+    required int facultyId,
+    int? currentSemester,
+    DateTime? semesterStartDate,
+    bool? autoAdvance,
+  }) async {
+    try {
+      final body = {
+        'facultyId': facultyId,
+        'currentSemester': currentSemester,
+        'semesterStartDate': semesterStartDate?.toIso8601String(),
+        'autoAdvance': autoAdvance,
+      }..removeWhere((k, v) => v == null);
+
+      final response = await _authPost('/classroom/me', body: body);
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCache(AppConstants.cacheClassroomMySubjects);
+      }
+      return json;
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
 }

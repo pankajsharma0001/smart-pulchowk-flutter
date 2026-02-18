@@ -255,6 +255,7 @@ class AppRadius {
   static const double full = 999;
 
   // Pre-built BorderRadius instances
+  static final BorderRadius xsAll = BorderRadius.circular(xs);
   static final BorderRadius smAll = BorderRadius.circular(sm);
   static final BorderRadius mdAll = BorderRadius.circular(md);
   static final BorderRadius lgAll = BorderRadius.circular(lg);

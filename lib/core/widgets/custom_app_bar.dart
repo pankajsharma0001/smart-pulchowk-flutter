@@ -30,12 +30,18 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isHomePage;
   final AppPage? currentPage;
   final String? userRole;
+  final String? title;
+  final bool showBackButton;
+  final List<Widget>? actions;
 
   const CustomAppBar({
     super.key,
     this.isHomePage = false,
     this.currentPage,
     this.userRole,
+    this.title,
+    this.showBackButton = false,
+    this.actions,
   });
 
   @override
@@ -76,33 +82,58 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
               child: Row(
                 children: [
                   // Logo and Brand
-                  _BrandLogo(isHomePage: isHomePage),
+                  if (showBackButton)
+                    IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 20,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  if (title != null)
+                    Expanded(
+                      child: Text(
+                        title!,
+                        style: AppTextStyles.h4.copyWith(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    )
+                  else
+                    _BrandLogo(isHomePage: isHomePage),
 
-                  const Spacer(),
+                  if (title == null) const Spacer(),
 
                   // Actions
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const _ThemeToggleButton(),
-                      _SearchButton(currentPage: currentPage),
-                      _NotificationBell(
-                        isActive: currentPage == AppPage.notifications,
-                      ),
-                      if (!isSmallScreen) const SizedBox(width: AppSpacing.sm),
-                      if (isLoggedIn)
-                        _UserAvatar(
-                          photoUrl: user?.photoURL,
-                          displayName: user?.displayName,
-                          userRole: userRole,
-                        )
-                      else
-                        _SignInButton(
-                          isActive: currentPage == AppPage.login,
-                          onTap: () => _navigateToLogin(context, currentPage),
+                  if (actions != null)
+                    ...actions!
+                  else
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const _ThemeToggleButton(),
+                        _SearchButton(currentPage: currentPage),
+                        _NotificationBell(
+                          isActive: currentPage == AppPage.notifications,
                         ),
-                    ],
-                  ),
+                        if (!isSmallScreen)
+                          const SizedBox(width: AppSpacing.sm),
+                        if (isLoggedIn)
+                          _UserAvatar(
+                            photoUrl: user?.photoURL,
+                            displayName: user?.displayName,
+                            userRole: userRole,
+                          )
+                        else
+                          _SignInButton(
+                            isActive: currentPage == AppPage.login,
+                            onTap: () => _navigateToLogin(context, currentPage),
+                          ),
+                      ],
+                    ),
                 ],
               ),
             ),
