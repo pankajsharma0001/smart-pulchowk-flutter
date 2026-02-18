@@ -24,7 +24,7 @@ class AuthWrapper extends StatelessWidget {
 
         // Authenticated → show main app
         if (snapshot.hasData && snapshot.data != null) {
-          return const MainLayout();
+          return MainLayout(key: MainLayout.mainLayoutKey);
         }
 
         // Not authenticated → login

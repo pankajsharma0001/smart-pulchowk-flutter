@@ -49,6 +49,10 @@ class MainLayout extends StatefulWidget {
   final int initialIndex;
   const MainLayout({super.key, this.initialIndex = 0});
 
+  /// Global key to access MainLayoutState from anywhere (e.g., NotificationService)
+  static final GlobalKey<MainLayoutState> mainLayoutKey =
+      GlobalKey<MainLayoutState>();
+
   /// Access the [MainLayoutState] from a descendant widget.
   static MainLayoutState? of(BuildContext context) =>
       context.findAncestorStateOfType<MainLayoutState>();
@@ -160,6 +164,19 @@ class MainLayoutState extends State<MainLayout>
       setState(() {
         _selectedIndex = index;
         tabIndexNotifier.value = index;
+      });
+    }
+  }
+
+  /// Navigate to a specific tab and optionally push a sub-page.
+  void navigateToTab(int index, {Widget? subPage}) {
+    setSelectedIndex(index);
+    if (subPage != null) {
+      // Short delay to allow IndexedStack to switch if needed
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _navigatorKeys[index].currentState?.push(
+          MaterialPageRoute(builder: (_) => subPage),
+        );
       });
     }
   }
