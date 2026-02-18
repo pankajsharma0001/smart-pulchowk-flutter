@@ -1211,8 +1211,10 @@ class _TeacherClassroomPage extends StatefulWidget {
   State<_TeacherClassroomPage> createState() => _TeacherClassroomPageState();
 }
 
-class _TeacherClassroomPageState extends State<_TeacherClassroomPage> {
+class _TeacherClassroomPageState extends State<_TeacherClassroomPage>
+    with TickerProviderStateMixin {
   final ApiService _apiService = ApiService();
+  late TabController _tabController;
 
   // Data
   List<Subject> _teacherSubjects = [];
@@ -1244,11 +1246,13 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 3, vsync: this);
     _loadData();
   }
 
   @override
   void dispose() {
+    _tabController.dispose();
     _titleController.dispose();
     _descController.dispose();
     super.dispose();
@@ -1446,394 +1450,448 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage> {
 
     return RefreshIndicator(
       onRefresh: () => _loadData(forceRefresh: true),
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.base,
-          0,
-          AppSpacing.base,
-          100,
+      child: Container(
+        color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 100),
+          children: [
+            _buildPageHeader(context, 'Teacher'),
+            _buildTeacherStatsGrid(),
+            const SizedBox(height: AppSpacing.md),
+            _buildTeacherTabBar(),
+            SizedBox(
+              height: MediaQuery.of(context).size.height * 0.75,
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildPublishAssignmentTab(isDark),
+                  _buildAddSubjectTab(isDark),
+                  _buildManageSubjectsTab(isDark),
+                ],
+              ),
+            ),
+          ],
         ),
-        children: [
-          _buildPageHeader(context, 'Teacher'),
-          _buildTeacherStatsGrid(),
-          const SizedBox(height: AppSpacing.base),
+      ),
+    );
+  }
 
-          // ── Publish Assignment ──
-          _buildSectionCard(
-            isDark: isDark,
-            title: 'Publish Assignment',
-            subtitle: 'Assign tasks to your classes',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_createError != null)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.1),
-                      borderRadius: AppRadius.smAll,
-                      border: Border.all(
-                        color: AppColors.error.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Text(
-                      _createError!,
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.error,
-                      ),
-                    ),
-                  ),
-
-                if (_teacherSubjects.isEmpty)
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
-                      borderRadius: AppRadius.smAll,
-                    ),
-                    child: Text(
-                      'Add a subject first.',
-                      style: AppTextStyles.caption.copyWith(
-                        color: const Color(0xFFF59E0B),
-                      ),
-                    ),
-                  ),
-
-                // Subject dropdown
-                _buildLabel('Subject'),
-                _buildDropdown<int?>(
-                  value: _selectedSubjectId,
-                  hint: _teacherSubjects.isEmpty ? 'None' : 'Select',
-                  items: _teacherSubjects
-                      .map(
-                        (s) => DropdownMenuItem(
-                          value: s.id,
-                          child: Text(s.title, overflow: TextOverflow.ellipsis),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _selectedSubjectId = v),
-                  isDark: isDark,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-
-                // Type + Due Date row
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel('Type'),
-                          _buildDropdown<String>(
-                            value: _assignmentType,
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'classwork',
-                                child: Text('Classwork'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'homework',
-                                child: Text('Homework'),
-                              ),
-                            ],
-                            onChanged: (v) =>
-                                setState(() => _assignmentType = v!),
-                            isDark: isDark,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildLabel('Due Date'),
-                          InkWell(
-                            onTap: () async {
-                              final date = await showDatePicker(
-                                context: context,
-                                initialDate: DateTime.now(),
-                                firstDate: DateTime.now(),
-                                lastDate: DateTime.now().add(
-                                  const Duration(days: 365),
-                                ),
-                              );
-                              if (date != null) {
-                                setState(() => _dueAt = date);
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 10,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? const Color(0xFF0F172A)
-                                    : Colors.grey[50],
-                                borderRadius: AppRadius.smAll,
-                                border: Border.all(
-                                  color: isDark
-                                      ? const Color(0xFF334155)
-                                      : Colors.grey.shade200,
-                                ),
-                              ),
-                              child: Text(
-                                _dueAt == null
-                                    ? 'Select Date'
-                                    : _formatShortDate(_dueAt!),
-                                style: AppTextStyles.caption,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                _buildLabel('Title'),
-                _buildTextField(
-                  controller: _titleController,
-                  hint: 'Assignment Title',
-                  isDark: isDark,
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                _buildLabel('Description'),
-                _buildTextField(
-                  controller: _descController,
-                  hint: 'Assignment Description',
-                  maxLines: 3,
-                  isDark: isDark,
-                ),
-                const SizedBox(height: AppSpacing.lg),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _isCreating ? null : _createAssignment,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppRadius.mdAll,
-                      ),
-                    ),
-                    child: _isCreating
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          )
-                        : const Text('Create Assignment'),
-                  ),
-                ),
-              ],
+  Widget _buildTeacherTabBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.base),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : Colors.grey[100],
+        borderRadius: AppRadius.lgAll,
+      ),
+      child: TabBar(
+        controller: _tabController,
+        dividerColor: Colors.transparent,
+        indicatorSize: TabBarIndicatorSize.tab,
+        indicator: BoxDecoration(
+          color: isDark ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: AppRadius.mdAll,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
             ),
-          ),
-          const SizedBox(height: AppSpacing.md),
+          ],
+        ),
+        labelStyle: AppTextStyles.labelSmall.copyWith(
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.5,
+        ),
+        unselectedLabelStyle: AppTextStyles.labelSmall.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
+        labelColor: AppColors.primary,
+        unselectedLabelColor: Colors.grey,
+        onTap: (_) => haptics.lightImpact(),
+        tabs: const [
+          Tab(text: "ASSIGN"),
+          Tab(text: "ADD SUBJECT"),
+          Tab(text: "MANAGED"),
+        ],
+      ),
+    );
+  }
 
-          // ── Add Subject ──
-          _buildSectionCard(
-            isDark: isDark,
-            title: 'Add Subject',
-            subtitle: 'Assign yourself to teach',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_addSubjectError != null)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-                    padding: const EdgeInsets.all(AppSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withValues(alpha: 0.1),
-                      borderRadius: AppRadius.smAll,
-                      border: Border.all(
-                        color: AppColors.error.withValues(alpha: 0.3),
-                      ),
-                    ),
-                    child: Text(
-                      _addSubjectError!,
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.error,
-                      ),
-                    ),
-                  ),
-
-                // Faculty
-                _buildLabel('Faculty'),
-                _buildDropdown<Faculty?>(
-                  value: _selectedFaculty,
-                  hint: 'Select Faculty',
-                  items: _faculties
-                      .map(
-                        (f) => DropdownMenuItem(
-                          value: f,
-                          child: Text(f.name, overflow: TextOverflow.ellipsis),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (f) {
-                    setState(() {
-                      _selectedFaculty = f;
-                      _selectedSemester = 1;
-                      _availableSubjects = [];
-                      _selectedAvailableSubjectId = null;
-                    });
-                    _loadAvailableSubjects();
-                  },
-                  isDark: isDark,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-
-                // Semester
-                _buildLabel('Semester'),
-                _buildDropdown<int>(
-                  value: _selectedSemester,
-                  hint: 'Select Semester',
-                  items: List.generate(
-                    _selectedFaculty?.semestersCount ?? 8,
-                    (i) => DropdownMenuItem(
-                      value: i + 1,
-                      child: Text('Semester ${i + 1}'),
-                    ),
-                  ).toList(),
-                  onChanged: (v) {
-                    setState(() {
-                      _selectedSemester = v!;
-                      _availableSubjects = [];
-                      _selectedAvailableSubjectId = null;
-                    });
-                    _loadAvailableSubjects();
-                  },
-                  isDark: isDark,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-
-                // Subject
-                _buildLabel('Subject'),
-                _buildDropdown<int?>(
-                  value: _selectedAvailableSubjectId,
-                  hint: _availableSubjects.isEmpty
-                      ? 'Choose context first'
-                      : 'Select Subject',
-                  items: _availableSubjects
-                      .map(
-                        (s) => DropdownMenuItem(
-                          value: s.id,
-                          child: Text(s.title, overflow: TextOverflow.ellipsis),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) =>
-                      setState(() => _selectedAvailableSubjectId = v),
-                  isDark: isDark,
-                ),
-                const SizedBox(height: AppSpacing.md),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed:
-                        _isAddingSubject || _selectedAvailableSubjectId == null
-                        ? null
-                        : _addSubject,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isDark
-                          ? const Color(0xFF1E293B)
-                          : const Color(0xFF0F172A),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppRadius.smAll,
-                      ),
-                    ),
-                    child: Text(
-                      _isAddingSubject ? 'Adding...' : 'Add Subject',
-                      style: AppTextStyles.labelMedium.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
+  Widget _buildPublishAssignmentTab(bool isDark) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.base),
+      child: _buildSectionCard(
+        isDark: isDark,
+        title: 'Publish Assignment',
+        subtitle: 'Assign tasks to your classes',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_createError != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.1),
+                  borderRadius: AppRadius.smAll,
+                  border: Border.all(
+                    color: AppColors.error.withValues(alpha: 0.3),
                   ),
                 ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppSpacing.base),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Managed Subjects',
-                style: AppTextStyles.labelLarge.copyWith(
-                  fontWeight: FontWeight.w800,
+                child: Text(
+                  _createError!,
+                  style: AppTextStyles.caption.copyWith(color: AppColors.error),
                 ),
               ),
+
+            if (_teacherSubjects.isEmpty)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                 decoration: BoxDecoration(
-                  color: Colors.grey.withValues(alpha: 0.1),
+                  color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
                   borderRadius: AppRadius.smAll,
                 ),
                 child: Text(
-                  '$_subjectCount Total',
+                  'Add a subject first.',
                   style: AppTextStyles.caption.copyWith(
-                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFFF59E0B),
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          if (_teacherSubjects.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceDark : Colors.white,
-                borderRadius: AppRadius.lgAll,
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-              ),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.book_outlined,
-                    size: 40,
-                    color: Colors.grey.withValues(alpha: 0.4),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'No subjects assigned',
-                    style: AppTextStyles.labelLarge.copyWith(
-                      color: Colors.grey,
+
+            // Subject dropdown
+            _buildLabel('Subject'),
+            _buildDropdown<int?>(
+              value: _selectedSubjectId,
+              hint: _teacherSubjects.isEmpty ? 'None' : 'Select',
+              items: _teacherSubjects
+                  .map(
+                    (s) => DropdownMenuItem(
+                      value: s.id,
+                      child: Text(s.title, overflow: TextOverflow.ellipsis),
                     ),
-                  ),
-                  Text(
-                    'Use "Add Subject" to get started.',
-                    style: AppTextStyles.caption.copyWith(color: Colors.grey),
-                  ),
-                ],
-              ),
-            )
-          else
-            ..._teacherSubjects.map(
-              (subject) => _buildSubjectCard(subject, isDark),
+                  )
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedSubjectId = v),
+              isDark: isDark,
             ),
-        ],
+            const SizedBox(height: AppSpacing.sm),
+
+            // Type + Due Date row
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Type'),
+                      _buildDropdown<String>(
+                        value: _assignmentType,
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'classwork',
+                            child: Text('Classwork'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'homework',
+                            child: Text('Homework'),
+                          ),
+                        ],
+                        onChanged: (v) => setState(() => _assignmentType = v!),
+                        isDark: isDark,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildLabel('Due Date'),
+                      InkWell(
+                        onTap: () async {
+                          final date = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.now(),
+                            firstDate: DateTime.now(),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 365),
+                            ),
+                          );
+                          if (date != null) {
+                            setState(() => _dueAt = date);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 10,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? const Color(0xFF0F172A)
+                                : Colors.grey[50],
+                            borderRadius: AppRadius.smAll,
+                            border: Border.all(
+                              color: isDark
+                                  ? const Color(0xFF334155)
+                                  : Colors.grey.shade200,
+                            ),
+                          ),
+                          child: Text(
+                            _dueAt == null
+                                ? 'Select Date'
+                                : _formatShortDate(_dueAt!),
+                            style: AppTextStyles.caption,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            _buildLabel('Title'),
+            _buildTextField(
+              controller: _titleController,
+              hint: 'Assignment Title',
+              isDark: isDark,
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            _buildLabel('Description'),
+            _buildTextField(
+              controller: _descController,
+              hint: 'Assignment Description',
+              maxLines: 3,
+              isDark: isDark,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isCreating ? null : _createAssignment,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+                ),
+                child: _isCreating
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        ),
+                      )
+                    : const Text('Create Assignment'),
+              ),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildAddSubjectTab(bool isDark) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(AppSpacing.base),
+      child: _buildSectionCard(
+        isDark: isDark,
+        title: 'Add Subject',
+        subtitle: 'Assign yourself to teach',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_addSubjectError != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                padding: const EdgeInsets.all(AppSpacing.sm),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.1),
+                  borderRadius: AppRadius.smAll,
+                  border: Border.all(
+                    color: AppColors.error.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Text(
+                  _addSubjectError!,
+                  style: AppTextStyles.caption.copyWith(color: AppColors.error),
+                ),
+              ),
+
+            // Faculty
+            _buildLabel('Faculty'),
+            _buildDropdown<Faculty?>(
+              value: _selectedFaculty,
+              hint: 'Select Faculty',
+              items: _faculties
+                  .map(
+                    (f) => DropdownMenuItem(
+                      value: f,
+                      child: Text(f.name, overflow: TextOverflow.ellipsis),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (f) {
+                setState(() {
+                  _selectedFaculty = f;
+                  _selectedSemester = 1;
+                  _availableSubjects = [];
+                  _selectedAvailableSubjectId = null;
+                });
+                _loadAvailableSubjects();
+              },
+              isDark: isDark,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+
+            // Semester
+            _buildLabel('Semester'),
+            _buildDropdown<int>(
+              value: _selectedSemester,
+              hint: 'Select Semester',
+              items: List.generate(
+                _selectedFaculty?.semestersCount ?? 8,
+                (i) => DropdownMenuItem(
+                  value: i + 1,
+                  child: Text('Semester ${i + 1}'),
+                ),
+              ).toList(),
+              onChanged: (v) {
+                setState(() {
+                  _selectedSemester = v!;
+                  _availableSubjects = [];
+                  _selectedAvailableSubjectId = null;
+                });
+                _loadAvailableSubjects();
+              },
+              isDark: isDark,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+
+            // Subject
+            _buildLabel('Subject'),
+            _buildDropdown<int?>(
+              value: _selectedAvailableSubjectId,
+              hint: _availableSubjects.isEmpty
+                  ? 'Choose context first'
+                  : 'Select Subject',
+              items: _availableSubjects
+                  .map(
+                    (s) => DropdownMenuItem(
+                      value: s.id,
+                      child: Text(s.title, overflow: TextOverflow.ellipsis),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedAvailableSubjectId = v),
+              isDark: isDark,
+            ),
+            const SizedBox(height: AppSpacing.md),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed:
+                    _isAddingSubject || _selectedAvailableSubjectId == null
+                    ? null
+                    : _addSubject,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDark
+                      ? const Color(0xFF1E293B)
+                      : const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: AppRadius.smAll),
+                ),
+                child: Text(
+                  _isAddingSubject ? 'Adding...' : 'Add Subject',
+                  style: AppTextStyles.labelMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildManageSubjectsTab(bool isDark) {
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.base),
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Managed Subjects',
+              style: AppTextStyles.labelLarge.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.1),
+                borderRadius: AppRadius.smAll,
+              ),
+              child: Text(
+                '$_subjectCount Total',
+                style: AppTextStyles.caption.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (_teacherSubjects.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              borderRadius: AppRadius.lgAll,
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.book_outlined,
+                  size: 40,
+                  color: Colors.grey.withValues(alpha: 0.4),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  'No subjects assigned',
+                  style: AppTextStyles.labelLarge.copyWith(color: Colors.grey),
+                ),
+                Text(
+                  'Use "Add Subject" to get started.',
+                  style: AppTextStyles.caption.copyWith(color: Colors.grey),
+                ),
+              ],
+            ),
+          )
+        else
+          ..._teacherSubjects.map(
+            (subject) => _buildSubjectCard(subject, isDark),
+          ),
+      ],
     );
   }
 
@@ -1886,7 +1944,7 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage> {
             label,
             style: AppTextStyles.overline.copyWith(
               color: Colors.grey,
-              fontSize: 9,
+              fontSize: 11,
               fontWeight: FontWeight.w600,
             ),
             textAlign: TextAlign.center,
