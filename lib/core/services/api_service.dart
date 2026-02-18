@@ -9,6 +9,8 @@ import 'package:smart_pulchowk/core/models/notification.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:http_parser/http_parser.dart';
 
 /// Result class for API operations.
 class ApiResult<T> {
@@ -1385,6 +1387,73 @@ class ApiService {
       }
       return json;
     } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Submit an assignment.
+  Future<Map<String, dynamic>> submitAssignment(
+    int assignmentId,
+    PlatformFile file, {
+    String? comment,
+  }) async {
+    try {
+      final url = Uri.parse(
+        '${AppConstants.fullApiUrl}/classroom/assignments/$assignmentId/submissions',
+      );
+      final request = http.MultipartRequest('POST', url);
+
+      request.headers.addAll(await _getAuthHeaders());
+
+      if (comment != null) {
+        request.fields['comment'] = comment;
+      }
+
+      if (kIsWeb) {
+        if (file.bytes == null) {
+          return {'success': false, 'message': 'File bytes are null'};
+        }
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'file',
+            file.bytes!,
+            filename: file.name,
+            contentType: MediaType(
+              file.extension == 'pdf' ? 'application' : 'image',
+              file.extension == 'pdf'
+                  ? 'pdf'
+                  : (file.extension ?? 'octet-stream'),
+            ),
+          ),
+        );
+      } else {
+        if (file.path == null) {
+          return {'success': false, 'message': 'File path is null'};
+        }
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            file.path!,
+            contentType: MediaType(
+              file.extension == 'pdf' ? 'application' : 'image',
+              file.extension == 'pdf'
+                  ? 'pdf'
+                  : (file.extension ?? 'octet-stream'),
+            ),
+          ),
+        );
+      }
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      final result = jsonDecode(response.body);
+      if (result['success'] == true) {
+        _invalidateCache(AppConstants.cacheClassroomMySubjects);
+      }
+      return result;
+    } catch (e) {
+      debugPrint('Error submitting assignment: $e');
       return {'success': false, 'message': 'Error: $e'};
     }
   }

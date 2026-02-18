@@ -429,6 +429,37 @@ class AppDecorations {
       boxShadow: AppShadows.glow(AppColors.primary),
     );
   }
+
+  /// Input decoration for text fields.
+  static InputDecoration input({
+    required String hint,
+    IconData? prefixIcon,
+    Widget? suffixIcon,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, size: 20) : null,
+      suffixIcon: suffixIcon,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: AppRadius.mdAll,
+        borderSide: BorderSide(color: AppColors.borderLight),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: AppRadius.mdAll,
+        borderSide: BorderSide(color: AppColors.borderLight),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: AppRadius.mdAll,
+        borderSide: const BorderSide(color: AppColors.primary),
+      ),
+      filled: true,
+      fillColor: Colors.transparent,
+    );
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

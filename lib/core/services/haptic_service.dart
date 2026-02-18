@@ -36,6 +36,21 @@ class HapticService {
   void vibrate() {
     if (_isEnabled) HapticFeedback.vibrate();
   }
+
+  void success() {
+    if (_isEnabled) {
+      HapticFeedback.mediumImpact();
+      Future.delayed(const Duration(milliseconds: 100), () {
+        HapticFeedback.lightImpact();
+      });
+    }
+  }
+
+  void error() {
+    if (_isEnabled) {
+      HapticFeedback.heavyImpact();
+    }
+  }
 }
 
 /// Global instance for easy access.

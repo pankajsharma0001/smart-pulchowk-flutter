@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/custom_app_bar.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
@@ -118,18 +119,7 @@ class _ClassroomPageState extends State<ClassroomPage>
     }
 
     return Scaffold(
-      appBar: CustomAppBar(
-        title: 'Classroom',
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () {
-              haptics.mediumImpact();
-              _loadData(forceRefresh: true);
-            },
-          ),
-        ],
-      ),
+      appBar: const CustomAppBar(title: 'Classroom'),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -140,30 +130,36 @@ class _ClassroomPageState extends State<ClassroomPage>
                 : [AppColors.backgroundLight, Colors.white],
           ),
         ),
-        child: Column(
-          children: [
-            _buildStatsGrid(),
-            _buildTabBar(),
-            Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                physics: const BouncingScrollPhysics(),
-                children: [
-                  _buildAssignmentList(
-                    _todoAssignments,
-                    "No assignments to do! 🎉",
-                    Icons.celebration_rounded,
-                  ),
-                  _buildAssignmentList(
-                    _doneAssignments,
-                    "No completed assignments yet.",
-                    Icons.assignment_turned_in_rounded,
-                  ),
-                  _buildSubjectsGrid(),
-                ],
+        child: RefreshIndicator(
+          onRefresh: () => _loadData(forceRefresh: true),
+          child: ListView(
+            padding: EdgeInsets.zero,
+            physics: const AlwaysScrollableScrollPhysics(),
+            children: [
+              _buildStatsGrid(),
+              _buildTabBar(),
+              SizedBox(
+                height: MediaQuery.of(context).size.height * 0.7,
+                child: TabBarView(
+                  controller: _tabController,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    _buildAssignmentList(
+                      _todoAssignments,
+                      "No assignments to do! 🎉",
+                      Icons.celebration_rounded,
+                    ),
+                    _buildAssignmentList(
+                      _doneAssignments,
+                      "No completed assignments yet.",
+                      Icons.assignment_turned_in_rounded,
+                    ),
+                    _buildSubjectsGrid(),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -398,8 +394,11 @@ class _ClassroomPageState extends State<ClassroomPage>
       physics: const BouncingScrollPhysics(),
       itemCount: assignments.length,
       separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-      itemBuilder: (context, index) =>
-          _AssignmentCard(assignment: assignments[index], index: index),
+      itemBuilder: (context, index) => _AssignmentCard(
+        assignment: assignments[index],
+        index: index,
+        onRefresh: () => _loadData(forceRefresh: true),
+      ),
     );
   }
 
@@ -556,7 +555,13 @@ class _ClassroomPageState extends State<ClassroomPage>
 class _AssignmentCard extends StatefulWidget {
   final Assignment assignment;
   final int index;
-  const _AssignmentCard({required this.assignment, required this.index});
+  final VoidCallback? onRefresh;
+
+  const _AssignmentCard({
+    required this.assignment,
+    required this.index,
+    this.onRefresh,
+  });
 
   @override
   State<_AssignmentCard> createState() => _AssignmentCardState();
@@ -567,6 +572,11 @@ class _AssignmentCardState extends State<_AssignmentCard>
   bool _isExpanded = false;
   late AnimationController _expansionController;
   late Animation<double> _animation;
+
+  PlatformFile? _selectedFile;
+  final TextEditingController _commentController = TextEditingController();
+  bool _isSubmitting = false;
+  bool _isResubmitting = false;
 
   @override
   void initState() {
@@ -584,6 +594,7 @@ class _AssignmentCardState extends State<_AssignmentCard>
   @override
   void dispose() {
     _expansionController.dispose();
+    _commentController.dispose();
     super.dispose();
   }
 
@@ -597,6 +608,82 @@ class _AssignmentCardState extends State<_AssignmentCard>
       }
     });
     haptics.lightImpact();
+  }
+
+  Future<void> _pickFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+      );
+
+      if (result != null) {
+        setState(() {
+          _selectedFile = result.files.first;
+        });
+        haptics.mediumImpact();
+      }
+    } catch (e) {
+      debugPrint('Error picking file: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Failed to pick file')));
+      }
+    }
+  }
+
+  Future<void> _submit() async {
+    if (_selectedFile == null) return;
+
+    setState(() => _isSubmitting = true);
+    haptics.mediumImpact();
+
+    try {
+      final apiService = ApiService();
+      final result = await apiService.submitAssignment(
+        widget.assignment.id,
+        _selectedFile!,
+        comment: _commentController.text.trim().isEmpty
+            ? null
+            : _commentController.text.trim(),
+      );
+
+      if (mounted) {
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Assignment submitted successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          haptics.success();
+          widget.onRefresh?.call();
+          setState(() {
+            _isResubmitting = false;
+            _selectedFile = null;
+            _commentController.clear();
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message'] ?? 'Submission failed'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
   }
 
   @override
@@ -723,24 +810,139 @@ class _AssignmentCardState extends State<_AssignmentCard>
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xl),
-                      if (!isSubmitted)
-                        SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: () {
-                              haptics.mediumImpact();
-                              // TODO: Implement Submission
-                            },
-                            icon: const Icon(
-                              Icons.upload_file_rounded,
-                              size: 18,
+                      if (!isSubmitted || _isResubmitting)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_isResubmitting)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.md,
+                                ),
+                                child: Text(
+                                  "Resubmitting work...",
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: AppColors.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            if (_selectedFile != null) ...[
+                              Container(
+                                padding: const EdgeInsets.all(AppSpacing.md),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.05,
+                                  ),
+                                  borderRadius: AppRadius.mdAll,
+                                  border: Border.all(
+                                    color: AppColors.primary.withValues(
+                                      alpha: 0.1,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.insert_drive_file_rounded,
+                                      color: AppColors.primary,
+                                      size: 20,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            _selectedFile!.name,
+                                            style: AppTextStyles.labelMedium,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          Text(
+                                            "${(_selectedFile!.size / 1024).toStringAsFixed(1)} KB",
+                                            style: AppTextStyles.caption,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: () =>
+                                          setState(() => _selectedFile = null),
+                                      icon: const Icon(
+                                        Icons.close_rounded,
+                                        size: 20,
+                                      ),
+                                      color: Colors.red,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: AppSpacing.md),
+                              TextField(
+                                controller: _commentController,
+                                decoration: AppDecorations.input(
+                                  hint: "Add a comment (optional)",
+                                  prefixIcon: Icons.chat_bubble_outline_rounded,
+                                ),
+                                style: AppTextStyles.bodyMedium,
+                                maxLines: 2,
+                              ),
+                              const SizedBox(height: AppSpacing.lg),
+                            ],
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: _isSubmitting
+                                    ? null
+                                    : (_selectedFile == null
+                                          ? _pickFile
+                                          : _submit),
+                                icon: Icon(
+                                  _isSubmitting
+                                      ? Icons.hourglass_empty_rounded
+                                      : (_selectedFile == null
+                                            ? Icons.upload_file_rounded
+                                            : Icons.send_rounded),
+                                  size: 18,
+                                ),
+                                label: Text(
+                                  _isSubmitting
+                                      ? "Submitting..."
+                                      : (_selectedFile == null
+                                            ? "Select Work File"
+                                            : "Turn In Work"),
+                                ),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: _selectedFile != null
+                                      ? Colors.green
+                                      : AppColors.primary,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                ),
+                              ),
                             ),
-                            label: const Text("Turn In Work"),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                            ),
-                          ),
+                            if (_isResubmitting)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  top: AppSpacing.md,
+                                ),
+                                child: Center(
+                                  child: TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _isResubmitting = false;
+                                        _selectedFile = null;
+                                        _commentController.clear();
+                                      });
+                                    },
+                                    child: const Text("Cancel"),
+                                  ),
+                                ),
+                              ),
+                          ],
                         )
                       else
                         _buildSubmissionInfo(assignment.submission!),
@@ -793,61 +995,82 @@ class _AssignmentCardState extends State<_AssignmentCard>
   }
 
   Widget _buildSubmissionInfo(Submission submission) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: Colors.green.withValues(alpha: 0.05),
-        borderRadius: AppRadius.mdAll,
-        border: Border.all(color: Colors.green.withValues(alpha: 0.1)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.done_all_rounded,
-              color: Colors.green,
-              size: 20,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: BoxDecoration(
+            color: Colors.green.withValues(alpha: 0.05),
+            borderRadius: AppRadius.mdAll,
+            border: Border.all(color: Colors.green.withValues(alpha: 0.1)),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Work Submitted",
-                  style: AppTextStyles.labelLarge.copyWith(color: Colors.green),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
-                Text(
-                  "Done on ${_formatDate(submission.submittedAt)}",
-                  style: AppTextStyles.caption.copyWith(
-                    color: Colors.green.withValues(alpha: 0.7),
+                child: const Icon(
+                  Icons.done_all_rounded,
+                  color: Colors.green,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Work Submitted",
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: Colors.green,
+                      ),
+                    ),
+                    Text(
+                      "Done on ${_formatDate(submission.submittedAt)}",
+                      style: AppTextStyles.caption.copyWith(
+                        color: Colors.green.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: AppRadius.xsAll,
+                ),
+                child: Text(
+                  submission.status.toUpperCase(),
+                  style: AppTextStyles.overline.copyWith(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.1),
-              borderRadius: AppRadius.xsAll,
-            ),
-            child: Text(
-              submission.status.toUpperCase(),
-              style: AppTextStyles.overline.copyWith(
-                color: Colors.green,
-                fontWeight: FontWeight.bold,
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Center(
+          child: TextButton.icon(
+            onPressed: () {
+              haptics.mediumImpact();
+              setState(() {
+                _isResubmitting = true;
+              });
+            },
+            icon: const Icon(Icons.refresh_rounded, size: 16),
+            label: const Text("Resubmit Work"),
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+          ),
+        ),
+      ],
     );
   }
 
