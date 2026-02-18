@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:flutter/services.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
@@ -137,6 +138,11 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
   }
 
   Future<void> _onRefresh() async {
+    if (mounted) {
+      debugPrint('BookMarketplacePage: Manual refresh. Syncing role...');
+      await MainLayout.of(context)?.refreshUserRole();
+      if (!mounted) return;
+    }
     await Future.wait([
       _loadBooks(refresh: true),
       _loadCategories(forceRefresh: true),

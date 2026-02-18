@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
@@ -25,7 +26,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   Future<void> _loadNotifications({bool silent = false}) async {
-    if (!silent) setState(() => _isLoading = true);
+    if (!silent) {
+      setState(() => _isLoading = true);
+    } else if (mounted) {
+      // Manual/Silent refresh - sync role too
+      debugPrint('NotificationsPage: Manual refresh. Syncing role...');
+      await MainLayout.of(context)?.refreshUserRole();
+      if (!mounted) return;
+    }
     try {
       final data = await _api.getNotifications(forceRefresh: silent);
       if (mounted) {

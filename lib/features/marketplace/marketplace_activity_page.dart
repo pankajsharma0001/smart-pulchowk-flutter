@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
@@ -93,6 +94,11 @@ class _SellingViewState extends State<_SellingView> {
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
+    if (forceRefresh && mounted) {
+      debugPrint('MarketplaceSellingView: Manual refresh. Syncing role...');
+      await MainLayout.of(context)?.refreshUserRole();
+      if (!mounted) return;
+    }
     setState(() => _isLoading = true);
     final results = await _api.getMyBookListings(forceRefresh: forceRefresh);
     if (mounted) {
@@ -341,6 +347,11 @@ class _InquiriesViewState extends State<_InquiriesView> {
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
+    if (forceRefresh && mounted) {
+      debugPrint('MarketplaceInquiriesView: Manual refresh. Syncing role...');
+      await MainLayout.of(context)?.refreshUserRole();
+      if (!mounted) return;
+    }
     setState(() => _isLoading = true);
     final results = await _api.getIncomingPurchaseRequests(
       forceRefresh: forceRefresh,
@@ -821,6 +832,11 @@ class _RequestsViewState extends State<_RequestsView> {
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
+    if (forceRefresh && mounted) {
+      debugPrint('MarketplaceRequestsView: Manual refresh. Syncing role...');
+      await MainLayout.of(context)?.refreshUserRole();
+      if (!mounted) return;
+    }
     setState(() => _isLoading = true);
     final results = await _api.getMyPurchaseRequests(
       forceRefresh: forceRefresh,
@@ -1334,6 +1350,11 @@ class _SavedViewState extends State<_SavedView> {
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
+    if (forceRefresh && mounted) {
+      debugPrint('MarketplaceSavedView: Manual refresh. Syncing role...');
+      await MainLayout.of(context)?.refreshUserRole();
+      if (!mounted) return;
+    }
     setState(() => _isLoading = true);
     final results = await _api.getSavedBooks(forceRefresh: forceRefresh);
     if (mounted) {

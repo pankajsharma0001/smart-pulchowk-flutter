@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smart_pulchowk/core/models/chat.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
@@ -157,7 +158,13 @@ class _ChatListPageState extends State<ChatListPage> {
           : _conversations.isEmpty
           ? _buildEmptyState(isDark)
           : RefreshIndicator(
-              onRefresh: _loadConversations,
+              onRefresh: () async {
+                if (mounted) {
+                  debugPrint('ChatListPage: Manual refresh. Syncing role...');
+                  await MainLayout.of(context)?.refreshUserRole();
+                }
+                await _loadConversations();
+              },
               child: ListView.separated(
                 padding: const EdgeInsets.all(16),
                 itemCount: _conversations.length,
