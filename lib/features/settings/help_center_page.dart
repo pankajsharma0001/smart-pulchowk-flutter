@@ -93,7 +93,13 @@ class _FaqTabState extends State<_FaqTab> with SingleTickerProviderStateMixin {
     _FeatureSection(
       label: 'Marketplace',
       icon: Icons.auto_stories_rounded,
-      color: Color(0xFF6366F1),
+      color: const Color(0xFF6366F1),
+      isReady: true,
+    ),
+    _FeatureSection(
+      label: 'Classroom',
+      icon: Icons.school_rounded,
+      color: AppColors.primary,
       isReady: true,
     ),
     _FeatureSection(
@@ -231,6 +237,9 @@ class _FaqTabState extends State<_FaqTab> with SingleTickerProviderStateMixin {
               if (!f.isReady) {
                 return _PlaceholderFaq(feature: f, isDark: widget.isDark);
               }
+              if (f.label == 'Classroom') {
+                return _ClassroomFaq(isDark: widget.isDark);
+              }
               return _MarketplaceFaq(isDark: widget.isDark);
             }).toList(),
           ),
@@ -348,6 +357,84 @@ class _MarketplaceFaq extends StatelessWidget {
             'On a user\'s profile page, tap the three-dot menu (⋮) and select "Block User". Blocked users won\'t be able to send you requests or messages. You can manage blocked users in Settings → Blocked Users.',
         icon: Icons.block_rounded,
         color: Color(0xFF64748B),
+      ),
+    ];
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      itemCount: faqs.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (context, i) => _FaqCard(item: faqs[i], isDark: isDark),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CLASSROOM FAQ
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ClassroomFaq extends StatelessWidget {
+  final bool isDark;
+  const _ClassroomFaq({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final faqs = [
+      _FaqItem(
+        question: 'How setup profile in classroom?',
+        answer:
+            'It is done automatically. Once you have logged in then according to your college email, the Classroom tab will automatically display subjects and assignments for your specific semester.',
+        icon: Icons.account_circle_rounded,
+        color: AppColors.primary,
+      ),
+      _FaqItem(
+        question: 'How do I submit an assignment?',
+        answer:
+            'In the Classroom tab, find the assignment you want to submit. Tap the "Upload File" button to select your document (PDF or Image), then tap "Submit Assignment". You can also leave an optional comment for your teacher.',
+        icon: Icons.upload_file_rounded,
+        color: const Color(0xFF10B981),
+      ),
+      _FaqItem(
+        question: 'Can I resubmit an assignment?',
+        answer:
+            'Yes, you can re-upload and re-submit assignments before they are graded. Re-submitting will replace your previous submission with the new file.',
+        icon: Icons.update_rounded,
+        color: const Color(0xFFF59E0B),
+      ),
+      _FaqItem(
+        question: 'How do I check my grades?',
+        answer:
+            'Once a teacher returns your assignment, you\'ll see its status change to "Returned" or "Graded" in the Classroom list. Tap the assignment to view any feedback or comments from your teacher.',
+        icon: Icons.grading_rounded,
+        color: const Color(0xFF8B5CF6),
+      ),
+      _FaqItem(
+        question: 'How do I add a subject to teach?',
+        answer:
+            'Teachers can go to the Classroom tab → "Add Subject" sub-tab. Select the Faculty and Semester, choose the subject you are teaching, and tap "Add Subject" to begin managing assignments for that class.',
+        icon: Icons.add_task_rounded,
+        color: const Color(0xFF6366F1),
+      ),
+      _FaqItem(
+        question: 'How do I create a new assignment?',
+        answer:
+            'As a teacher, use the Classroom tab → "Assign" sub-tab. Select the subject, choose a category (Classwork or Homework), set a due date, and provide a title and description. Tap "Create Assignment" to notify your students.',
+        icon: Icons.post_add_rounded,
+        color: const Color(0xFF10B981),
+      ),
+      _FaqItem(
+        question: 'How do I view student submissions?',
+        answer:
+            'In the Classroom tab → "Managed" sub-tab, find the assignment you want to review. Tap on it to see a list of all students who have submitted their work. You can then view their files and leave feedback.',
+        icon: Icons.people_rounded,
+        color: const Color(0xFF0EA5E9),
+      ),
+      _FaqItem(
+        question: 'Classroom data isn\'t loading. What should I do?',
+        answer:
+            'If the dashboard seems out of date, pull down on the Classroom screen to trigger a manual refresh. This will sync your profile role and clear any stale cache.',
+        icon: Icons.sync_rounded,
+        color: const Color(0xFFF59E0B),
       ),
     ];
 
