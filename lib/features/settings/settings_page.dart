@@ -14,6 +14,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:smart_pulchowk/features/marketplace/blocked_users_page.dart';
 import 'package:smart_pulchowk/features/marketplace/my_reports_page.dart';
+import 'package:smart_pulchowk/features/settings/help_center_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -555,10 +556,13 @@ class _SettingsPageState extends State<SettingsPage> {
             icon: Icons.help_outline_rounded,
             title: 'Help Center',
             subtitle: 'FAQ and support contact',
-            trailing: const Icon(Icons.launch_rounded, size: 18),
+            trailing: const Icon(Icons.chevron_right_rounded, size: 20),
             onTap: () {
               haptics.selectionClick();
-              _sendFeedback(); // Reuse existing feedback logic
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const HelpCenterPage()),
+              );
             },
           ),
           const _Divider(),
