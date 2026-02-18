@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
+import 'package:smart_pulchowk/features/marketplace/book_details_page.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'dart:async';
@@ -215,6 +216,60 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     return DateFormat('h:mm a').format(date);
   }
 
+  Future<void> _deleteChat() async {
+    if (_activeConversationId == null) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete this conversation?'),
+        content: const Text(
+          'This will remove this conversation from your list. Other participants will still be able to see it.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      final res = await _api.deleteConversation(_activeConversationId!);
+
+      if (mounted) {
+        if (res['success'] == true) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Conversation deleted')));
+          Navigator.pop(context); // Go back to list
+        } else {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(res['message'] ?? 'Failed to delete')),
+          );
+        }
+      }
+    }
+  }
+
+  void _viewListing() {
+    if (widget.listing == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BookDetailsPage(listing: widget.listing!),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -261,6 +316,47 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
             ),
           ],
         ),
+        actions: [
+          PopupMenuButton<String>(
+            onSelected: (val) {
+              if (val == 'view_listing') {
+                _viewListing();
+              } else if (val == 'delete_chat') {
+                _deleteChat();
+              }
+            },
+            itemBuilder: (context) => [
+              if (widget.listing != null)
+                const PopupMenuItem(
+                  value: 'view_listing',
+                  child: Row(
+                    children: [
+                      Icon(Icons.menu_book_outlined, size: 20),
+                      SizedBox(width: 8),
+                      Text('View Listing'),
+                    ],
+                  ),
+                ),
+              const PopupMenuItem(
+                value: 'delete_chat',
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.delete_outline,
+                      color: AppColors.error,
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'Delete Chat',
+                      style: TextStyle(color: AppColors.error),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
       body: GestureDetector(
         behavior: HitTestBehavior.opaque,
