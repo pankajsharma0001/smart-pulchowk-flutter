@@ -1,4 +1,5 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,12 @@ class NotificationService {
   NotificationService._();
 
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  static final StreamController<Map<String, dynamic>> _chatStreamController =
+      StreamController<Map<String, dynamic>>.broadcast();
+
+  /// Stream of incoming chat-related notifications
+  static Stream<Map<String, dynamic>> get chatStream =>
+      _chatStreamController.stream;
 
   /// Initialize notifications (permission request, channel setup).
   static Future<void> initialize() async {
@@ -47,6 +54,12 @@ class NotificationService {
           debugPrint(
             'Message also contained a notification: ${message.notification}',
           );
+        }
+
+        // If it's a chat message, emit to our internal stream
+        final type = message.data['type'];
+        if (type == 'chat_message' || type == 'chat_mention') {
+          _chatStreamController.add(message.data);
         }
       });
 

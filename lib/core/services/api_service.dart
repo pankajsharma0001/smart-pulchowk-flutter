@@ -524,6 +524,7 @@ class ApiService {
       if (json['success'] == true) {
         _invalidateCache(AppConstants.cacheMyListings);
         _invalidateCache(AppConstants.cacheBookListings);
+        _invalidateCache('${AppConstants.cacheBookDetail}$id');
       }
       return {
         'success': json['success'] == true,
@@ -545,6 +546,7 @@ class ApiService {
       if (json['success'] == true) {
         _invalidateCache(AppConstants.cacheMyListings);
         _invalidateCache(AppConstants.cacheBookListings);
+        _invalidateCache('${AppConstants.cacheBookDetail}$id');
       }
       return {'success': json['success'] == true, 'message': json['message']};
     } catch (e) {
@@ -582,6 +584,7 @@ class ApiService {
       if (json['success'] == true) {
         _invalidateCache(AppConstants.cacheMyListings);
         _invalidateCache(AppConstants.cacheBookListings);
+        _invalidateCache('${AppConstants.cacheBookDetail}$id');
       }
       return {'success': json['success'] == true, 'message': json['message']};
     } catch (e) {
@@ -610,6 +613,9 @@ class ApiService {
       final json = jsonDecode(response.body);
 
       if (response.statusCode == 200 || response.statusCode == 201) {
+        if (json['success'] == true) {
+          _invalidateCache('${AppConstants.cacheBookDetail}$listingId');
+        }
         return {
           'success': json['success'] == true,
           'data': json['data'] != null
@@ -886,8 +892,9 @@ class ApiService {
   /// Respond to a purchase request (accept/reject).
   Future<Map<String, dynamic>> respondToPurchaseRequest(
     int requestId,
-    bool accept,
-  ) async {
+    bool accept, {
+    int? listingId,
+  }) async {
     try {
       final response = await _authPut(
         '/books/requests/$requestId/respond',
@@ -897,6 +904,10 @@ class ApiService {
       if (json['success'] == true) {
         _invalidateCache(AppConstants.cacheIncomingRequests);
         _invalidateCache(AppConstants.cacheMyRequests);
+        if (listingId != null) {
+          _invalidateCache('${AppConstants.cacheBookDetail}$listingId');
+          _invalidateCache('${AppConstants.cacheRequestStatus}$listingId');
+        }
       }
       return {'success': json['success'] == true, 'message': json['message']};
     } catch (e) {
@@ -998,7 +1009,11 @@ class ApiService {
           if (review != null) 'review': review,
         },
       );
-      return jsonDecode(response.body);
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCache('${AppConstants.cacheSellerReputation}$sellerId');
+      }
+      return json;
     } catch (e) {
       return {'success': false, 'message': 'Error: $e'};
     }
@@ -1114,10 +1129,14 @@ class ApiService {
   }
 
   /// Get message history for a specific conversation.
-  Future<List<ChatMessage>> getMessages(int conversationId) async {
+  Future<List<ChatMessage>> getMessages(
+    int conversationId, {
+    bool forceRefresh = false,
+  }) async {
     return await _cachedFetch<List<ChatMessage>>(
           key: '${AppConstants.cacheMessages}$conversationId',
-          ttl: const Duration(minutes: 1), // Short TTL for chat
+          ttl: const Duration(seconds: 30), // Reduced TTL for chat
+          forceRefresh: forceRefresh,
           fetcher: () async {
             final response = await _authGet(
               '/chat/conversations/$conversationId/messages',

@@ -351,8 +351,12 @@ class _InquiriesViewState extends State<_InquiriesView> {
     }
   }
 
-  Future<void> _respond(int requestId, bool accept) async {
-    final res = await _api.respondToPurchaseRequest(requestId, accept);
+  Future<void> _respond(int requestId, bool accept, {int? listingId}) async {
+    final res = await _api.respondToPurchaseRequest(
+      requestId,
+      accept,
+      listingId: listingId,
+    );
     if (!mounted) return;
     if (res['success'] == true) {
       _load();
@@ -525,10 +529,10 @@ class _InquiriesViewState extends State<_InquiriesView> {
                   isSelected: isSelected,
                   onAccept: _isSelectionMode
                       ? null
-                      : () => _respond(r.id, true),
+                      : () => _respond(r.id, true, listingId: r.listingId),
                   onReject: _isSelectionMode
                       ? null
-                      : () => _respond(r.id, false),
+                      : () => _respond(r.id, false, listingId: r.listingId),
                   onLongPress: () {
                     setState(() {
                       if (isSelected) {

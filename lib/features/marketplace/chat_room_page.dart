@@ -5,6 +5,7 @@ import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
+import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
@@ -41,11 +42,24 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   String? _currentUserId;
   int? _activeConversationId;
   Timer? _pollTimer;
+  StreamSubscription? _chatSubscription;
 
   @override
   void initState() {
     super.initState();
     _initChat();
+    _listenForMessages();
+  }
+
+  void _listenForMessages() {
+    _chatSubscription = NotificationService.chatStream.listen((data) {
+      final notificationConvId = int.tryParse(data['conversationId'] ?? '');
+      if (notificationConvId != null &&
+          notificationConvId == _activeConversationId) {
+        debugPrint('Real-time chat update triggered by notification');
+        _loadMessages(refresh: true);
+      }
+    });
   }
 
   Future<void> _initChat() async {
@@ -77,13 +91,14 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _chatSubscription?.cancel();
     _msgController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
   void _startPolling() {
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (_activeConversationId != null) {
         _loadMessages(refresh: true);
       }
@@ -98,7 +113,10 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
 
     if (!refresh) setState(() => _isLoading = true);
 
-    final results = await _api.getMessages(_activeConversationId!);
+    final results = await _api.getMessages(
+      _activeConversationId!,
+      forceRefresh: refresh,
+    );
 
     if (mounted) {
       setState(() {
