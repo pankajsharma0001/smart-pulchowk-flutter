@@ -1381,7 +1381,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
           recipientId: seller.id,
           recipientName: seller.name,
           recipientImage: seller.image,
-          listing: r.listing,
+          listing: r.listing ?? _book,
         ),
       ),
     );
