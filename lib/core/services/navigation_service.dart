@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
+import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
+import 'package:smart_pulchowk/core/widgets/pdf_viewer.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/features/marketplace/book_details_page.dart';
 import 'package:smart_pulchowk/features/marketplace/chat_room_page.dart';
@@ -52,6 +54,35 @@ class NavigationService {
       }
     } else if (type == 'lost_found_claim_received') {
       _navigateToTab(9); // Lost & Found tab
+    } else if (type == 'notice_created' || type == 'notice_updated') {
+      final attachmentUrl = data['attachmentUrl']?.toString();
+      final noticeTitle = data['noticeTitle']?.toString() ?? 'Notice';
+
+      if (attachmentUrl != null && attachmentUrl.isNotEmpty) {
+        final urlLower = attachmentUrl.toLowerCase();
+        final isPdf = urlLower.endsWith('.pdf');
+        final isImage =
+            urlLower.endsWith('.jpg') ||
+            urlLower.endsWith('.jpeg') ||
+            urlLower.endsWith('.png') ||
+            urlLower.endsWith('.webp');
+
+        if (isPdf) {
+          _navigateToTab(
+            8, // Notices tab
+            subPage: CustomPdfViewer(url: attachmentUrl, title: noticeTitle),
+          );
+        } else if (isImage) {
+          _navigateToTab(
+            8, // Notices tab
+            subPage: FullScreenImageViewer(imageUrls: [attachmentUrl]),
+          );
+        } else {
+          _navigateToTab(8); // Notices tab fallback
+        }
+      } else {
+        _navigateToTab(8); // Notices tab
+      }
     }
   }
 
