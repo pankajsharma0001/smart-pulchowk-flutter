@@ -31,6 +31,10 @@ class AppConstants {
   static const String classroomMySubjects = '/classroom/me/subjects';
   static const String classroomAssignments = '/classroom/assignments';
 
+  // ── Notice Endpoints ───────────────────────────────────────────────────────
+  static const String notices = '/notices';
+  static const String noticeStats = '/notices/stats';
+
   // ── Storage Keys ──────────────────────────────────────────────────────────
   static const String dbUserIdKey = 'db_user_id';
   static const String userRoleKey = 'user_role';
@@ -71,4 +75,8 @@ class AppConstants {
   static const String cacheClassroomMySubjects = 'cls_my_subjects';
   static const String cacheClassroomSubjectDetails = 'cls_subject_';
   static const String cacheClassroomAssignments = 'cls_assignments_';
+
+  // ── Notices Cache Keys ─────────────────────────────────────────────────
+  static const String cacheNoticesList = 'notices_list';
+  static const String cacheNoticeStats = 'notices_stats';
 }

@@ -5,6 +5,7 @@ import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/models/chat.dart';
 import 'package:smart_pulchowk/core/models/classroom.dart';
 import 'package:smart_pulchowk/core/models/notification.dart';
+import 'package:smart_pulchowk/core/models/notice.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
@@ -1595,5 +1596,62 @@ class ApiService {
               .toList(),
         ) ??
         [];
+  }
+
+  /// Get all notices (with optional filtering)
+  Future<List<Notice>> getNotices({
+    String? category,
+    String? level,
+    bool forceRefresh = false,
+  }) async {
+    final queryParams = <String, String>{};
+    if (category != null) queryParams['category'] = category;
+    if (level != null) queryParams['level'] = level;
+
+    final queryString = queryParams.isNotEmpty
+        ? '?${Uri(queryParameters: queryParams).query}'
+        : '';
+
+    return await _cachedFetch<List<Notice>>(
+          key: '${AppConstants.cacheNoticesList}$queryString',
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet(
+              '${AppConstants.notices}$queryString',
+            );
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true && json['data'] != null) {
+                return json['data'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
+              .map((e) => Notice.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        ) ??
+        [];
+  }
+
+  /// Get notice stats
+  Future<NoticeStats?> getNoticeStats({bool forceRefresh = false}) async {
+    return await _cachedFetch<NoticeStats>(
+      key: AppConstants.cacheNoticeStats,
+      ttl: AppConstants.longCacheExpiry,
+      forceRefresh: forceRefresh,
+      fetcher: () async {
+        final response = await _authGet(AppConstants.noticeStats);
+        if (response.statusCode == 200) {
+          final json = jsonDecode(response.body);
+          if (json['success'] == true && json['data'] != null) {
+            return json['data'];
+          }
+        }
+        return null;
+      },
+      parser: (data) => NoticeStats.fromJson(data as Map<String, dynamic>),
+    );
   }
 }
