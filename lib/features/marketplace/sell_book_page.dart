@@ -361,7 +361,7 @@ class _SellBookPageState extends State<SellBookPage> {
                 children: [
                   if (_categories.isNotEmpty) ...[
                     DropdownButtonFormField<int>(
-                      value: _selectedCategoryId,
+                      initialValue: _selectedCategoryId,
                       validator: (v) => v == null ? 'Selection required' : null,
                       style: AppTextStyles.bodyMedium.copyWith(
                         color: isDark ? Colors.white : Colors.black87,
@@ -474,7 +474,7 @@ class _SellBookPageState extends State<SellBookPage> {
               child: Column(
                 children: [
                   DropdownButtonFormField<String>(
-                    value: _contactMethod,
+                    initialValue: _contactMethod,
                     style: AppTextStyles.bodyMedium.copyWith(
                       color: isDark ? Colors.white : Colors.black87,
                     ),

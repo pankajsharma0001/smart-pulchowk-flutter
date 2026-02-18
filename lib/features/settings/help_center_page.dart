@@ -254,7 +254,7 @@ class _MarketplaceFaq extends StatelessWidget {
       _FaqItem(
         question: 'How do I sell a book?',
         answer:
-            'Go to the Marketplace tab and tap the "Sell a Book" button at the top. Fill in the book title, author, price, condition, and upload photos. Once submitted, your listing will be visible to other students.',
+            'Go to the Marketplace tab and tap the "Sell a Book" button at the bottom right. Fill in the book title, author, price, condition, and upload photos. Once submitted, your listing will be visible to other students.',
         icon: Icons.sell_rounded,
         color: Color(0xFF6366F1),
       ),

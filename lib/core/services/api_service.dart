@@ -485,15 +485,15 @@ class ApiService {
           'author': author,
           'condition': condition,
           'price': price,
-          if (isbn != null) 'isbn': isbn,
-          if (edition != null) 'edition': edition,
-          if (publisher != null) 'publisher': publisher,
-          if (publicationYear != null) 'publicationYear': publicationYear,
-          if (description != null) 'description': description,
-          if (courseCode != null) 'courseCode': courseCode,
-          if (buyerContactInfo != null) 'buyerContactInfo': buyerContactInfo,
-          if (categoryId != null) 'categoryId': categoryId,
-        },
+          'isbn': isbn,
+          'edition': edition,
+          'publisher': publisher,
+          'publicationYear': publicationYear,
+          'description': description,
+          'courseCode': courseCode,
+          'buyerContactInfo': buyerContactInfo,
+          'categoryId': categoryId,
+        }..removeWhere((k, v) => v == null),
       );
 
       final json = jsonDecode(response.body);
@@ -1023,11 +1023,8 @@ class ApiService {
     try {
       final response = await _authPost(
         '/books/trust/sellers/$sellerId/rate',
-        body: {
-          'listingId': listingId,
-          'rating': rating,
-          if (review != null) 'review': review,
-        },
+        body: {'listingId': listingId, 'rating': rating, 'review': review}
+          ..removeWhere((k, v) => v == null),
       );
       final json = jsonDecode(response.body);
       if (json['success'] == true) {
@@ -1095,10 +1092,10 @@ class ApiService {
         AppConstants.trustReports,
         body: {
           'reportedUserId': reportedUserId,
-          if (listingId != null) 'listingId': listingId,
+          'listingId': listingId,
           'category': category,
           'description': description,
-        },
+        }..removeWhere((k, v) => v == null),
       );
       return jsonDecode(response.body);
     } catch (e) {
@@ -1190,9 +1187,9 @@ class ApiService {
 
       final body = {
         'content': content,
-        if (listingId != null) 'listingId': listingId,
-        if (receiverId != null) 'receiverId': receiverId,
-      };
+        'listingId': listingId,
+        'receiverId': receiverId,
+      }..removeWhere((k, v) => v == null);
 
       final response = await _authPost(path, body: body);
       final result = jsonDecode(response.body);

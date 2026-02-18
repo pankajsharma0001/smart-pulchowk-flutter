@@ -237,6 +237,69 @@ class MainLayoutState extends State<MainLayout>
     }
   }
 
+  AppPage _getCurrentPage() {
+    switch (_selectedIndex) {
+      case 0:
+        return AppPage.home;
+      case 1:
+        return AppPage.map;
+      case 2:
+        if (_userRole == 'admin') return AppPage.dashboard;
+        return AppPage.classroom;
+      case 3:
+        return AppPage.bookMarketplace;
+      case 4:
+        return AppPage.dashboard;
+      case 5:
+        return AppPage.home; // Clubs (placeholder)
+      case 6:
+        return AppPage.home; // Events (placeholder)
+      case 7:
+        return AppPage.dashboard; // Admin Dashboard
+      case 8:
+        return AppPage.notifications; // Notices
+      case 9:
+        return AppPage.home; // Lost & Found
+      case 10:
+        return AppPage.settings;
+      default:
+        return AppPage.home;
+    }
+  }
+
+  IconData _getCenterIcon() {
+    // If a submenu page is selected, show its specific icon
+    switch (_selectedIndex) {
+      case 2:
+        if (_userRole == 'admin') return Icons.admin_panel_settings_rounded;
+        if (_userRole == 'notice manager') {
+          return Icons.notifications_active_rounded;
+        }
+        return Icons.school_rounded;
+      case 5:
+        return Icons.groups_rounded;
+      case 6:
+        return Icons.event_rounded;
+      case 7:
+        return Icons.dashboard_customize_rounded;
+      case 8:
+        return Icons.notifications_active_rounded;
+      case 9:
+        return Icons.search_rounded;
+      case 10:
+        return Icons.settings_rounded;
+    }
+
+    // Default role-based icon for main tabs (Home, Map, Books, Profile)
+    if (_userRole == 'admin') {
+      return Icons.admin_panel_settings_rounded;
+    }
+    if (_userRole == 'notice manager') {
+      return Icons.notifications_active_rounded;
+    }
+    return Icons.grid_view_rounded;
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -287,11 +350,7 @@ class MainLayoutState extends State<MainLayout>
             ),
             bottomNavigationBar: _BottomNavBar(
               selectedIndex: _selectedIndex,
-              userRole: _userRole,
-              isMenuOpen: _isMenuOpen,
-              menuAnimation: _menuAnimation,
               onItemSelected: setSelectedIndex,
-              onToggleMenu: _toggleMenu,
             ),
           ),
 
@@ -305,39 +364,78 @@ class MainLayoutState extends State<MainLayout>
               onClose: _closeMenu,
               onItemSelected: setSelectedIndex,
             ),
+
+          // ── Floating center button (Root level to avoid blur) ───────
+          Positioned(
+            bottom: (MediaQuery.of(context).padding.bottom + 65.0) - 36,
+            left: (MediaQuery.of(context).size.width - 55) / 2,
+            child: GestureDetector(
+              onTap: _toggleMenu,
+              child: AnimatedBuilder(
+                animation: _menuAnimation,
+                builder: (context, child) {
+                  return Container(
+                    width: 55,
+                    height: 55,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xFF6366F1), // Indigo
+                          Color(0xFF818CF8), // Lighter indigo
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.4),
+                          blurRadius: 16,
+                          offset: Offset(0, 6 * (1 - _menuAnimation.value)),
+                        ),
+                        BoxShadow(
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.2),
+                          blurRadius: 32,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
+                        width: 1,
+                      ),
+                    ),
+                    child: Transform.rotate(
+                      angle: _menuAnimation.value * (3.14159 / 4), // 45 deg
+                      child: AnimatedScale(
+                        duration: AppAnimations.fast,
+                        scale:
+                            ([2, 5, 6, 7, 8, 9, 10].contains(_selectedIndex) ||
+                                _isMenuOpen)
+                            ? 1.1
+                            : 1.0,
+                        child: AnimatedSwitcher(
+                          duration: AppAnimations.fast,
+                          child: Icon(
+                            _isMenuOpen ? Icons.add_rounded : _getCenterIcon(),
+                            key: ValueKey(
+                              _isMenuOpen
+                                  ? Icons.add_rounded
+                                  : _getCenterIcon(),
+                            ),
+                            color: Colors.white,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
         ],
       ),
     );
-  }
-
-  AppPage _getCurrentPage() {
-    switch (_selectedIndex) {
-      case 0:
-        return AppPage.home;
-      case 1:
-        return AppPage.map;
-      case 2:
-        if (_userRole == 'admin') return AppPage.dashboard;
-        return AppPage.classroom;
-      case 3:
-        return AppPage.bookMarketplace;
-      case 4:
-        return AppPage.dashboard;
-      case 5:
-        return AppPage.home; // Clubs (placeholder)
-      case 6:
-        return AppPage.home; // Events (placeholder)
-      case 7:
-        return AppPage.dashboard; // Admin Dashboard
-      case 8:
-        return AppPage.notifications; // Notices
-      case 9:
-        return AppPage.home; // Lost & Found
-      case 10:
-        return AppPage.settings;
-      default:
-        return AppPage.home;
-    }
   }
 }
 
@@ -375,19 +473,11 @@ class _TabNavigator extends StatelessWidget {
 
 class _BottomNavBar extends StatelessWidget {
   final int selectedIndex;
-  final String userRole;
-  final bool isMenuOpen;
-  final Animation<double> menuAnimation;
   final Function(int) onItemSelected;
-  final VoidCallback onToggleMenu;
 
   const _BottomNavBar({
     required this.selectedIndex,
-    required this.userRole,
-    required this.isMenuOpen,
-    required this.menuAnimation,
     required this.onItemSelected,
-    required this.onToggleMenu,
   });
 
   @override
@@ -405,183 +495,115 @@ class _BottomNavBar extends StatelessWidget {
     final totalWidth = MediaQuery.of(context).size.width;
     final itemWidth = totalWidth / 5;
 
+    final indicatorIndex = [0, 1, 3, 4].contains(selectedIndex)
+        ? selectedIndex
+        : 2;
+
     return SizedBox(
-      height: barHeight + 20, // Extra space for floating center button
-      child: Stack(
-        alignment: Alignment.bottomCenter,
-        children: [
-          // ── Glass bar ──────────────────────────────────────────────
-          ClipRect(
-            child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: Container(
-                height: barHeight,
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  border: Border(
-                    top: BorderSide(color: borderColor, width: 0.5),
+      height: barHeight,
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          child: Container(
+            height: barHeight,
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              border: Border(top: BorderSide(color: borderColor, width: 0.5)),
+              boxShadow: isDark
+                  ? []
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
+                      ),
+                    ],
+            ),
+            padding: EdgeInsets.only(bottom: bottomPadding),
+            child: Stack(
+              children: [
+                // ── Sliding Indicator Pill ──
+                AnimatedPositioned(
+                  duration: const Duration(milliseconds: 400),
+                  curve: Curves.easeOutBack,
+                  left: indicatorIndex * itemWidth + (itemWidth - 48) / 2,
+                  top: (65.0 - 52.0) / 2,
+                  child: Container(
+                    width: 48,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color:
+                          (isDark ? const Color(0xFF818CF8) : AppColors.primary)
+                              .withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
-                  boxShadow: isDark
-                      ? []
-                      : [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, -2),
+                ),
+                // Icons Row
+                Row(
+                  children: [
+                    // Left side: Home + Map
+                    Expanded(
+                      flex: 2,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _NavItem(
+                              icon: Icons.home_outlined,
+                              activeIcon: Icons.home_rounded,
+                              label: 'Home',
+                              isActive: selectedIndex == 0,
+                              onTap: () => onItemSelected(0),
+                            ),
+                          ),
+                          Expanded(
+                            child: _NavItem(
+                              icon: Icons.navigation_outlined,
+                              activeIcon: Icons.navigation_rounded,
+                              label: 'Map',
+                              isActive: selectedIndex == 1,
+                              onTap: () => onItemSelected(1),
+                            ),
                           ),
                         ],
-                ),
-                padding: EdgeInsets.only(bottom: bottomPadding),
-                child: Stack(
-                  children: [
-                    // ── Sliding Indicator Pill ──
-                    AnimatedPositioned(
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeOutBack,
-                      left: selectedIndex * itemWidth + (itemWidth - 48) / 2,
-                      top: (65.0 - 52.0) / 2,
-                      child: Container(
-                        width: 48,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color:
-                              (isDark
-                                      ? const Color(0xFF818CF8)
-                                      : AppColors.primary)
-                                  .withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
                       ),
                     ),
-                    // Icons Row
-                    Row(
-                      children: [
-                        // Left side: Home + Map
-                        Expanded(
-                          flex: 2,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _NavItem(
-                                  icon: Icons.home_outlined,
-                                  activeIcon: Icons.home_rounded,
-                                  label: 'Home',
-                                  isActive: selectedIndex == 0,
-                                  onTap: () => onItemSelected(0),
-                                ),
-                              ),
-                              Expanded(
-                                child: _NavItem(
-                                  icon: Icons.navigation_outlined,
-                                  activeIcon: Icons.navigation_rounded,
-                                  label: 'Map',
-                                  isActive: selectedIndex == 1,
-                                  onTap: () => onItemSelected(1),
-                                ),
-                              ),
-                            ],
+                    // Center gap for floating button
+                    SizedBox(width: itemWidth),
+                    // Right side: Books + Profile
+                    Expanded(
+                      flex: 2,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _NavItem(
+                              icon: Icons.auto_stories_outlined,
+                              activeIcon: Icons.auto_stories_rounded,
+                              label: 'Books',
+                              isActive: selectedIndex == 3,
+                              onTap: () => onItemSelected(3),
+                            ),
                           ),
-                        ),
-                        // Center gap for floating button
-                        SizedBox(width: itemWidth),
-                        // Right side: Books + Profile
-                        Expanded(
-                          flex: 2,
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _NavItem(
-                                  icon: Icons.auto_stories_outlined,
-                                  activeIcon: Icons.auto_stories_rounded,
-                                  label: 'Books',
-                                  isActive: selectedIndex == 3,
-                                  onTap: () => onItemSelected(3),
-                                ),
-                              ),
-                              Expanded(
-                                child: _NavItem(
-                                  icon: Icons.person_outline_rounded,
-                                  activeIcon: Icons.person_rounded,
-                                  label: 'Profile',
-                                  isActive: selectedIndex == 4,
-                                  onTap: () => onItemSelected(4),
-                                ),
-                              ),
-                            ],
+                          Expanded(
+                            child: _NavItem(
+                              icon: Icons.person_outline_rounded,
+                              activeIcon: Icons.person_rounded,
+                              label: 'Profile',
+                              isActive: selectedIndex == 4,
+                              onTap: () => onItemSelected(4),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ],
                 ),
-              ),
+              ],
             ),
           ),
-
-          // ── Floating center button ─────────────────────────────────
-          Positioned(
-            bottom: barHeight - 36,
-            child: GestureDetector(
-              onTap: onToggleMenu,
-              child: AnimatedBuilder(
-                animation: menuAnimation,
-                builder: (context, child) {
-                  return Container(
-                    width: 55,
-                    height: 55,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xFF6366F1), // Indigo
-                          Color(0xFF818CF8), // Lighter indigo
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF6366F1).withValues(alpha: 0.4),
-                          blurRadius: 16,
-                          offset: Offset(0, 6 * (1 - menuAnimation.value)),
-                        ),
-                        BoxShadow(
-                          color: const Color(0xFF6366F1).withValues(alpha: 0.2),
-                          blurRadius: 32,
-                          spreadRadius: 2,
-                        ),
-                      ],
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        width: 1,
-                      ),
-                    ),
-                    child: Transform.rotate(
-                      angle: menuAnimation.value * (3.14159 / 4), // 45 deg
-                      child: AnimatedScale(
-                        duration: AppAnimations.fast,
-                        scale: (selectedIndex == 2 || isMenuOpen) ? 1.1 : 1.0,
-                        child: Icon(
-                          isMenuOpen ? Icons.add_rounded : _getCenterIcon(),
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
-  }
-
-  IconData _getCenterIcon() {
-    if (userRole == 'admin') return Icons.admin_panel_settings_rounded;
-    if (userRole == 'notice manager') return Icons.notifications_active_rounded;
-    return Icons.grid_view_rounded;
   }
 }
 
@@ -668,7 +690,10 @@ class _QuickMenu extends StatelessWidget {
                             ),
                           ],
                         ),
-                        child: _buildGrid(context),
+                        child: Material(
+                          type: MaterialType.transparency,
+                          child: _buildGrid(context),
+                        ),
                       ),
                     ),
                   ),
@@ -684,7 +709,7 @@ class _QuickMenu extends StatelessWidget {
   Widget _buildGrid(BuildContext context) {
     final List<_QuickMenuItemData> items = [
       _QuickMenuItemData(
-        icon: Icons.grid_view_rounded,
+        icon: Icons.school_rounded,
         label: 'Classroom',
         index: 2,
         color: const Color(0xFF6366F1),
@@ -838,7 +863,7 @@ class _QuickMenuItem extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// NAV ITEM — Outlined icon + label + underline active indicator
+// NAV ITEM — Outlined icon + label
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _NavItem extends StatelessWidget {

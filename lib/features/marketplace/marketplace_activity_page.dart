@@ -1376,13 +1376,12 @@ class _SavedViewState extends State<_SavedView> {
             book: book,
             isDark: isDark,
             onUnsave: () async {
+              final messenger = ScaffoldMessenger.of(context);
               final res = await _api.unsaveBook(book.id);
               if (res['success'] == true) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Removed from saved')),
-                  );
-                }
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Removed from saved')),
+                );
                 _load();
               }
             },
@@ -2136,7 +2135,7 @@ class _RequestCard extends StatelessWidget {
 class RatingDialog extends StatefulWidget {
   final String sellerName;
 
-  const RatingDialog({required this.sellerName});
+  const RatingDialog({super.key, required this.sellerName});
 
   @override
   State<RatingDialog> createState() => RatingDialogState();
