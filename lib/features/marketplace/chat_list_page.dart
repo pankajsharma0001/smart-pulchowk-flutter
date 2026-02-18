@@ -21,6 +21,9 @@ class _ChatListPageState extends State<ChatListPage> {
   List<Conversation> _conversations = [];
   bool _isLoading = true;
   String? _currentUserId;
+  final Set<int> _selectedIds = {};
+
+  bool get _isSelectionMode => _selectedIds.isNotEmpty;
 
   @override
   void initState() {
@@ -40,7 +43,51 @@ class _ChatListPageState extends State<ChatListPage> {
       setState(() {
         _conversations = results;
         _isLoading = false;
+        // Clean up selection if any of the coversations were removed
+        _selectedIds.retainWhere((id) => _conversations.any((c) => c.id == id));
       });
+    }
+  }
+
+  Future<void> _bulkDelete() async {
+    if (_selectedIds.isEmpty) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete ${_selectedIds.length} conversations?'),
+        content: const Text(
+          'This will remove these conversations from your list. Other participants will still be able to see them.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      int successCount = 0;
+      for (final id in _selectedIds) {
+        final res = await _api.deleteConversation(id);
+        if (res['success'] == true) successCount++;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Deleted $successCount conversations')),
+        );
+        _selectedIds.clear();
+        _loadConversations();
+      }
     }
   }
 
@@ -85,11 +132,25 @@ class _ChatListPageState extends State<ChatListPage> {
           ? AppColors.backgroundDark
           : AppColors.backgroundLight,
       appBar: AppBar(
-        title: const Text('Messages'),
+        title: _isSelectionMode
+            ? Text('${_selectedIds.length} selected')
+            : const Text('Messages'),
         backgroundColor: isDark
             ? AppColors.backgroundDark
             : AppColors.backgroundLight,
         elevation: 0,
+        actions: [
+          if (_isSelectionMode) ...[
+            TextButton(
+              onPressed: () => setState(() => _selectedIds.clear()),
+              child: const Text('Clear'),
+            ),
+            IconButton(
+              onPressed: _bulkDelete,
+              icon: const Icon(Icons.delete_outline, color: AppColors.error),
+            ),
+          ],
+        ],
       ),
       body: _isLoading
           ? _buildChatListSkeleton(isDark)
@@ -107,31 +168,82 @@ class _ChatListPageState extends State<ChatListPage> {
                     _currentUserId ?? '',
                   );
                   final lastMsg = conversation.lastMessage;
+                  final isSelected = _selectedIds.contains(conversation.id);
                   final hasUnread = conversation.unreadCount > 0;
 
                   return GestureDetector(
-                    onTap: () => _navigateToChat(conversation),
+                    onTap: () {
+                      if (_isSelectionMode) {
+                        setState(() {
+                          if (isSelected) {
+                            _selectedIds.remove(conversation.id);
+                          } else {
+                            _selectedIds.add(conversation.id);
+                          }
+                        });
+                      } else {
+                        _navigateToChat(conversation);
+                      }
+                    },
+                    onLongPress: () {
+                      setState(() {
+                        if (isSelected) {
+                          _selectedIds.remove(conversation.id);
+                        } else {
+                          _selectedIds.add(conversation.id);
+                        }
+                      });
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.cardDark
-                            : AppColors.cardLight,
+                        color: isSelected
+                            ? AppColors.primary.withValues(alpha: 0.1)
+                            : (isDark
+                                  ? AppColors.cardDark
+                                  : AppColors.cardLight),
                         borderRadius: AppRadius.lgAll,
                         border: Border.all(
-                          color: isDark ? Colors.white10 : Colors.black12,
+                          color: isSelected
+                              ? AppColors.primary.withValues(alpha: 0.5)
+                              : (isDark ? Colors.white10 : Colors.black12),
                         ),
                       ),
                       child: Row(
                         children: [
-                          CircleAvatar(
-                            radius: 24,
-                            backgroundImage: otherUser?.image != null
-                                ? CachedNetworkImageProvider(otherUser!.image!)
-                                : null,
-                            child: otherUser?.image == null
-                                ? Text(otherUser?.name[0].toUpperCase() ?? '?')
-                                : null,
+                          Stack(
+                            children: [
+                              CircleAvatar(
+                                radius: 24,
+                                backgroundImage: otherUser?.image != null
+                                    ? CachedNetworkImageProvider(
+                                        otherUser!.image!,
+                                      )
+                                    : null,
+                                child: otherUser?.image == null
+                                    ? Text(
+                                        otherUser?.name[0].toUpperCase() ?? '?',
+                                      )
+                                    : null,
+                              ),
+                              if (isSelected)
+                                Positioned(
+                                  right: 0,
+                                  bottom: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: const BoxDecoration(
+                                      color: AppColors.primary,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.check,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
                           const SizedBox(width: 12),
                           Expanded(
