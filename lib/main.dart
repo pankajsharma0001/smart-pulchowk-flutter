@@ -7,6 +7,7 @@ import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/services/analytics_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/features/auth/auth.dart';
+import 'package:smart_pulchowk/core/services/navigation_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -56,6 +57,8 @@ class SmartPulchowkApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: themeProvider.themeMode,
+            navigatorKey:
+                NavigationService.navigatorKey, // Set global navigator key
             navigatorObservers: [AnalyticsService.observer],
             home: const AuthWrapper(),
           ),

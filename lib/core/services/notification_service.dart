@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smart_pulchowk/core/services/navigation_service.dart';
 
 /// Service to handle FCM and local notifications.
 class NotificationService {
@@ -21,6 +22,21 @@ class NotificationService {
       debugPrint(
         'User granted notification permission: ${settings.authorizationStatus}',
       );
+
+      // 1. Listen to background notification clicks (App in background)
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        debugPrint('Notification clicked from background: ${message.data}');
+        NavigationService.handleNotificationPayload(message.data);
+      });
+
+      // 2. Handle initial notification (App terminated)
+      final initialMessage = await _messaging.getInitialMessage();
+      if (initialMessage != null) {
+        debugPrint(
+          'Notification clicked from terminated: ${initialMessage.data}',
+        );
+        NavigationService.handleNotificationPayload(initialMessage.data);
+      }
 
       // Listen to foreground messages
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {

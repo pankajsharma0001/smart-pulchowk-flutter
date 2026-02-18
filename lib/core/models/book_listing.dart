@@ -352,6 +352,22 @@ class BookListing {
     );
   }
 
+  /// Create a placeholder listing with just an ID for navigation.
+  factory BookListing.fromId(int id) {
+    return BookListing(
+      id: id,
+      sellerId: '',
+      title: '...',
+      author: '...',
+      condition: BookCondition.good,
+      price: '0',
+      status: BookStatus.available,
+      viewCount: 0,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
   /// Get the first image URL or null
   String? get primaryImageUrl =>
       images != null && images!.isNotEmpty ? images!.first.imageUrl : null;
