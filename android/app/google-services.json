@@ -1,0 +1,90 @@
+{
+  "project_info": {
+    "project_number": "1004167085921",
+    "project_id": "pulchowkx-cb4e7",
+    "storage_bucket": "pulchowkx-cb4e7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1004167085921:android:9dcc374f888ba820f2cf20",
+        "android_client_info": {
+          "package_name": "com.example.pulchowkx_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1004167085921-52l2jqbndlgpn4tet4uk5enq7de3t4ig.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.pulchowkx_app",
+            "certificate_hash": "6fd8c23fe8c94bf37e5dc319eae31b3cace92353"
+          }
+        },
+        {
+          "client_id": "1004167085921-bf50vb9v2090tofgipesrs4e64r6lt60.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDD5T4zU8xglu1Nb4Q6zTTGjJm0-M_st8o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1004167085921-bf50vb9v2090tofgipesrs4e64r6lt60.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1004167085921-k7eo4ckcqa5aablems026r63soo87pdh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.pulchowkxApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1004167085921:android:90f00483dae1046af2cf20",
+        "android_client_info": {
+          "package_name": "com.pankajsharma.smart_pulchowk"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1004167085921-bf50vb9v2090tofgipesrs4e64r6lt60.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDD5T4zU8xglu1Nb4Q6zTTGjJm0-M_st8o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1004167085921-bf50vb9v2090tofgipesrs4e64r6lt60.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1004167085921-k7eo4ckcqa5aablems026r63soo87pdh.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.pulchowkxApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
