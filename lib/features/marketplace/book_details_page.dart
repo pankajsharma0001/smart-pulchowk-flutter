@@ -1216,7 +1216,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
   }
 
   void _viewContact(BookPurchaseRequest r) async {
-    final seller = r.listing?.seller;
+    final seller = r.listing?.seller ?? _book.seller;
     if (seller == null) {
       _showSnackBar('Seller information not available');
       return;
@@ -1372,7 +1372,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
   }
 
   void _openChat(BookPurchaseRequest r) {
-    final seller = r.listing?.seller;
+    final seller = r.listing?.seller ?? _book.seller;
     if (seller == null) return;
     Navigator.push(
       context,

@@ -51,6 +51,25 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   Future<void> _initChat() async {
     _currentUserId = await StorageService.readSecure(AppConstants.dbUserIdKey);
     _activeConversationId = widget.conversationId;
+
+    // If we don't have a conversation ID but we have a listing,
+    // try to find an existing conversation for this listing and recipient.
+    if (_activeConversationId == null && widget.listing != null) {
+      try {
+        final conversations = await _api.getConversations();
+        for (var conv in conversations) {
+          if (conv.listingId == widget.listing!.id &&
+              (conv.buyerId == widget.recipientId ||
+                  conv.sellerId == widget.recipientId)) {
+            _activeConversationId = conv.id;
+            break;
+          }
+        }
+      } catch (e) {
+        debugPrint('Error finding existing conversation: $e');
+      }
+    }
+
     _loadMessages();
     _startPolling();
   }

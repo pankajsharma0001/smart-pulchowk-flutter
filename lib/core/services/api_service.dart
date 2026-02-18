@@ -1151,8 +1151,8 @@ class ApiService {
 
       final body = {
         'content': content,
-        ?listingId: listingId,
-        ?receiverId: receiverId,
+        if (listingId != null) 'listingId': listingId,
+        if (receiverId != null) 'receiverId': receiverId,
       };
 
       final response = await _authPost(path, body: body);
