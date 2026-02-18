@@ -9,6 +9,7 @@ import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/core/widgets/staggered_scale_fade.dart';
 import 'package:smart_pulchowk/core/widgets/pdf_viewer.dart';
 import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
+import 'package:smart_pulchowk/features/notices/notice_editor.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class NoticesPage extends StatefulWidget {
@@ -34,6 +35,7 @@ class _NoticesPageState extends State<NoticesPage> {
   List<Notice> _notices = [];
   NoticeStats? _stats;
   String? _selectedCategory;
+  String _userRole = 'student';
 
   final List<Map<String, dynamic>> _categories = [
     {'label': 'All', 'value': null, 'icon': Icons.all_inclusive_rounded},
@@ -107,9 +109,11 @@ class _NoticesPageState extends State<NoticesPage> {
       ]);
 
       if (mounted) {
+        final role = await _api.getUserRole();
         setState(() {
           _notices = results[0] as List<Notice>;
           _stats = results[1] as NoticeStats?;
+          _userRole = role;
           _isLoading = false;
           _offset = _notices.length;
           _hasMore = _notices.length >= _limit;
@@ -147,6 +151,60 @@ class _NoticesPageState extends State<NoticesPage> {
     } catch (e) {
       debugPrint('Error loading more notices: $e');
       if (mounted) setState(() => _isLoadingMore = false);
+    }
+  }
+
+  void _openNoticeEditor({Notice? notice}) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: isDark ? AppColors.cardDark : Colors.white,
+      showDragHandle: true,
+      builder: (_) => NoticeEditor(notice: notice),
+    );
+
+    if (result == true) {
+      _loadData(forceRefresh: true);
+    }
+  }
+
+  Future<void> _deleteNotice(Notice notice) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Notice?'),
+        content: const Text(
+          'Are you sure you want to permanently delete this notice?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      haptics.heavyImpact();
+      final result = await _api.deleteNotice(notice.id);
+      if (mounted) {
+        if (result.success) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Notice deleted')));
+          _loadData(forceRefresh: true);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result.error ?? 'Failed to delete notice')),
+          );
+        }
+      }
     }
   }
 
@@ -211,6 +269,21 @@ class _NoticesPageState extends State<NoticesPage> {
           ),
         ],
       ),
+      floatingActionButton: _userRole == 'notice_manager'
+          ? Container(
+              margin: const EdgeInsets.only(bottom: 80),
+              child: FloatingActionButton.extended(
+                onPressed: () => _openNoticeEditor(),
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                icon: const Icon(Icons.add_rounded),
+                label: const Text(
+                  'Add Notice',
+                  style: TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            )
+          : null,
     );
   }
 
@@ -433,7 +506,13 @@ class _NoticesPageState extends State<NoticesPage> {
         return StaggeredScaleFade(
           key: ValueKey('notice_${notice.id}'),
           index: index,
-          child: _NoticeCard(notice: notice, isDark: isDark),
+          child: _NoticeCard(
+            notice: notice,
+            isDark: isDark,
+            userRole: _userRole,
+            onEdit: () => _openNoticeEditor(notice: notice),
+            onDelete: () => _deleteNotice(notice),
+          ),
         );
       },
     );
@@ -443,8 +522,17 @@ class _NoticesPageState extends State<NoticesPage> {
 class _NoticeCard extends StatelessWidget {
   final Notice notice;
   final bool isDark;
+  final String userRole;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
-  const _NoticeCard({required this.notice, required this.isDark});
+  const _NoticeCard({
+    required this.notice,
+    required this.isDark,
+    required this.userRole,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   void _handleAttachmentView(BuildContext context) {
     if (notice.attachmentUrl == null || notice.attachmentUrl!.isEmpty) return;
@@ -624,6 +712,38 @@ class _NoticeCard extends StatelessWidget {
                           onTap: () => _launchExternalUrl(notice.sourceUrl),
                         ),
                       ],
+                    ],
+                  ),
+                ],
+                if (userRole == 'notice_manager') ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        onPressed: onEdit,
+                        icon: const Icon(Icons.edit_rounded, size: 16),
+                        label: const Text('Edit'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: onDelete,
+                        icon: const Icon(
+                          Icons.delete_outline_rounded,
+                          size: 16,
+                        ),
+                        label: const Text('Delete'),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
                     ],
                   ),
                 ],

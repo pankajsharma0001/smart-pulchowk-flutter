@@ -56,16 +56,14 @@ class ApiService {
     _cache[key] = _CacheEntry<T>(data, ttl);
   }
 
-  /// Invalidate a specific cache key (both in-memory and Hive).
-  static void _invalidateCache(String key) {
+  static Future<void> _invalidateCache(String key) async {
     _cache.remove(key);
-    StorageService.deleteCache(key);
+    await StorageService.deleteCache(key);
   }
 
-  /// Invalidate all cache keys matching a prefix (both in-memory and Hive).
-  static void _invalidateCachePrefix(String prefix) {
+  static Future<void> _invalidateCachePrefix(String prefix) async {
     _cache.removeWhere((k, _) => k.startsWith(prefix));
-    StorageService.deleteCacheByPrefix(prefix);
+    await StorageService.deleteCacheByPrefix(prefix);
   }
 
   /// Clear all marketplace caches.
@@ -246,9 +244,13 @@ class ApiService {
 
   /// Force refresh the user role from the backend.
   Future<void> refreshUserRole() async {
-    // Currently getUserRole already hits the backend,
-    // but this could implement local caching in the future.
+    await _invalidateCache(AppConstants.userRoleKey);
     await getUserRole();
+  }
+
+  /// Get the database user ID from local storage.
+  Future<String?> getDbUserId() async {
+    return await StorageService.readSecure(AppConstants.dbUserIdKey);
   }
 
   /// Get current user's student profile (for faculty-based notifications etc.)
@@ -1659,5 +1661,138 @@ class ApiService {
       },
       parser: (data) => NoticeStats.fromJson(data as Map<String, dynamic>),
     );
+  }
+
+  /// Create a new notice
+  Future<ApiResult> createNotice(Map<String, dynamic> data) async {
+    final response = await _authPost(AppConstants.notices, body: data);
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      _invalidateCachePrefix(AppConstants.cacheNoticesList);
+      _invalidateCache(AppConstants.cacheNoticeStats);
+      return ApiResult(success: true);
+    }
+    try {
+      return ApiResult(
+        success: false,
+        error:
+            jsonDecode(response.body)['message'] ??
+            'Failed to create notice (${response.statusCode})',
+      );
+    } catch (e) {
+      return ApiResult(
+        success: false,
+        error: 'Failed to create notice (Status ${response.statusCode})',
+      );
+    }
+  }
+
+  /// Update an existing notice
+  Future<ApiResult> updateNotice(int id, Map<String, dynamic> data) async {
+    final response = await _authPut('${AppConstants.notices}/$id', body: data);
+    if (response.statusCode == 200) {
+      _invalidateCachePrefix(AppConstants.cacheNoticesList);
+      _invalidateCache(AppConstants.cacheNoticeStats);
+      return ApiResult(success: true);
+    }
+    try {
+      return ApiResult(
+        success: false,
+        error:
+            jsonDecode(response.body)['message'] ??
+            'Failed to update notice (${response.statusCode})',
+      );
+    } catch (e) {
+      return ApiResult(
+        success: false,
+        error: 'Failed to update notice (Status ${response.statusCode})',
+      );
+    }
+  }
+
+  /// Delete a notice
+  Future<ApiResult> deleteNotice(int id) async {
+    final response = await _authDelete('${AppConstants.notices}/$id');
+    if (response.statusCode == 200) {
+      _invalidateCachePrefix(AppConstants.cacheNoticesList);
+      _invalidateCache(AppConstants.cacheNoticeStats);
+      return ApiResult(success: true);
+    }
+    try {
+      return ApiResult(
+        success: false,
+        error:
+            jsonDecode(response.body)['message'] ??
+            'Failed to delete notice (${response.statusCode})',
+      );
+    } catch (e) {
+      return ApiResult(
+        success: false,
+        error: 'Failed to delete notice (Status ${response.statusCode})',
+      );
+    }
+  }
+
+  /// Upload a notice attachment
+  Future<ApiResult<String>> uploadNoticeAttachment(String filePath) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${AppConstants.fullApiUrl}${AppConstants.notices}/upload'),
+      );
+
+      final authHeaders = await _getAuthHeaders();
+      request.headers.addAll(authHeaders);
+
+      final extension = filePath.split('.').last.toLowerCase();
+      String mimeType = 'application/octet-stream';
+      if (extension == 'pdf') {
+        mimeType = 'application/pdf';
+      } else if (['jpg', 'jpeg'].contains(extension)) {
+        mimeType = 'image/jpeg';
+      } else if (extension == 'png') {
+        mimeType = 'image/png';
+      } else if (extension == 'webp') {
+        mimeType = 'image/webp';
+      }
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'file',
+          filePath,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        try {
+          final json = jsonDecode(response.body);
+          if (json['success'] == true && json['data'] != null) {
+            // Backend returns { success: true, data: { url: "...", name: "..." } }
+            final url = json['data']['url'] as String;
+            return ApiResult.success(url);
+          }
+        } catch (e) {
+          return ApiResult.failure('Server returned invalid data format');
+        }
+      }
+
+      // Handle non-JSON errors (like HTML 404s) gracefully
+      try {
+        final errorMsg =
+            jsonDecode(response.body)['message'] ??
+            'Failed to upload attachment (${response.statusCode})';
+        return ApiResult.failure(errorMsg);
+      } catch (e) {
+        return ApiResult.failure(
+          'Upload failed with status ${response.statusCode}',
+        );
+      }
+    } catch (e) {
+      debugPrint('Error uploading notice attachment: $e');
+      return ApiResult.failure('Network or File Error');
+    }
   }
 }

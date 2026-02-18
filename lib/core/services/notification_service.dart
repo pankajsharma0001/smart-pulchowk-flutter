@@ -76,9 +76,19 @@ class NotificationService {
       }
 
       // Listen to foreground messages
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
         debugPrint('Got a message whilst in the foreground!');
         debugPrint('Message data: ${message.data}');
+
+        // Don't show notification if it's sent by the current user
+        final publisherId = message.data['publisherId']?.toString();
+        if (publisherId != null) {
+          final currentUserId = await ApiService().getDbUserId();
+          if (currentUserId == publisherId) {
+            debugPrint('Suppressing notification from self ($publisherId)');
+            return;
+          }
+        }
 
         if (message.notification != null) {
           debugPrint(
