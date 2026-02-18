@@ -32,6 +32,7 @@ class _SettingsPageState extends State<SettingsPage> {
   // Notification Preferences
   bool _eventsNotify = true;
   bool _booksNotify = true;
+  bool _noticesNotify = true;
   bool _announcementsNotify = true;
   bool _classroomNotify = true;
   bool _chatNotify = true;
@@ -52,6 +53,8 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _eventsNotify = hasPermission && (prefs.getBool('notify_events') ?? true);
       _booksNotify = hasPermission && (prefs.getBool('notify_books') ?? true);
+      _noticesNotify =
+          hasPermission && (prefs.getBool('notify_notices') ?? true);
       _announcementsNotify =
           hasPermission && (prefs.getBool('notify_announcements') ?? true);
       _classroomNotify =
@@ -72,6 +75,7 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       if (key == 'notify_events') _eventsNotify = value;
       if (key == 'notify_books') _booksNotify = value;
+      if (key == 'notify_notices') _noticesNotify = value;
       if (key == 'notify_announcements') _announcementsNotify = value;
       if (key == 'notify_classroom') _classroomNotify = value;
       if (key == 'notify_chat') _chatNotify = value;
@@ -442,6 +446,14 @@ class _SettingsPageState extends State<SettingsPage> {
             value: _booksNotify,
             onChanged: (v) => _toggleNotification('notify_books', v),
             icon: Icons.shopping_bag_rounded,
+          ),
+          const _Divider(),
+          _buildToggleTile(
+            title: 'Campus Notices',
+            subtitle: 'New university results & forms',
+            value: _noticesNotify,
+            onChanged: (v) => _toggleNotification('notify_notices', v),
+            icon: Icons.campaign_rounded,
           ),
           const _Divider(),
           _buildToggleTile(

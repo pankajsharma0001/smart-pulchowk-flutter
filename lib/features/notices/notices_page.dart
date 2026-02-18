@@ -163,14 +163,7 @@ class _NoticesPageState extends State<NoticesPage> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => _loadData(forceRefresh: true),
-            tooltip: 'Refresh',
-          ),
-          const SizedBox(width: AppSpacing.sm),
-        ],
+        actions: const [SizedBox(width: AppSpacing.md)],
       ),
       body: Column(
         children: [
@@ -206,7 +199,12 @@ class _NoticesPageState extends State<NoticesPage> {
             ),
           Expanded(
             child: RefreshIndicator(
-              onRefresh: () => _loadData(forceRefresh: true),
+              onRefresh: () async {
+                await Future.wait([
+                  _loadData(forceRefresh: true),
+                  _api.refreshUserRole(),
+                ]);
+              },
               color: AppColors.primary,
               child: _isLoading ? _buildLoading() : _buildContent(isDark),
             ),

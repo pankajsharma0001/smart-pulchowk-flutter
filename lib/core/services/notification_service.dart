@@ -181,6 +181,7 @@ class NotificationService {
       final topics = [
         'events',
         'books',
+        'notices',
         'announcements',
         'lost_found',
         'chat',
@@ -220,6 +221,7 @@ class NotificationService {
       final topics = {
         'events': prefs.getBool('notify_events') ?? true,
         'books': prefs.getBool('notify_books') ?? true,
+        'notices': prefs.getBool('notify_notices') ?? true,
         'announcements': prefs.getBool('notify_announcements') ?? true,
         'lost_found': prefs.getBool('notify_lost_found') ?? true,
         'chat': prefs.getBool('notify_chat') ?? true,
