@@ -56,7 +56,7 @@ class EventCard extends StatelessWidget {
                       placeholder: (_, _) => const ShimmerWrapper(
                         child: Skeleton(height: double.infinity),
                       ),
-                      errorWidget: (_, __, ___) => _buildPlaceholder(context),
+                      errorWidget: (_, _, _) => _buildPlaceholder(context),
                     )
                   else
                     _buildPlaceholder(context),

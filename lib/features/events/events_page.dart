@@ -46,6 +46,15 @@ class _EventsPageState extends State<EventsPage>
         setState(() {
           _allEvents = events;
           _isLoading = false;
+
+          // Smart Tab Selection: Default to Ongoing (0)
+          // If Ongoing is empty but Upcoming has events, switch to Upcoming (1)
+          final hasOngoing = events.any((e) => e.isOngoing);
+          final hasUpcoming = events.any((e) => e.isUpcoming);
+
+          if (!hasOngoing && hasUpcoming && _tabController.index == 0) {
+            _tabController.animateTo(1);
+          }
         });
       }
     } catch (e) {
@@ -107,7 +116,12 @@ class _EventsPageState extends State<EventsPage>
     }
 
     return GridView.builder(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        100, // Bottom padding for navbar
+      ),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         childAspectRatio: 0.68,
@@ -123,7 +137,12 @@ class _EventsPageState extends State<EventsPage>
 
   Widget _buildLoadingState() {
     return GridView.builder(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        100, // Bottom padding for navbar
+      ),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         childAspectRatio: 0.68,
