@@ -146,6 +146,23 @@ class EventCard extends StatelessWidget {
                     Row(
                       children: [
                         Icon(
+                          Icons.access_time_rounded,
+                          size: 12,
+                          color: isDark
+                              ? AppColors.textMutedDark
+                              : AppColors.textMuted,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          DateFormat('h:mm a').format(event.eventStartTime),
+                          style: AppTextStyles.caption.copyWith(fontSize: 10),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Icon(
                           Icons.location_on_rounded,
                           size: 12,
                           color: isDark
@@ -194,7 +211,6 @@ class EventCard extends StatelessWidget {
 
   Widget _buildListCard(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final dateFormat = DateFormat('EEE, MMM d');
 
     return GestureDetector(
       onTap: onTap ?? () => _navigateToDetails(context),
@@ -258,7 +274,9 @@ class EventCard extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        dateFormat.format(event.eventStartTime),
+                        DateFormat(
+                          'EEE, MMM d • h:mm a',
+                        ).format(event.eventStartTime),
                         style: AppTextStyles.caption,
                       ),
                     ],

@@ -206,6 +206,11 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                   child: CachedNetworkImage(
                                     imageUrl: widget.event.bannerUrl!,
                                     fit: BoxFit.cover,
+                                    errorWidget: (_, _, _) => Container(
+                                      decoration: BoxDecoration(
+                                        gradient: AppColors.primaryGradient,
+                                      ),
+                                    ),
                                   ),
                                 ),
                                 Positioned.fill(
@@ -228,6 +233,15 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                     fit: BoxFit.contain,
                                     placeholder: (_, _) => const ShimmerWrapper(
                                       child: Skeleton(height: double.infinity),
+                                    ),
+                                    errorWidget: (_, _, _) => Center(
+                                      child: Icon(
+                                        Icons.broken_image_rounded,
+                                        size: 48,
+                                        color: Colors.white.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -274,12 +288,28 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   if (widget.event.club!.logoUrl != null) ...[
-                                    CircleAvatar(
-                                      radius: 10,
-                                      backgroundImage:
-                                          CachedNetworkImageProvider(
-                                            widget.event.club!.logoUrl!,
-                                          ),
+                                    Container(
+                                      width: 20,
+                                      height: 20,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
+                                      ),
+                                      clipBehavior: Clip.antiAlias,
+                                      child: CachedNetworkImage(
+                                        imageUrl: widget.event.club!.logoUrl!,
+                                        fit: BoxFit.cover,
+                                        placeholder: (_, _) =>
+                                            const ShimmerWrapper(
+                                              child: Skeleton(
+                                                height: double.infinity,
+                                              ),
+                                            ),
+                                        errorWidget: (_, _, _) => const Icon(
+                                          Icons.business_rounded,
+                                          size: 14,
+                                          color: AppColors.primary,
+                                        ),
+                                      ),
                                     ),
                                     const SizedBox(width: 6),
                                   ],

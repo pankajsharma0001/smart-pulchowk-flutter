@@ -35,10 +35,17 @@ class _EventsPageState extends State<EventsPage>
 
   Future<void> _loadEvents({bool forceRefresh = false}) async {
     if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+
+    // Only show full screen loading if we don't have events yet
+    final bool showFullLoading =
+        (_allEvents.isEmpty || _error != null) && !forceRefresh;
+
+    if (showFullLoading) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     try {
       final events = await _apiService.getAllEvents(forceRefresh: forceRefresh);
@@ -46,6 +53,7 @@ class _EventsPageState extends State<EventsPage>
         setState(() {
           _allEvents = events;
           _isLoading = false;
+          _error = null;
 
           // Smart Tab Selection: Default to Ongoing (0)
           // If Ongoing is empty but Upcoming has events, switch to Upcoming (1)
@@ -83,30 +91,34 @@ class _EventsPageState extends State<EventsPage>
             ],
           ),
         ),
-        body: RefreshIndicator(
-          onRefresh: () => _loadEvents(forceRefresh: true),
-          child: _isLoading
-              ? _buildLoadingState()
-              : _error != null
-              ? _buildErrorState()
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildEventList(
-                      _allEvents.where((e) => e.isOngoing).toList(),
-                    ),
-                    _buildEventList(
-                      _allEvents.where((e) => e.isUpcoming).toList(),
-                    ),
-                    _buildEventList(
-                      _allEvents
-                          .where((e) => e.isCompleted || e.isCancelled)
-                          .toList(),
-                    ),
-                  ],
-                ),
-        ),
+        body: _isLoading
+            ? _buildLoadingState()
+            : _error != null
+            ? _buildErrorState()
+            : TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildRefreshableList(
+                    _allEvents.where((e) => e.isOngoing).toList(),
+                  ),
+                  _buildRefreshableList(
+                    _allEvents.where((e) => e.isUpcoming).toList(),
+                  ),
+                  _buildRefreshableList(
+                    _allEvents
+                        .where((e) => e.isCompleted || e.isCancelled)
+                        .toList(),
+                  ),
+                ],
+              ),
       ),
+    );
+  }
+
+  Widget _buildRefreshableList(List<ClubEvent> events) {
+    return RefreshIndicator(
+      onRefresh: () => _loadEvents(forceRefresh: true),
+      child: events.isEmpty ? _buildEmptyState() : _buildEventList(events),
     );
   }
 
@@ -116,6 +128,7 @@ class _EventsPageState extends State<EventsPage>
     }
 
     return GridView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.md,
@@ -137,6 +150,7 @@ class _EventsPageState extends State<EventsPage>
 
   Widget _buildLoadingState() {
     return GridView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.md,
@@ -159,46 +173,68 @@ class _EventsPageState extends State<EventsPage>
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.event_busy_rounded,
-            size: 64,
-            color: AppColors.textMuted.withValues(alpha: 0.5),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: constraints.maxHeight,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.event_busy_rounded,
+                    size: 64,
+                    color: AppColors.textMuted.withValues(alpha: 0.5),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    'No events found',
+                    style: AppTextStyles.h4.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'No events found',
-            style: AppTextStyles.h4.copyWith(color: AppColors.textMuted),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildErrorState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            size: 48,
-            color: AppColors.error,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: constraints.maxHeight,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline_rounded,
+                    size: 48,
+                    color: AppColors.error,
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  Text(
+                    _error ?? 'Something went wrong',
+                    style: AppTextStyles.bodyLarge,
+                  ),
+                  TextButton(
+                    onPressed: () => _loadEvents(forceRefresh: true),
+                    child: const Text('Try Again'),
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            _error ?? 'Something went wrong',
-            style: AppTextStyles.bodyLarge,
-          ),
-          TextButton(
-            onPressed: () => _loadEvents(forceRefresh: true),
-            child: const Text('Try Again'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
