@@ -5,6 +5,7 @@ import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/widgets/custom_app_bar.dart';
+import 'package:smart_pulchowk/features/events/events_page.dart';
 import 'package:smart_pulchowk/features/home/home_page.dart';
 import 'package:smart_pulchowk/features/notifications/notifications.dart';
 import 'package:smart_pulchowk/features/notices/notices_page.dart';
@@ -285,10 +286,7 @@ class MainLayoutState extends State<MainLayout>
           icon: Icons.groups_rounded,
         );
       case 6:
-        return const _PlaceholderPage(
-          title: 'Events',
-          icon: Icons.event_rounded,
-        );
+        return const EventsPage();
       case 7:
         return const _PlaceholderPage(
           title: 'Admin Dashboard',
@@ -324,7 +322,7 @@ class MainLayoutState extends State<MainLayout>
       case 5:
         return AppPage.home; // Clubs (placeholder)
       case 6:
-        return AppPage.home; // Events (placeholder)
+        return AppPage.events;
       case 7:
         return AppPage.dashboard; // Admin Dashboard
       case 8:

@@ -6,6 +6,8 @@ import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/features/marketplace/book_details_page.dart';
 import 'package:smart_pulchowk/features/marketplace/chat_room_page.dart';
 import 'package:smart_pulchowk/features/marketplace/marketplace_activity_page.dart';
+import 'package:smart_pulchowk/core/models/event.dart';
+import 'package:smart_pulchowk/features/events/event_details_page.dart';
 
 class NavigationService {
   NavigationService._();
@@ -82,6 +84,19 @@ class NavigationService {
         }
       } else {
         _navigateToTab(8); // Notices tab
+      }
+    } else if (type == 'new_event' || type == 'event_reminder') {
+      final eventIdStr = data['eventId'];
+      if (eventIdStr != null) {
+        final id = int.tryParse(eventIdStr.toString());
+        if (id != null) {
+          _navigateToTab(
+            6, // Events tab
+            subPage: EventDetailsPage(event: ClubEvent.fromId(id)),
+          );
+        }
+      } else {
+        _navigateToTab(6); // Events tab
       }
     }
   }

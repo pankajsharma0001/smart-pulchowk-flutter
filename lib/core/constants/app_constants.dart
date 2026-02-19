@@ -35,6 +35,13 @@ class AppConstants {
   static const String notices = '/notices';
   static const String noticeStats = '/notices/stats';
 
+  // ── Event Endpoints ────────────────────────────────────────────────────────
+  static const String eventsAll = '/events/all-events';
+  static const String eventsUpcoming = '/events/get-upcoming-events';
+  static const String eventsRegister = '/events/register-event';
+  static const String eventsCancelRegistration = '/events/cancel-registration';
+  static const String eventsEnrollment = '/events/enrollment';
+
   // ── Storage Keys ──────────────────────────────────────────────────────────
   static const String dbUserIdKey = 'db_user_id';
   static const String userRoleKey = 'user_role';
@@ -79,4 +86,9 @@ class AppConstants {
   // ── Notices Cache Keys ─────────────────────────────────────────────────
   static const String cacheNoticesList = 'notices_list';
   static const String cacheNoticeStats = 'notices_stats';
+
+  // ── Events Cache Keys ──────────────────────────────────────────────────
+  static const String cacheEventsList = 'events_list';
+  static const String cacheEventsUpcoming = 'events_upcoming';
+  static const String cacheEventsEnrollment = 'events_enrollment';
 }

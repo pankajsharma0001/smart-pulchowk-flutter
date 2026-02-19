@@ -6,6 +6,7 @@ import 'package:smart_pulchowk/core/models/chat.dart';
 import 'package:smart_pulchowk/core/models/classroom.dart';
 import 'package:smart_pulchowk/core/models/notification.dart';
 import 'package:smart_pulchowk/core/models/notice.dart';
+import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
@@ -68,6 +69,9 @@ class ApiService {
 
   /// Clear all marketplace caches.
   static void invalidateMarketplaceCache() => _invalidateCachePrefix('mkt_');
+
+  /// Clear events caches.
+  static void invalidateEventsCache() => _invalidateCachePrefix('events_');
 
   /// 3-tier cached fetch: in-memory → network (+persist) → Hive fallback.
   ///
@@ -1794,5 +1798,122 @@ class ApiService {
       debugPrint('Error uploading notice attachment: $e');
       return ApiResult.failure('Network or File Error');
     }
+  }
+
+  // ── Campus Events ────────────────────────────────────────────────────────
+
+  /// Get all events from the backend.
+  Future<List<ClubEvent>> getAllEvents({bool forceRefresh = false}) async {
+    return await _cachedFetch<List<ClubEvent>>(
+          key: AppConstants.cacheEventsList,
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet(AppConstants.eventsAll);
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['data'] != null && json['data']['allEvents'] != null) {
+                return json['data']['allEvents'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
+              .map((e) => ClubEvent.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        ) ??
+        [];
+  }
+
+  /// Get upcoming events from the backend.
+  Future<List<ClubEvent>> getUpcomingEvents({bool forceRefresh = false}) async {
+    return await _cachedFetch<List<ClubEvent>>(
+          key: AppConstants.cacheEventsUpcoming,
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet(AppConstants.eventsUpcoming);
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['data'] != null &&
+                  json['data']['upcomingEvents'] != null) {
+                return json['data']['upcomingEvents'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
+              .map((e) => ClubEvent.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        ) ??
+        [];
+  }
+
+  /// Register student for an event.
+  Future<Map<String, dynamic>> registerForEvent(int eventId) async {
+    try {
+      final response = await _authPost(
+        AppConstants.eventsRegister,
+        body: {'eventId': eventId},
+      );
+      final json = jsonDecode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _invalidateCache(AppConstants.cacheEventsEnrollment);
+        return {'success': true, 'data': json['data']};
+      }
+      return {
+        'success': false,
+        'message': json['message'] ?? 'Failed to register',
+      };
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  /// Cancel event registration.
+  Future<Map<String, dynamic>> cancelEventRegistration(int eventId) async {
+    try {
+      final response = await _authPost(
+        AppConstants.eventsCancelRegistration,
+        body: {'eventId': eventId},
+      );
+      final json = jsonDecode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        _invalidateCache(AppConstants.cacheEventsEnrollment);
+        return {'success': true, 'data': json['data']};
+      }
+      return {
+        'success': false,
+        'message': json['message'] ?? 'Failed to cancel',
+      };
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  /// Get current student's active event registrations (enrollment).
+  Future<List<EventRegistration>> getStudentEnrollment({
+    bool forceRefresh = false,
+  }) async {
+    return await _cachedFetch<List<EventRegistration>>(
+          key: AppConstants.cacheEventsEnrollment,
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authPost(AppConstants.eventsEnrollment);
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['data'] != null &&
+                  json['data']['registrations'] != null) {
+                return json['data']['registrations'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
+              .map((e) => EventRegistration.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        ) ??
+        [];
   }
 }
