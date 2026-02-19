@@ -116,21 +116,27 @@ class _FaqTabState extends State<_FaqTab> with SingleTickerProviderStateMixin {
     ),
     _FeatureSection(
       label: 'Notices',
-      icon: Icons.notifications_active_rounded,
-      color: Color(0xFFF59E0B),
-      isReady: false,
+      icon: Icons.campaign_rounded,
+      color: const Color(0xFFF59E0B),
+      isReady: true,
     ),
     _FeatureSection(
       label: 'Events',
       icon: Icons.event_rounded,
-      color: Color(0xFFEC4899),
-      isReady: false,
+      color: const Color(0xFFEC4899),
+      isReady: true,
     ),
     _FeatureSection(
       label: 'Clubs',
       icon: Icons.groups_rounded,
-      color: Color(0xFF14B8A6),
-      isReady: false,
+      color: const Color(0xFF14B8A6),
+      isReady: true,
+    ),
+    _FeatureSection(
+      label: 'Notifications',
+      icon: Icons.notifications_active_rounded,
+      color: AppColors.primary,
+      isReady: true,
     ),
   ];
 
@@ -239,6 +245,18 @@ class _FaqTabState extends State<_FaqTab> with SingleTickerProviderStateMixin {
               }
               if (f.label == 'Classroom') {
                 return _ClassroomFaq(isDark: widget.isDark);
+              }
+              if (f.label == 'Notices') {
+                return _NoticesFaq(isDark: widget.isDark);
+              }
+              if (f.label == 'Events') {
+                return _EventsFaq(isDark: widget.isDark);
+              }
+              if (f.label == 'Clubs') {
+                return _ClubsFaq(isDark: widget.isDark);
+              }
+              if (f.label == 'Notifications') {
+                return _NotificationsFaq(isDark: widget.isDark);
               }
               return _MarketplaceFaq(isDark: widget.isDark);
             }).toList(),
@@ -435,6 +453,241 @@ class _ClassroomFaq extends StatelessWidget {
             'If the dashboard seems out of date, pull down on the Classroom screen to trigger a manual refresh. This will sync your profile role and clear any stale cache.',
         icon: Icons.sync_rounded,
         color: const Color(0xFFF59E0B),
+      ),
+    ];
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      itemCount: faqs.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (context, i) => _FaqCard(item: faqs[i], isDark: isDark),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTICES FAQ
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _NoticesFaq extends StatelessWidget {
+  final bool isDark;
+  const _NoticesFaq({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final faqs = [
+      _FaqItem(
+        question: 'How do I see my department notices?',
+        answer:
+            'Notices are automatically filtered by your faculty and semester based on your official college email. You will always see the most relevant announcements first.',
+        icon: Icons.filter_list_rounded,
+        color: const Color(0xFFF59E0B),
+      ),
+      _FaqItem(
+        question: 'Can I search for old notices?',
+        answer:
+            'Yes, use the search bar at the top of the Notices tab to find previous announcements by title, content, or department.',
+        icon: Icons.search_rounded,
+        color: const Color(0xFF6366F1),
+      ),
+      _FaqItem(
+        question: 'How do I know if a notice is important?',
+        answer:
+            'Urgent or highly important notices are often highlighted with a distinct border or pinned to the top of the list for better visibility.',
+        icon: Icons.priority_high_rounded,
+        color: const Color(0xFFEF4444),
+      ),
+      _FaqItem(
+        question: 'Can I get notified of new notices?',
+        answer:
+            'Yes! Make sure the "Notices" toggle is enabled in your Notification Settings. You will receive a push notification whenever a new notice is published for your semester.',
+        icon: Icons.notifications_active_rounded,
+        color: const Color(0xFF10B981),
+      ),
+      _FaqItem(
+        question: 'How do I download attachments?',
+        answer:
+            'If a notice has an attached PDF or image, tap on the notice to open it, then tap the attachment thumbnail to view it in full screen or share/save it.',
+        icon: Icons.attachment_rounded,
+        color: const Color(0xFF8B5CF6),
+      ),
+    ];
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      itemCount: faqs.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (context, i) => _FaqCard(item: faqs[i], isDark: isDark),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EVENTS FAQ
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _EventsFaq extends StatelessWidget {
+  final bool isDark;
+  const _EventsFaq({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final faqs = [
+      _FaqItem(
+        question: 'How do I register for an event?',
+        answer:
+            'Tap on any event to see its full details. If registration is required, you\'ll find a "Register" or "Join" button at the bottom of the page.',
+        icon: Icons.how_to_reg_rounded,
+        color: const Color(0xFFEC4899),
+      ),
+      _FaqItem(
+        question: 'Where can I see my registered events?',
+        answer:
+            'You can view all events you\'ve signed up for by checking the "My Events" section or your personalized calendar within the Events tab.',
+        icon: Icons.event_available_rounded,
+        color: const Color(0xFF10B981),
+      ),
+      _FaqItem(
+        question: 'How do I add an event to my device calendar?',
+        answer:
+            'On the event details page, tap the "Add to Calendar" button. The app will sync the date, time, and location to your phone\'s native calendar app.',
+        icon: Icons.event_note_rounded,
+        color: const Color(0xFF6366F1),
+      ),
+      _FaqItem(
+        question: 'Can I see events from all clubs?',
+        answer:
+            'Yes, the Events tab provides a unified feed of all upcoming college events, including workshops, seminars, and social gatherings from all registered clubs.',
+        icon: Icons.dashboard_rounded,
+        color: const Color(0xFFF59E0B),
+      ),
+      _FaqItem(
+        question: 'How do I get directions to an event venue?',
+        answer:
+            'Tap on the location or venue name within the event details. This will open Google Maps or your preferred navigation app with directions to the spot.',
+        icon: Icons.location_on_rounded,
+        color: const Color(0xFFEF4444),
+      ),
+    ];
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      itemCount: faqs.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (context, i) => _FaqCard(item: faqs[i], isDark: isDark),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CLUBS FAQ
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ClubsFaq extends StatelessWidget {
+  final bool isDark;
+  const _ClubsFaq({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final faqs = [
+      _FaqItem(
+        question: 'How do I join a club?',
+        answer:
+            'Open a club\'s profile from the Clubs tab. You can use the "Join" button if they have an active recruitment form, or use the contact links to message the organizers.',
+        icon: Icons.person_add_rounded,
+        color: const Color(0xFF14B8A6),
+      ),
+      _FaqItem(
+        question: 'Where can I see a list of all college clubs?',
+        answer:
+            'The main "Clubs" tab in the application menu lists all registered student organizations, categorized by their field of interest or faculty.',
+        icon: Icons.list_alt_rounded,
+        color: const Color(0xFF6366F1),
+      ),
+      _FaqItem(
+        question: 'How do I contact club organizers?',
+        answer:
+            'Every club profile includes quick-action buttons for Email, WhatsApp, or Social Media. Tap any of these to reach out to the club leads directly.',
+        icon: Icons.contact_support_rounded,
+        color: const Color(0xFFF59E0B),
+      ),
+      _FaqItem(
+        question: 'Can I create a new club?',
+        answer:
+            'New clubs must be formally registered with the college administration. You can find guidance or contact student council representatives through the Help Center for the process.',
+        icon: Icons.add_circle_rounded,
+        color: const Color(0xFF10B981),
+      ),
+      _FaqItem(
+        question: 'How do I see upcoming club activities?',
+        answer:
+            'Visit the specific Club profile to see their upcoming events, or check the unified Events feed in the main app navigation.',
+        icon: Icons.local_activity_rounded,
+        color: const Color(0xFFEC4899),
+      ),
+    ];
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      itemCount: faqs.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (context, i) => _FaqCard(item: faqs[i], isDark: isDark),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// NOTIFICATIONS FAQ
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _NotificationsFaq extends StatelessWidget {
+  final bool isDark;
+  const _NotificationsFaq({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final faqs = [
+      _FaqItem(
+        question: 'Why am I not receiving push notifications?',
+        answer:
+            'First, ensure "Notifications" are enabled in the app Settings. Then, check your phone\'s system settings to make sure Smart Pulchowk has permission to send alerts.',
+        icon: Icons.notifications_paused_rounded,
+        color: const Color(0xFFEF4444),
+      ),
+      _FaqItem(
+        question: 'How do I mark a notification as read?',
+        answer:
+            'Simply tap on the notification to view it, or swipe right on any item in the Notifications list to mark it as read without opening.',
+        icon: Icons.done_all_rounded,
+        color: AppColors.primary,
+      ),
+      _FaqItem(
+        question: 'How do I delete or dismiss a notification?',
+        answer:
+            'You can swipe left on any notification in your list to permanently remove it from your feed (red background). This helps keep your alerts clean.',
+        icon: Icons.delete_sweep_rounded,
+        color: const Color(0xFFEF4444),
+      ),
+      _FaqItem(
+        question: 'Can I choose which alerts to receive?',
+        answer:
+            'Yes! Go to Settings → Notification Settings. You can individually toggle alerts for Books, Notices, Events, Classroom, and Chat Messages.',
+        icon: Icons.tune_rounded,
+        color: const Color(0xFF6366F1),
+      ),
+      _FaqItem(
+        question: 'Is there a limit to how many notifications are saved?',
+        answer:
+            'The app shows your most recent notifications. You can scroll down to load older alerts. Notifications older than 30 days are automatically cleaned up.',
+        icon: Icons.history_rounded,
+        color: const Color(0xFFF59E0B),
+      ),
+      _FaqItem(
+        question: 'Can I celebrate after reading all notifications?',
+        answer:
+            'Absolutely! If you mark all your unread notifications as read, the app will trigger a celebratory confetti blast to reward your productivity.',
+        icon: Icons.celebration_rounded,
+        color: const Color(0xFFEC4899),
       ),
     ];
 
