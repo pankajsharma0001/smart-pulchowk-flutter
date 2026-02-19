@@ -284,6 +284,7 @@ class _NoticesPageState extends State<NoticesPage> {
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 80),
                     child: FloatingActionButton.extended(
+                      heroTag: 'fab_notices',
                       onPressed: isKeyboardOpen
                           ? null
                           : () => _openNoticeEditor(),

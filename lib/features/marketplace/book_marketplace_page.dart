@@ -317,6 +317,7 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
 
   Widget _buildFAB(ColorScheme cs) {
     return FloatingActionButton.extended(
+      heroTag: 'fab_marketplace',
       onPressed: () async {
         final result = await Navigator.push<bool>(
           context,

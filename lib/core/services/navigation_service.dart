@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
+import 'package:smart_pulchowk/core/models/notification.dart';
 import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
 import 'package:smart_pulchowk/core/widgets/pdf_viewer.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
@@ -15,7 +16,114 @@ class NavigationService {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
-  /// Handle navigation based on notification data payload.
+  /// Handle navigation from an in-app notification tap.
+  static void handleInAppNotification(InAppNotification notification) {
+    final data = notification.data ?? {};
+    final type = notification.type;
+
+    switch (type) {
+      case NotificationType.bookListed:
+      case NotificationType.newBook:
+      case NotificationType.requestResponse:
+        final idStr = data['listingId'] ?? data['bookId'];
+        final id = int.tryParse(idStr?.toString() ?? '');
+        if (id != null) {
+          _navigateToTab(
+            3,
+            subPage: BookDetailsPage(listing: BookListing.fromId(id)),
+          );
+        } else {
+          _navigateToTab(3);
+        }
+
+      case NotificationType.purchaseRequest:
+      case NotificationType.purchaseRequestCancelled:
+      case NotificationType.purchaseRequestRemoved:
+        _navigateToTab(
+          3,
+          subPage: const MarketplaceActivityPage(initialTabIndex: 1),
+        );
+
+      case NotificationType.chatMessage:
+      case NotificationType.chatMention:
+        final conversationId = int.tryParse(
+          data['conversationId']?.toString() ?? '',
+        );
+        final senderId = data['senderId']?.toString();
+        final senderName = data['senderName']?.toString() ?? 'Chat';
+        if (conversationId != null) {
+          _navigateToTab(
+            3,
+            subPage: ChatRoomPage(
+              conversationId: conversationId,
+              recipientId: senderId ?? '',
+              recipientName: senderName,
+            ),
+          );
+        }
+
+      case NotificationType.newEvent:
+      case NotificationType.eventPublished:
+      case NotificationType.eventReminder:
+      case NotificationType.eventUpdated:
+      case NotificationType.eventRegistered:
+        final eventId = int.tryParse(data['eventId']?.toString() ?? '');
+        if (eventId != null) {
+          _navigateToTab(
+            6,
+            subPage: EventDetailsPage(event: ClubEvent.fromId(eventId)),
+          );
+        } else {
+          _navigateToTab(6);
+        }
+
+      case NotificationType.noticeCreated:
+      case NotificationType.noticeUpdated:
+      case NotificationType.noticeDeleted:
+        final attachmentUrl = data['attachmentUrl']?.toString();
+        final noticeTitle = data['noticeTitle']?.toString() ?? 'Notice';
+        if (attachmentUrl != null && attachmentUrl.isNotEmpty) {
+          final urlLower = attachmentUrl.toLowerCase();
+          if (urlLower.endsWith('.pdf')) {
+            _navigateToTab(
+              8,
+              subPage: CustomPdfViewer(url: attachmentUrl, title: noticeTitle),
+            );
+          } else if (urlLower.endsWith('.jpg') ||
+              urlLower.endsWith('.jpeg') ||
+              urlLower.endsWith('.png') ||
+              urlLower.endsWith('.webp')) {
+            _navigateToTab(
+              8,
+              subPage: FullScreenImageViewer(imageUrls: [attachmentUrl]),
+            );
+          } else {
+            _navigateToTab(8);
+          }
+        } else {
+          _navigateToTab(8);
+        }
+
+      case NotificationType.lostFoundClaimReceived:
+      case NotificationType.lostFoundClaimAccepted:
+      case NotificationType.lostFoundClaimRejected:
+      case NotificationType.lostFoundPublished:
+        _navigateToTab(9);
+
+      case NotificationType.newAssignment:
+      case NotificationType.gradingUpdate:
+      case NotificationType.assignmentDeadline:
+        _navigateToTab(4); // Classroom tab
+
+      case NotificationType.roleChanged:
+      case NotificationType.securityAlert:
+      case NotificationType.systemAnnouncement:
+      case NotificationType.system:
+        break; // No specific navigation
+    }
+  }
+
+  /// Handle navigation based on push notification data payload.
   static void handleNotificationPayload(Map<String, dynamic> data) {
     final type = data['type']?.toString();
     debugPrint('Handling notification payload: $type');

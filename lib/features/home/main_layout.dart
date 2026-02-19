@@ -312,6 +312,7 @@ class MainLayoutState extends State<MainLayout>
         return AppPage.map;
       case 2:
         if (_userRole == 'admin') return AppPage.dashboard;
+        if (_userRole == 'notice_manager') return AppPage.notifications;
         return AppPage.classroom;
       case 3:
         return AppPage.bookMarketplace;
@@ -324,8 +325,7 @@ class MainLayoutState extends State<MainLayout>
       case 7:
         return AppPage.dashboard; // Admin Dashboard
       case 8:
-        return AppPage
-            .notifications; // Using notifications theme/appbar for now
+        return AppPage.notices;
       case 9:
         return AppPage.home; // Lost & Found
       case 10:
@@ -343,8 +343,8 @@ class MainLayoutState extends State<MainLayout>
     switch (_selectedIndex) {
       case 2:
         if (_userRole == 'admin') return Icons.admin_panel_settings_rounded;
-        if (_userRole == 'notice manager') {
-          return Icons.notifications_active_rounded;
+        if (_userRole == 'notice_manager') {
+          return Icons.campaign_rounded;
         }
         return Icons.school_rounded;
       case 5:
@@ -354,7 +354,7 @@ class MainLayoutState extends State<MainLayout>
       case 7:
         return Icons.dashboard_customize_rounded;
       case 8:
-        return Icons.notifications_active_rounded;
+        return Icons.campaign_rounded;
       case 9:
         return Icons.search_rounded;
       case 10:
@@ -366,7 +366,7 @@ class MainLayoutState extends State<MainLayout>
       return Icons.admin_panel_settings_rounded;
     }
     if (_userRole == 'notice_manager') {
-      return Icons.notifications_active_rounded;
+      return Icons.campaign_rounded;
     }
     return Icons.grid_view_rounded;
   }
@@ -707,10 +707,8 @@ class _QuickMenu extends StatelessWidget {
     return AnimatedBuilder(
       animation: animation,
       builder: (context, child) {
-        final shouldIgnore = animation.value == 0 && !isMenuOpen;
-
         return IgnorePointer(
-          ignoring: shouldIgnore,
+          ignoring: !isMenuOpen,
           child: Stack(
             children: [
               // Tap area to close
@@ -795,7 +793,7 @@ class _QuickMenu extends StatelessWidget {
 
     items.addAll([
       _QuickMenuItemData(
-        icon: Icons.notifications_active_rounded,
+        icon: Icons.campaign_rounded,
         label: 'Notices',
         index: 8,
         color: const Color(0xFFF59E0B),
@@ -889,6 +887,7 @@ class _QuickMenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () {
         haptics.lightImpact();
         onTap();

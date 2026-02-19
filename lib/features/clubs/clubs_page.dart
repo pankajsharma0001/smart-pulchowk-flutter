@@ -145,6 +145,7 @@ class _ClubsPageState extends State<ClubsPage>
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 80),
                     child: FloatingActionButton.extended(
+                      heroTag: 'fab_clubs',
                       onPressed: MediaQuery.of(context).viewInsets.bottom > 0
                           ? null
                           : () async {

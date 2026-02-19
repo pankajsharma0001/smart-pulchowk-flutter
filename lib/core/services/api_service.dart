@@ -314,7 +314,7 @@ class ApiService {
     return await _client.post(
       url,
       headers: combinedHeaders,
-      body: jsonEncode(body),
+      body: body != null ? jsonEncode(body) : null,
     );
   }
 
@@ -340,6 +340,20 @@ class ApiService {
     final url = Uri.parse('${AppConstants.fullApiUrl}$path');
     final combinedHeaders = await _getHeaders(headers);
     return await _client.delete(
+      url,
+      headers: combinedHeaders,
+      body: body != null ? jsonEncode(body) : null,
+    );
+  }
+
+  Future<http.Response> _patch(
+    String path, {
+    dynamic body,
+    Map<String, String>? headers,
+  }) async {
+    final url = Uri.parse('${AppConstants.fullApiUrl}$path');
+    final combinedHeaders = await _getHeaders(headers);
+    return await _client.patch(
       url,
       headers: combinedHeaders,
       body: body != null ? jsonEncode(body) : null,
@@ -425,6 +439,11 @@ class ApiService {
   /// Make an authenticated DELETE request.
   Future<http.Response> _authDelete(String path, {dynamic body}) async {
     return _delete(path, body: body, headers: await _getAuthHeaders());
+  }
+
+  /// Make an authenticated PATCH request.
+  Future<http.Response> _authPatch(String path, {dynamic body}) async {
+    return _patch(path, body: body, headers: await _getAuthHeaders());
   }
 
   // ── Book Marketplace ─────────────────────────────────────────────────────
@@ -1298,14 +1317,15 @@ class ApiService {
     return result ?? [];
   }
 
-  /// Mark a specific notification as read.
   Future<bool> markNotificationRead(int id) async {
     try {
-      final response = await _authPut('/notifications/$id/read');
-      final result = jsonDecode(response.body);
-      if (result['success'] == true) {
-        _invalidateCache('notifications_list');
-        return true;
+      final response = await _authPatch('/notifications/$id/read');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final result = jsonDecode(response.body);
+        if (result['success'] == true) {
+          _invalidateCachePrefix('notifications_');
+          return true;
+        }
       }
       return false;
     } catch (e) {
@@ -1317,12 +1337,23 @@ class ApiService {
   /// Mark all notifications as read.
   Future<bool> markAllNotificationsRead() async {
     try {
-      final response = await _authPost('/notifications/mark-all-read');
-      final result = jsonDecode(response.body);
-      if (result['success'] == true) {
-        _invalidateCache('notifications_list');
-        return true;
+      var response = await _authPost('/notifications/mark-all-read');
+
+      // Fallback: If POST returns 404/405, try PUT as a safety measure for different environments
+      if (response.statusCode == 404 || response.statusCode == 405) {
+        response = await _authPut('/notifications/mark-all-read');
       }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final result = jsonDecode(response.body);
+        if (result['success'] == true) {
+          _invalidateCachePrefix('notifications_');
+          return true;
+        }
+      }
+      debugPrint(
+        'Failed to mark all read: Status ${response.statusCode}, Body: ${response.body}',
+      );
       return false;
     } catch (e) {
       debugPrint('Error marking all notifications read: $e');
