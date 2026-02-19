@@ -1900,7 +1900,11 @@ class ApiService {
           ttl: AppConstants.cacheExpiry,
           forceRefresh: forceRefresh,
           fetcher: () async {
-            final response = await _authPost(AppConstants.eventsEnrollment);
+            final dbUserId = await getDbUserId();
+            final response = await _authPost(
+              AppConstants.eventsEnrollment,
+              body: {'authStudentId': dbUserId},
+            );
             if (response.statusCode == 200) {
               final json = jsonDecode(response.body);
               if (json['data'] != null &&

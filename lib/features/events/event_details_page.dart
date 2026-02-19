@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -6,7 +7,10 @@ import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
+import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_status_badge.dart';
+import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class EventDetailsPage extends StatefulWidget {
@@ -87,28 +91,10 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
 
   void _showFullScreenImage() {
     if (widget.event.bannerUrl == null) return;
-    Navigator.push(
-      context,
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
-        builder: (context) => Scaffold(
-          backgroundColor: Colors.black,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            leading: const BackButton(color: Colors.white),
-          ),
-          body: Center(
-            child: Hero(
-              tag: 'event_banner_${widget.event.id}',
-              child: InteractiveViewer(
-                child: CachedNetworkImage(
-                  imageUrl: widget.event.bannerUrl!,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-          ),
-        ),
+        builder: (context) =>
+            FullScreenImageViewer(imageUrls: [widget.event.bannerUrl!]),
       ),
     );
   }
@@ -171,8 +157,6 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   Widget build(BuildContext context) {
     // Full date format as requested
     final fullDateFormat = DateFormat('EEEE, MMMM d, yyyy h:mm a');
-    final timeFormat = DateFormat('h:mm a');
-    final dateTimeFormat = DateFormat('MMMM d, h:mm a');
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -186,6 +170,25 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                 pinned: true,
                 elevation: 0,
                 stretch: true,
+                leading: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.1),
+                          ),
+                        ),
+                        child: const BackButton(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
                 flexibleSpace: FlexibleSpaceBar(
                   stretchModes: const [
                     StretchMode.zoomBackground,
@@ -193,29 +196,56 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                   ],
                   background: GestureDetector(
                     onTap: _showFullScreenImage,
-                    child: Hero(
-                      tag: 'event_banner_${widget.event.id}',
-                      child: widget.event.bannerUrl != null
-                          ? CachedNetworkImage(
-                              imageUrl: widget.event.bannerUrl!,
-                              fit: BoxFit.cover,
-                              placeholder: (_, _) => const ShimmerWrapper(
-                                child: Skeleton(height: double.infinity),
-                              ),
-                            )
-                          : Container(
-                              decoration: BoxDecoration(
-                                gradient: AppColors.primaryGradient,
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.event_rounded,
-                                  size: 64,
-                                  color: Colors.white24,
+                    child: widget.event.bannerUrl != null
+                        ? Hero(
+                            tag: widget.event.bannerUrl!,
+                            child: Stack(
+                              children: [
+                                // Blurred Background
+                                Positioned.fill(
+                                  child: CachedNetworkImage(
+                                    imageUrl: widget.event.bannerUrl!,
+                                    fit: BoxFit.cover,
+                                  ),
                                 ),
+                                Positioned.fill(
+                                  child: BackdropFilter(
+                                    filter: ImageFilter.blur(
+                                      sigmaX: 10,
+                                      sigmaY: 10,
+                                    ),
+                                    child: Container(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                // Focused Foreground
+                                Positioned.fill(
+                                  child: CachedNetworkImage(
+                                    imageUrl: widget.event.bannerUrl!,
+                                    fit: BoxFit.contain,
+                                    placeholder: (_, _) => const ShimmerWrapper(
+                                      child: Skeleton(height: double.infinity),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Container(
+                            decoration: BoxDecoration(
+                              gradient: AppColors.primaryGradient,
+                            ),
+                            child: const Center(
+                              child: Icon(
+                                Icons.event_rounded,
+                                size: 64,
+                                color: Colors.white24,
                               ),
                             ),
-                    ),
+                          ),
                   ),
                 ),
               ),
@@ -304,7 +334,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                               _buildIconInfo(
                                 Icons.timer_outlined,
                                 'Registration Deadline',
-                                dateTimeFormat.format(
+                                fullDateFormat.format(
                                   widget.event.registrationDeadline!,
                                 ),
                                 textColor:
@@ -326,7 +356,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                             const Divider(height: AppSpacing.lg),
                             _buildIconInfo(
                               Icons.people_rounded,
-                              'Capacity',
+                              'Participants',
                               '${widget.event.currentParticipants}${widget.event.maxParticipants != null ? ' / ${widget.event.maxParticipants}' : ''} registered',
                             ),
                           ],
@@ -346,8 +376,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                         ),
                       ),
                       const SizedBox(
-                        height: 150,
-                      ), // Increased spacing for bottom interaction
+                        height: 200,
+                      ), // Increased spacing for bottom interaction to prevent overlap with the floating bottom bar
                     ],
                   ),
                 ),
@@ -388,31 +418,33 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   }
 
   Widget _buildActionButtons() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (_isEnrolled) {
       return Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             decoration: BoxDecoration(
               color: AppColors.success.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(
                 color: AppColors.success.withValues(alpha: 0.3),
               ),
             ),
             child: Row(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(
                   Icons.check_circle_rounded,
                   color: AppColors.success,
-                  size: 20,
+                  size: 22,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Text(
-                  'You are registered for this event',
-                  style: AppTextStyles.labelMedium.copyWith(
+                  'You are registered',
+                  style: AppTextStyles.labelLarge.copyWith(
                     color: AppColors.success,
                     fontWeight: FontWeight.bold,
                   ),
@@ -442,7 +474,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                       ),
                     )
                   : Text(
-                      'Cancel Registration',
+                      'Unregister',
                       style: AppTextStyles.button.copyWith(
                         color: AppColors.error,
                       ),
@@ -462,16 +494,11 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       children: [
         // Share Button
         Container(
-          decoration: AppDecorations.card(borderRadius: AppRadius.md),
+          decoration: isDark
+              ? AppDecorations.cardDark(borderRadius: AppRadius.md)
+              : AppDecorations.card(borderRadius: AppRadius.md),
           child: IconButton(
-            onPressed: () {
-              // TODO: Implement Share
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Sharing functionality coming soon!'),
-                ),
-              );
-            },
+            onPressed: _shareEvent,
             icon: const Icon(Icons.share_rounded, color: AppColors.primary),
             padding: const EdgeInsets.all(12),
           ),
@@ -562,6 +589,26 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
         ),
       ],
     );
+  }
+
+  Future<void> _shareEvent() async {
+    final baseUrl = AppConstants.baseUrl;
+    final eventUrl = '$baseUrl/events/${widget.event.id}';
+    final dateFormat = DateFormat('EEEE, MMMM d, yyyy h:mm a');
+
+    final String text =
+        '''
+Check out this event: ${widget.event.title}
+
+📅 Date: ${dateFormat.format(widget.event.eventStartTime)}
+📍 Venue: ${widget.event.venue ?? 'To be announced'}
+
+${widget.event.description ?? ''}
+
+Join here: $eventUrl
+''';
+
+    await Share.share(text, subject: 'Event: ${widget.event.title}');
   }
 }
 

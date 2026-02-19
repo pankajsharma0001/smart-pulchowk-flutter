@@ -195,11 +195,21 @@ class EventRegistration {
           : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       eventId: json['eventId'] is int
           ? json['eventId']
-          : int.tryParse(json['eventId']?.toString() ?? '0') ?? 0,
-      studentId: json['studentId']?.toString() ?? '',
+          : json['event_id'] is int
+          ? json['event_id']
+          : int.tryParse(
+                  json['eventId']?.toString() ??
+                      json['event_id']?.toString() ??
+                      '0',
+                ) ??
+                0,
+      studentId:
+          json['studentId']?.toString() ?? json['student_id']?.toString() ?? '',
       status: json['status']?.toString() ?? 'registered',
       createdAt: json['createdAt'] != null
           ? (DateTime.tryParse(json['createdAt'].toString()) ?? DateTime.now())
+          : json['created_at'] != null
+          ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
       event: json['event'] != null
           ? ClubEvent.fromJson(json['event'] as Map<String, dynamic>)
