@@ -1540,8 +1540,8 @@ class _CategoryQuickFilters extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 48,
-      margin: const EdgeInsets.only(bottom: 16, top: 2),
+      height: 44, // Reduced from 48
+      margin: const EdgeInsets.only(bottom: 12, top: 2),
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: 20),
         scrollDirection: Axis.horizontal,
@@ -1595,7 +1595,10 @@ class _QuickFilterChip extends StatelessWidget {
       borderRadius: BorderRadius.circular(24),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 6,
+        ), // Reduced from 16, 8
         decoration: BoxDecoration(
           color: isSelected
               ? cs.primary.withValues(alpha: 0.15)
@@ -1624,8 +1627,11 @@ class _QuickFilterChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(emoji, style: const TextStyle(fontSize: 14)),
-            const SizedBox(width: 8),
+            Text(
+              emoji,
+              style: const TextStyle(fontSize: 13),
+            ), // Reduced from 14
+            const SizedBox(width: 6), // Reduced from 8
             Text(
               label,
               style: AppTextStyles.labelMedium.copyWith(
@@ -1633,6 +1639,7 @@ class _QuickFilterChip extends StatelessWidget {
                     ? cs.primary
                     : (isDark ? Colors.white70 : Colors.black87),
                 fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                fontSize: 11.5, // Added explicit slightly smaller font
                 letterSpacing: 0.1,
               ),
             ),

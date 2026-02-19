@@ -451,13 +451,7 @@ class _NoticesPageState extends State<NoticesPage> {
       itemCount: 6,
       itemBuilder: (context, index) => const Padding(
         padding: EdgeInsets.only(bottom: AppSpacing.md),
-        child: ShimmerWrapper(
-          child: Skeleton(
-            height: 120,
-            width: double.infinity,
-            borderRadius: 16,
-          ),
-        ),
+        child: _NoticeSkeleton(),
       ),
     );
   }
@@ -816,6 +810,62 @@ class _NoticeCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NoticeSkeleton extends StatelessWidget {
+  const _NoticeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.cardDark : AppColors.cardLight,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+          width: 1,
+        ),
+      ),
+      child: const ShimmerWrapper(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Skeleton(height: 36, width: 36, borderRadius: 10),
+                SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Skeleton(height: 12, width: 60, borderRadius: 4),
+                    SizedBox(height: 6),
+                    Skeleton(height: 8, width: 80, borderRadius: 4),
+                  ],
+                ),
+                Spacer(),
+                Skeleton(height: 18, width: 40, borderRadius: 6),
+              ],
+            ),
+            SizedBox(height: 16),
+            Skeleton(height: 16, width: double.infinity, borderRadius: 4),
+            SizedBox(height: 8),
+            Skeleton(height: 16, width: 150, borderRadius: 4),
+            SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: Skeleton(height: 36, borderRadius: 10)),
+                SizedBox(width: 8),
+                Expanded(child: Skeleton(height: 36, borderRadius: 10)),
+              ],
+            ),
+          ],
         ),
       ),
     );
