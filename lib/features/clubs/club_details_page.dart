@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -1170,11 +1171,11 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
     final socialMap = {
       'facebook': (Icons.facebook_rounded, const Color(0xFF1877F2)),
       'instagram': (Icons.camera_alt_rounded, const Color(0xFFE1306C)),
-      'twitter': (Icons.alternate_email_rounded, const Color(0xFF1DA1F2)),
+      'twitter': ('assets/icons/twitter.svg', const Color(0xFF000000)),
       'linkedin': (Icons.work_rounded, const Color(0xFF0A66C2)),
       'youtube': (Icons.play_circle_fill_rounded, const Color(0xFFFF0000)),
-      'discord': (Icons.headset_mic_rounded, const Color(0xFF5865F2)),
-      'github': (Icons.code_rounded, const Color(0xFF333333)),
+      'discord': ('assets/icons/discord.svg', const Color(0xFF5865F2)),
+      'github': ('assets/icons/github.svg', const Color(0xFF333333)),
       'tiktok': (Icons.music_video_rounded, const Color(0xFF000000)),
     };
 
@@ -1206,7 +1207,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
 
   Widget _buildSocialButton({
     required String platform,
-    required IconData icon,
+    required dynamic icon,
     required Color color,
     required String url,
   }) {
@@ -1228,7 +1229,15 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 16, color: color),
+              if (icon is IconData)
+                Icon(icon, size: 16, color: color)
+              else if (icon is String)
+                SvgPicture.asset(
+                  icon,
+                  width: 16,
+                  height: 16,
+                  colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+                ),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 _capitalize(platform),
