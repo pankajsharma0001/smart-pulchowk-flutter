@@ -2078,4 +2078,172 @@ class ApiService {
         ) ??
         [];
   }
+
+  // ── Club & Event Admin Mutations ───────────────────────────────────────────
+
+  /// Create a new club (Global Admin only).
+  Future<Map<String, dynamic>> createClub(Map<String, dynamic> data) async {
+    try {
+      final response = await _authPost(AppConstants.createNewClub, body: data);
+      final json = jsonDecode(response.body);
+      if (json['data']?['success'] == true) {
+        _invalidateCache(AppConstants.cacheClubsList);
+      }
+      return json;
+    } catch (e) {
+      debugPrint('Error in createClub: $e');
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Create a new club profile.
+  Future<Map<String, dynamic>> createClubProfile(
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _authPost(AppConstants.clubProfile, body: data);
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        final clubId = data['clubId'];
+        if (clubId != null) {
+          _invalidateCache('${AppConstants.cacheClubProfile}$clubId');
+          _invalidateCache('club_$clubId');
+        }
+      }
+      return json;
+    } catch (e) {
+      debugPrint('Error in createClubProfile: $e');
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Update club profile.
+  Future<Map<String, dynamic>> updateClubProfile(
+    int clubId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _authPut(
+        '${AppConstants.clubProfile}/$clubId',
+        body: data,
+      );
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCache(AppConstants.cacheClubsList);
+        _invalidateCache('${AppConstants.cacheClubProfile}$clubId');
+        _invalidateCache('club_$clubId');
+      }
+      return json;
+    } catch (e) {
+      debugPrint('Error in updateClubProfile: $e');
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Create a new event for a club.
+  Future<Map<String, dynamic>> createEvent(Map<String, dynamic> data) async {
+    try {
+      final response = await _authPost('/events/create-event', body: data);
+      final json = jsonDecode(response.body);
+      // Backend usually returns { data: { success: true, ... } } or similar
+      if (json['data']?['success'] == true || json['success'] == true) {
+        _invalidateCache(AppConstants.cacheEventsList);
+        _invalidateCache(AppConstants.cacheEventsUpcoming);
+        if (data['clubId'] != null) {
+          _invalidateCache('${AppConstants.cacheClubEvents}${data['clubId']}');
+        }
+      }
+      return json;
+    } catch (e) {
+      debugPrint('Error in createEvent: $e');
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Update an existing event.
+  Future<Map<String, dynamic>> updateEvent(
+    int eventId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _authPut(
+        '/events/update-event/$eventId',
+        body: data,
+      );
+      final json = jsonDecode(response.body);
+      if (json['data']?['success'] == true || json['success'] == true) {
+        _invalidateCache(AppConstants.cacheEventsList);
+        _invalidateCache(AppConstants.cacheEventsUpcoming);
+        _invalidateCache('event_$eventId');
+        // If we have club ID, invalidating its events list would be good too
+      }
+      return json;
+    } catch (e) {
+      debugPrint('Error in updateEvent: $e');
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Delete an event.
+  Future<Map<String, dynamic>> deleteEvent(int eventId) async {
+    try {
+      final response = await _authDelete('/events/delete-event/$eventId');
+      final json = jsonDecode(response.body);
+      if (json['data']?['success'] == true || json['success'] == true) {
+        _invalidateCache(AppConstants.cacheEventsList);
+        _invalidateCache(AppConstants.cacheEventsUpcoming);
+        _invalidateCache('event_$eventId');
+      }
+      return json;
+    } catch (e) {
+      debugPrint('Error in deleteEvent: $e');
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Upload club logo
+  Future<ApiResult<String>> uploadClubLogo(int clubId, String filePath) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('${AppConstants.fullApiUrl}/clubs/$clubId/upload-logo'),
+      );
+
+      final authHeaders = await _getAuthHeaders();
+      request.headers.addAll(authHeaders);
+
+      final extension = filePath.split('.').last.toLowerCase();
+      String mimeType = 'image/jpeg';
+      if (extension == 'png') {
+        mimeType = 'image/png';
+      } else if (extension == 'webp') {
+        mimeType = 'image/webp';
+      }
+
+      request.files.add(
+        await http.MultipartFile.fromPath(
+          'logo',
+          filePath,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final json = jsonDecode(response.body);
+        if (json['success'] == true && json['data']?['url'] != null) {
+          return ApiResult.success(json['data']['url'] as String);
+        }
+      }
+
+      return ApiResult.failure(
+        'Upload failed: ${response.statusCode}\n${response.body}',
+      );
+    } catch (e) {
+      debugPrint('Error in uploadClubLogo: $e');
+      return ApiResult.failure('Upload failed: $e');
+    }
+  }
 }

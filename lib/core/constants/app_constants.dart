@@ -42,6 +42,7 @@ class AppConstants {
   static const String eventsCancelRegistration = '/events/cancel-registration';
   static const String eventsEnrollment = '/events/enrollment';
   static const String clubs = '/events/clubs';
+  static const String createNewClub = '/events/create-club';
   static const String clubProfile = '/clubs/club-profile';
   static const String clubEvents = '/events/events';
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smart_pulchowk/core/models/club.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
@@ -7,6 +8,9 @@ import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_card.dart';
+import 'package:smart_pulchowk/features/clubs/widgets/club_editor.dart';
+import 'package:smart_pulchowk/features/events/widgets/event_editor.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ClubDetailsPage extends StatefulWidget {
   final Club club;
@@ -18,7 +22,7 @@ class ClubDetailsPage extends StatefulWidget {
 }
 
 class _ClubDetailsPageState extends State<ClubDetailsPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _tabController;
   final ApiService _apiService = ApiService();
 
@@ -27,6 +31,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
   ClubProfile? _profile;
   List<ClubEvent> _events = [];
   String? _error;
+  bool _isAdmin = false;
 
   @override
   void initState() {
@@ -45,8 +50,36 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
     await Future.wait([
       _loadProfile(forceRefresh: forceRefresh),
       _loadEvents(forceRefresh: forceRefresh),
+      _checkAdminStatus(),
       if (forceRefresh) _apiService.refreshUserRole(),
     ]);
+  }
+
+  Future<void> _checkAdminStatus() async {
+    final role = await _apiService.getUserRole();
+    final user = FirebaseAuth.instance.currentUser;
+    final isAdmin =
+        role == 'admin' || (user != null && user.uid == widget.club.authClubId);
+
+    if (mounted && isAdmin != _isAdmin) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final oldIndex = _tabController.index;
+        final newLength = isAdmin ? 3 : 2;
+
+        // Dispose old controller
+        _tabController.dispose();
+
+        setState(() {
+          _isAdmin = isAdmin;
+          _tabController = TabController(
+            length: newLength,
+            vsync: this,
+            initialIndex: oldIndex < newLength ? oldIndex : 0,
+          );
+        });
+      });
+    }
   }
 
   Future<void> _loadProfile({bool forceRefresh = false}) async {
@@ -62,16 +95,24 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
         forceRefresh: forceRefresh,
       );
       if (mounted) {
-        setState(() {
-          _profile = profile;
-          _isLoadingProfile = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _profile = profile;
+              _isLoadingProfile = false;
+            });
+          }
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _error = 'Failed to load club profile.';
-          _isLoadingProfile = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _error = 'Failed to load club profile.';
+              _isLoadingProfile = false;
+            });
+          }
         });
       }
     }
@@ -89,15 +130,23 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
         forceRefresh: forceRefresh,
       );
       if (mounted) {
-        setState(() {
-          _events = events;
-          _isLoadingEvents = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _events = events;
+              _isLoadingEvents = false;
+            });
+          }
         });
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoadingEvents = false;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _isLoadingEvents = false;
+            });
+          }
         });
       }
     }
@@ -149,6 +198,22 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
                 ),
               ),
             ),
+            if (_isAdmin)
+              KeepAliveWrapper(
+                child: Builder(
+                  builder: (context) => CustomScrollView(
+                    key: const PageStorageKey('admin_tab'),
+                    slivers: [
+                      SliverOverlapInjector(
+                        handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                          context,
+                        ),
+                      ),
+                      _buildAdminTabSliver(),
+                    ],
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -403,12 +468,20 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
           indicatorColor: AppColors.primary,
           indicatorSize: TabBarIndicatorSize.label,
           labelStyle: AppTextStyles.labelLarge,
-          tabs: const [
-            Tab(
+          tabs: [
+            const Tab(
               icon: Icon(Icons.info_outline_rounded, size: 18),
               text: 'About',
             ),
-            Tab(icon: Icon(Icons.event_rounded, size: 18), text: 'Events'),
+            const Tab(
+              icon: Icon(Icons.event_rounded, size: 18),
+              text: 'Events',
+            ),
+            if (_isAdmin)
+              const Tab(
+                icon: Icon(Icons.admin_panel_settings_rounded, size: 18),
+                text: 'Admin',
+              ),
           ],
         ),
       ),
@@ -564,6 +637,236 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
 
           const SizedBox(height: AppSpacing.xl),
         ]),
+      ),
+    );
+  }
+
+  Widget _buildAdminTabSliver() {
+    return SliverPadding(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      sliver: SliverList(
+        delegate: SliverChildListDelegate([
+          Text(
+            'Club Administration',
+            style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            'Manage your club profile and events.',
+            style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
+          ),
+          const SizedBox(height: AppSpacing.xl),
+
+          // Action Cards
+          _buildAdminActionCard(
+            context,
+            icon: Icons.edit_note_rounded,
+            title: 'Edit Club Profile',
+            subtitle: 'Update about, mission, vision and contact info',
+            onTap: () async {
+              final result = await showModalBottomSheet<bool>(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) =>
+                    ClubEditor(club: widget.club, profile: _profile),
+              );
+              if (result == true) _loadProfile(forceRefresh: true);
+            },
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _buildAdminActionCard(
+            context,
+            icon: Icons.add_circle_outline_rounded,
+            title: 'Add New Event',
+            subtitle: 'Create a new event for your members',
+            onTap: () async {
+              final result = await showModalBottomSheet<bool>(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => EventEditor(clubId: widget.club.id),
+              );
+              if (result == true) _loadEvents(forceRefresh: true);
+            },
+            color: AppColors.secondary,
+          ),
+
+          const SizedBox(height: AppSpacing.massive),
+          Row(
+            children: [
+              const Icon(Icons.list_alt_rounded, size: 18),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                'Manage Events',
+                style: AppTextStyles.h5.copyWith(fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          const Divider(),
+          const SizedBox(height: AppSpacing.md),
+
+          if (_events.isEmpty)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(AppSpacing.massive),
+                child: Text(
+                  'No events to manage',
+                  style: AppTextStyles.bodySmall,
+                ),
+              ),
+            )
+          else
+            ..._events.map((event) => _buildAdminEventTile(event)),
+
+          const SizedBox(height: 120),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildAdminActionCard(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+    Color color = AppColors.primary,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: AppRadius.lgAll,
+      child: Container(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardDark : Colors.white,
+          borderRadius: AppRadius.lgAll,
+          boxShadow: AppShadows.md,
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color),
+            ),
+            const SizedBox(width: AppSpacing.lg),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: AppTextStyles.h5.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textMuted,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminEventTile(ClubEvent event) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.primaryContainer.withValues(alpha: 0.2),
+        borderRadius: AppRadius.mdAll,
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  event.title,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  DateFormat('MMM d, yyyy HH:mm').format(event.eventStartTime),
+                  style: AppTextStyles.bodySmall.copyWith(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit_rounded, size: 18),
+            onPressed: () async {
+              final result = await showModalBottomSheet<bool>(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => EventEditor(event: event),
+              );
+              if (result == true) _loadEvents(forceRefresh: true);
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+            color: AppColors.error,
+            onPressed: () => _showDeleteEventDialog(event),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteEventDialog(ClubEvent event) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Event'),
+        content: Text('Are you sure you want to delete "${event.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final result = await _apiService.deleteEvent(event.id);
+              if (mounted) {
+                final success =
+                    result['success'] == true ||
+                    result['data']?['success'] == true;
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Event deleted')),
+                  );
+                  _loadEvents(forceRefresh: true);
+                }
+              }
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1072,7 +1375,9 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => false;
+  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) =>
+      _tabBar != oldDelegate._tabBar ||
+      _tabBar.controller != oldDelegate._tabBar.controller;
 }
 
 class KeepAliveWrapper extends StatefulWidget {

@@ -4,6 +4,7 @@ import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/features/clubs/widgets/club_card.dart';
+import 'package:smart_pulchowk/features/clubs/widgets/club_editor.dart';
 
 class ClubsPage extends StatefulWidget {
   const ClubsPage({super.key});
@@ -22,6 +23,7 @@ class _ClubsPageState extends State<ClubsPage>
   List<Club> _allClubs = [];
   List<Club> _filteredClubs = [];
   String? _error;
+  String _userRole = 'student';
 
   @override
   void initState() {
@@ -54,14 +56,17 @@ class _ClubsPageState extends State<ClubsPage>
       // Sync user role and fetch clubs in parallel on force refresh
       final results = await Future.wait([
         _apiService.getClubs(forceRefresh: forceRefresh),
+        _apiService.getUserRole(),
         if (forceRefresh) _apiService.refreshUserRole(),
       ]);
 
       final clubs = results[0] as List<Club>;
+      final role = results[1] as String;
       if (mounted) {
         setState(() {
           _allClubs = clubs;
           _filteredClubs = clubs;
+          _userRole = role;
           _isLoading = false;
           _error = null;
         });
@@ -70,14 +75,8 @@ class _ClubsPageState extends State<ClubsPage>
         _animationController.forward();
 
         if (forceRefresh) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Cache updated'),
-              duration: Duration(seconds: 1),
-              behavior: SnackBarBehavior.floating,
-              width: 150,
-            ),
-          );
+          _animationController.reset();
+          _animationController.forward();
         }
       }
     } catch (e) {
@@ -133,6 +132,28 @@ class _ClubsPageState extends State<ClubsPage>
             ],
           ),
         ),
+        floatingActionButton: _userRole == 'admin'
+            ? Container(
+                margin: const EdgeInsets.only(bottom: 80),
+                child: FloatingActionButton.extended(
+                  onPressed: () async {
+                    final result = await showModalBottomSheet<bool>(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => const ClubEditor(),
+                    );
+                    if (result == true) {
+                      _loadClubs(forceRefresh: true);
+                    }
+                  },
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text('Create Club'),
+                ),
+              )
+            : null,
       ),
     );
   }
