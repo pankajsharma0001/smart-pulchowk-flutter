@@ -1,4 +1,6 @@
+import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
@@ -7,6 +9,7 @@ import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/services/navigation_service.dart';
 import 'package:smart_pulchowk/core/models/notification.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
+import 'package:smart_pulchowk/core/widgets/staggered_scale_fade.dart';
 import 'package:intl/intl.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -18,29 +21,71 @@ class NotificationsPage extends StatefulWidget {
 
 class _NotificationsPageState extends State<NotificationsPage> {
   final ApiService _api = ApiService();
+  final ScrollController _scrollController = ScrollController();
+  late ConfettiController _confettiController;
+
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _offset = 0;
+  static const int _limit = 20;
+
   List<InAppNotification> _notifications = [];
 
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 2),
+    );
     _loadNotifications();
+    _scrollController.addListener(_onScroll);
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _confettiController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoadingMore &&
+        _hasMore &&
+        !_isLoading) {
+      _loadMore();
+    }
   }
 
   Future<void> _loadNotifications({bool silent = false}) async {
     if (!silent) {
-      setState(() => _isLoading = true);
-    } else if (mounted) {
+      setState(() {
+        _isLoading = true;
+        _offset = 0;
+        _hasMore = true;
+      });
+    }
+
+    if (silent && mounted) {
       debugPrint('NotificationsPage: Manual refresh. Syncing role...');
       await MainLayout.of(context)?.refreshUserRole();
       if (!mounted) return;
     }
+
     try {
-      final data = await _api.getNotifications(forceRefresh: silent);
+      final data = await _api.getNotifications(
+        limit: _limit,
+        offset: 0,
+        forceRefresh: silent,
+      );
       if (mounted) {
         setState(() {
           _notifications = data;
           _isLoading = false;
+          _offset = data.length;
+          _hasMore = data.length >= _limit;
         });
       }
     } catch (e) {
@@ -48,11 +93,56 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final newData = await _api.getNotifications(
+        limit: _limit,
+        offset: _offset,
+      );
+
+      if (newData.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _hasMore = false;
+            _isLoadingMore = false;
+          });
+        }
+        return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _notifications.addAll(newData);
+          _offset += newData.length;
+          _isLoadingMore = false;
+          _hasMore = newData.length >= _limit;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading more notifications: $e');
+      if (mounted) setState(() => _isLoadingMore = false);
+    }
+  }
+
   Future<void> _markAllRead() async {
     haptics.mediumImpact();
     final success = await _api.markAllNotificationsRead();
     if (success) {
-      await _loadNotifications(silent: true);
+      _confettiController.play();
+      // Optimistically update all notifications to read
+      if (mounted) {
+        setState(() {
+          for (var n in _notifications) {
+            n.isRead = true;
+          }
+        });
+      }
+      // Reload in background to sync from server
+      _loadNotifications(silent: true);
     }
   }
 
@@ -108,36 +198,92 @@ class _NotificationsPageState extends State<NotificationsPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
         title: Text(
           'Notifications',
-          style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w900),
+          style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        surfaceTintColor: Colors.transparent,
         actions: [
           if (_notifications.any((n) => !n.isRead))
             TextButton.icon(
               onPressed: _markAllRead,
-              icon: Icon(Icons.done_all_rounded, size: 18, color: cs.primary),
-              label: Text(
-                'Mark all read',
-                style: AppTextStyles.labelSmall.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: cs.primary,
-                ),
-              ),
+              icon: const Icon(Icons.done_all_rounded, size: 20),
+              label: const Text('Mark all read'),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
             ),
-          const SizedBox(width: AppSpacing.sm),
+          const SizedBox(width: 8),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () => _loadNotifications(silent: true),
-        color: cs.primary,
-        child: _isLoading ? _buildLoading() : _buildContent(cs),
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: () => _loadNotifications(silent: true),
+            color: cs.primary,
+            child: _isLoading
+                ? _buildLoading()
+                : _notifications.isEmpty
+                ? _buildEmptyState(cs)
+                : _buildNotificationList(cs),
+          ),
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              shouldLoop: false,
+              colors: const [
+                Colors.green,
+                Colors.blue,
+                Colors.pink,
+                Colors.orange,
+                Colors.purple,
+              ],
+              createParticlePath: _drawStar,
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Path _drawStar(Size size) {
+    // Standard 5-point star path
+    double degToRad(double deg) => deg * (math.pi / 180.0);
+    const numberOfPoints = 5;
+    final halfWidth = size.width / 2;
+    final externalRadius = halfWidth;
+    final internalRadius = halfWidth / 2.5;
+    final degreesPerStep = degToRad(360 / numberOfPoints);
+    final halfDegreesPerStep = degreesPerStep / 2;
+    final path = Path();
+    final fullAngle = degToRad(-90);
+    path.moveTo(size.width / 2, 0);
+
+    for (int step = 0; step < numberOfPoints; step++) {
+      path.lineTo(
+        halfWidth +
+            externalRadius * math.cos(step * degreesPerStep + fullAngle),
+        halfWidth +
+            externalRadius * math.sin(step * degreesPerStep + fullAngle),
+      );
+      path.lineTo(
+        halfWidth +
+            internalRadius *
+                math.cos(
+                  step * degreesPerStep + halfDegreesPerStep + fullAngle,
+                ),
+        halfWidth +
+            internalRadius *
+                math.sin(
+                  step * degreesPerStep + halfDegreesPerStep + fullAngle,
+                ),
+      );
+    }
+    path.close();
+    return path;
   }
 
   Widget _buildLoading() {
@@ -156,36 +302,36 @@ class _NotificationsPageState extends State<NotificationsPage> {
     );
   }
 
-  Widget _buildContent(ColorScheme cs) {
-    if (_notifications.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.notifications_none_rounded,
-              size: 64,
-              color: cs.onSurface.withValues(alpha: 0.25),
+  Widget _buildEmptyState(ColorScheme cs) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.notifications_none_rounded,
+            size: 64,
+            color: cs.onSurface.withValues(alpha: 0.25),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Text(
+            'All caught up!',
+            style: AppTextStyles.h4.copyWith(
+              color: cs.onSurface.withValues(alpha: 0.5),
             ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'All caught up!',
-              style: AppTextStyles.h4.copyWith(
-                color: cs.onSurface.withValues(alpha: 0.5),
-              ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'No new notifications at the moment.',
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: cs.onSurface.withValues(alpha: 0.4),
             ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'No new notifications at the moment.',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: cs.onSurface.withValues(alpha: 0.4),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildNotificationList(ColorScheme cs) {
     final groups = _groupByDate(_notifications);
     final items = <_ListItem>[];
 
@@ -199,41 +345,63 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
 
     return ListView.builder(
+      controller: _scrollController,
       padding: const EdgeInsets.only(
         left: AppSpacing.md,
         right: AppSpacing.md,
         top: AppSpacing.xs,
         bottom: 100,
       ),
-      itemCount: items.length,
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: items.length + (_isLoadingMore ? 1 : 0),
       itemBuilder: (context, index) {
+        if (index == items.length) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+            ),
+          );
+        }
+
         final item = items[index];
         if (item.isHeader) {
-          return _buildSectionHeader(item.header!, cs);
+          return StaggeredScaleFade(
+            index: index,
+            child: _buildSectionHeader(item.header!, cs),
+          );
         }
         final notification = item.notification!;
-        return Dismissible(
+        return StaggeredScaleFade(
           key: ValueKey(notification.id),
-          direction: notification.isRead
-              ? DismissDirection.none
-              : DismissDirection.startToEnd,
-          onDismissed: (_) => _markRead(notification),
-          background: Container(
-            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
-            decoration: BoxDecoration(
-              color: cs.primary.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppRadius.lg),
+          index: index,
+          child: Dismissible(
+            key: ValueKey(notification.id),
+            direction: notification.isRead
+                ? DismissDirection.none
+                : DismissDirection.startToEnd,
+            onDismissed: (_) => _markRead(notification),
+            background: Container(
+              margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: cs.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+              ),
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Icon(Icons.done_rounded, color: cs.primary),
             ),
-            alignment: Alignment.centerLeft,
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: Icon(Icons.done_rounded, color: cs.primary),
-          ),
-          child: _NotificationTile(
-            notification: notification,
-            onTap: () {
-              _markRead(notification);
-              _handleNotificationClick(notification);
-            },
+            child: _NotificationTile(
+              notification: notification,
+              onTap: () {
+                _markRead(notification);
+                _handleNotificationClick(notification);
+              },
+            ),
           ),
         );
       },

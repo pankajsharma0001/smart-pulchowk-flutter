@@ -1294,14 +1294,18 @@ class ApiService {
 
   /// Get paginated in-app notifications.
   Future<List<InAppNotification>> getNotifications({
+    int limit = 20,
+    int offset = 0,
     bool forceRefresh = false,
   }) async {
     final result = await ApiService._cachedFetch<List<InAppNotification>>(
-      key: 'notifications_list',
+      key: 'notifications_list_${limit}_$offset',
       ttl: const Duration(minutes: 5),
       forceRefresh: forceRefresh,
       fetcher: () async {
-        final response = await _authGet('/notifications');
+        final response = await _authGet(
+          '/notifications?limit=$limit&offset=$offset',
+        );
         if (response.statusCode == 200) {
           final json = jsonDecode(response.body);
           if (json['success'] == true && json['data'] != null) {
