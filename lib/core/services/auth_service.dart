@@ -79,6 +79,7 @@ class AuthService {
         StorageService.deleteSecure(AppConstants.dbUserIdKey),
         StorageService.deleteSecure(AppConstants.userRoleKey),
         NotificationService.unsubscribeFromAllTopics().catchError((_) => null),
+        ApiService.clearCache(),
       ]);
 
       await _googleSignIn.signOut();

@@ -156,6 +156,20 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
+  Future<void> _deleteNotification(InAppNotification notification) async {
+    haptics.heavyImpact();
+    // Optimistically remove the specific instance
+    setState(() {
+      _notifications.remove(notification);
+    });
+
+    final success = await _api.deleteNotification(notification.id);
+    if (!success) {
+      // Re-add if failed
+      _loadNotifications(silent: true);
+    }
+  }
+
   void _handleNotificationClick(InAppNotification notification) {
     haptics.lightImpact();
 
@@ -381,19 +395,20 @@ class _NotificationsPageState extends State<NotificationsPage> {
           index: index,
           child: Dismissible(
             key: ValueKey(notification.id),
-            direction: notification.isRead
-                ? DismissDirection.none
-                : DismissDirection.startToEnd,
-            onDismissed: (_) => _markRead(notification),
+            direction: DismissDirection.endToStart,
+            onDismissed: (_) => _deleteNotification(notification),
             background: Container(
               margin: const EdgeInsets.only(bottom: AppSpacing.sm),
               decoration: BoxDecoration(
-                color: cs.primary.withValues(alpha: 0.12),
+                color: Colors.red.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(AppRadius.lg),
               ),
-              alignment: Alignment.centerLeft,
+              alignment: Alignment.centerRight,
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: Icon(Icons.done_rounded, color: cs.primary),
+              child: const Icon(
+                Icons.delete_outline_rounded,
+                color: Colors.red,
+              ),
             ),
             child: _NotificationTile(
               notification: notification,

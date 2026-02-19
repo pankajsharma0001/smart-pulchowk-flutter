@@ -67,6 +67,12 @@ class ApiService {
     await StorageService.deleteCache(key);
   }
 
+  /// Wipe all caches (memory and Hive). Used on logout.
+  static Future<void> clearCache() async {
+    _cache.clear();
+    await StorageService.clearCache();
+  }
+
   static Future<void> _invalidateCachePrefix(String prefix) async {
     _cache.removeWhere((k, _) => k.startsWith(prefix));
     await StorageService.deleteCacheByPrefix(prefix);
@@ -1298,8 +1304,9 @@ class ApiService {
     int offset = 0,
     bool forceRefresh = false,
   }) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'guest';
     final result = await ApiService._cachedFetch<List<InAppNotification>>(
-      key: 'notifications_list_${limit}_$offset',
+      key: 'notifications_list_${uid}_${limit}_$offset',
       ttl: const Duration(minutes: 5),
       forceRefresh: forceRefresh,
       fetcher: () async {
@@ -1334,6 +1341,23 @@ class ApiService {
       return false;
     } catch (e) {
       debugPrint('Error marking notification read: $e');
+      return false;
+    }
+  }
+
+  Future<bool> deleteNotification(int id) async {
+    try {
+      final response = await _authDelete('/notifications/$id');
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final result = jsonDecode(response.body);
+        if (result['success'] == true) {
+          _invalidateCachePrefix('notifications_');
+          return true;
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error deleting notification: $e');
       return false;
     }
   }
