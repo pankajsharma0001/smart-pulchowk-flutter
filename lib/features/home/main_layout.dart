@@ -12,6 +12,7 @@ import 'package:smart_pulchowk/features/notices/notices_page.dart';
 import 'package:smart_pulchowk/features/settings/settings.dart';
 import 'package:smart_pulchowk/features/marketplace/book_marketplace_page.dart';
 import 'package:smart_pulchowk/features/classroom/classroom_page.dart';
+import 'package:smart_pulchowk/features/clubs/clubs_page.dart';
 import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
@@ -281,10 +282,7 @@ class MainLayoutState extends State<MainLayout>
           icon: Icons.person_rounded,
         );
       case 5:
-        return const _PlaceholderPage(
-          title: 'Clubs',
-          icon: Icons.groups_rounded,
-        );
+        return const ClubsPage();
       case 6:
         return const EventsPage();
       case 7:
@@ -320,7 +318,7 @@ class MainLayoutState extends State<MainLayout>
       case 4:
         return AppPage.dashboard;
       case 5:
-        return AppPage.home; // Clubs (placeholder)
+        return AppPage.clubs;
       case 6:
         return AppPage.events;
       case 7:

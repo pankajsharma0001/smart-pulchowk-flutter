@@ -7,6 +7,7 @@ import 'package:smart_pulchowk/core/models/classroom.dart';
 import 'package:smart_pulchowk/core/models/notification.dart';
 import 'package:smart_pulchowk/core/models/notice.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
+import 'package:smart_pulchowk/core/models/club.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
@@ -348,6 +349,30 @@ class ApiService {
     };
     if (extra != null) headers.addAll(extra);
     return headers;
+  }
+
+  /// Process image URLs to handle Google Drive and Cloudinary optimizations.
+  static String? processImageUrl(String? url, {int? width}) {
+    if (url == null || url.isEmpty) return null;
+
+    // Handle Google Drive links
+    if (url.contains('drive.google.com')) {
+      final regExp = RegExp(r'\/file\/d\/([^\/]+)\/');
+      final match = regExp.firstMatch(url);
+      if (match != null && match.groupCount >= 1) {
+        final fileId = match.group(1);
+        return 'https://docs.google.com/uc?export=download&id=$fileId';
+      }
+    }
+
+    // Handle Cloudinary optimizations
+    if (url.contains('cloudinary.com') && url.contains('/upload/')) {
+      final transform =
+          'f_auto,q_auto${width != null ? ',w_$width,c_limit' : ''}';
+      return url.replaceFirst('/upload/', '/upload/$transform/');
+    }
+
+    return url;
   }
 
   /// Get auth headers with Firebase ID token attached.
@@ -1955,5 +1980,100 @@ class ApiService {
     return getCached<List<EventRegistration>>(
       AppConstants.cacheEventsEnrollment,
     );
+  }
+
+  Future<List<Club>> getClubs({bool forceRefresh = false}) async {
+    return await _cachedFetch<List<Club>>(
+          key: AppConstants.cacheClubsList,
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet(AppConstants.clubs);
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['data'] != null &&
+                  json['data']['success'] == true &&
+                  json['data']['existingClub'] != null) {
+                return json['data']['existingClub'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
+              .map((e) => Club.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        ) ??
+        [];
+  }
+
+  /// Get a single club by ID.
+  Future<Club?> getClub(int id, {bool forceRefresh = false}) async {
+    return await _cachedFetch<Club>(
+      key: 'club_$id',
+      ttl: AppConstants.cacheExpiry,
+      forceRefresh: forceRefresh,
+      fetcher: () async {
+        final response = await _authGet('${AppConstants.clubs}/$id');
+        if (response.statusCode == 200) {
+          final json = jsonDecode(response.body);
+          if (json['data'] != null &&
+              json['data']['success'] == true &&
+              json['data']['clubData'] != null) {
+            return json['data']['clubData'];
+          }
+        }
+        return null;
+      },
+      parser: (data) => Club.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  /// Get club profile details.
+  Future<ClubProfile?> getClubProfile(
+    int id, {
+    bool forceRefresh = false,
+  }) async {
+    return await _cachedFetch<ClubProfile>(
+      key: '${AppConstants.cacheClubProfile}$id',
+      ttl: AppConstants.longCacheExpiry,
+      forceRefresh: forceRefresh,
+      fetcher: () async {
+        final response = await _authGet('${AppConstants.clubProfile}/$id');
+        if (response.statusCode == 200) {
+          final json = jsonDecode(response.body);
+          if (json['success'] == true && json['profile'] != null) {
+            return json['profile'];
+          }
+        }
+        return null;
+      },
+      parser: (data) => ClubProfile.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  /// Get events for a specific club.
+  Future<List<ClubEvent>> getClubEvents(
+    int id, {
+    bool forceRefresh = false,
+  }) async {
+    return await _cachedFetch<List<ClubEvent>>(
+          key: '${AppConstants.cacheClubEvents}$id',
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet('${AppConstants.clubEvents}/$id');
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true && json['clubEvents'] != null) {
+                return json['clubEvents'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
+              .map((e) => ClubEvent.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        ) ??
+        [];
   }
 }

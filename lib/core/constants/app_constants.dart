@@ -41,6 +41,9 @@ class AppConstants {
   static const String eventsRegister = '/events/register-event';
   static const String eventsCancelRegistration = '/events/cancel-registration';
   static const String eventsEnrollment = '/events/enrollment';
+  static const String clubs = '/events/clubs';
+  static const String clubProfile = '/clubs/club-profile';
+  static const String clubEvents = '/events/events';
 
   // ── Storage Keys ──────────────────────────────────────────────────────────
   static const String dbUserIdKey = 'db_user_id';
@@ -91,4 +94,7 @@ class AppConstants {
   static const String cacheEventsList = 'events_list';
   static const String cacheEventsUpcoming = 'events_upcoming';
   static const String cacheEventsEnrollment = 'events_enrollment';
+  static const String cacheClubsList = 'clubs_list';
+  static const String cacheClubProfile = 'clubs_profile_';
+  static const String cacheClubEvents = 'clubs_events_';
 }

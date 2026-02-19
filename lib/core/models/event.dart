@@ -1,40 +1,6 @@
+import 'package:smart_pulchowk/core/models/club.dart';
+
 enum EventStatus { draft, published, ongoing, completed, cancelled }
-
-enum RegistrationStatus { registered, attended, cancelled, waitlisted }
-
-class Club {
-  final int id;
-  final String authClubId;
-  final String name;
-  final String? email;
-  final String? bio;
-  final String? logoUrl;
-  final String? website;
-
-  Club({
-    required this.id,
-    required this.authClubId,
-    required this.name,
-    this.email,
-    this.bio,
-    this.logoUrl,
-    this.website,
-  });
-
-  factory Club.fromJson(Map<String, dynamic> json) {
-    return Club(
-      id: json['id'] is int
-          ? json['id']
-          : int.tryParse(json['id']?.toString() ?? '0') ?? 0,
-      authClubId: json['authClubId']?.toString() ?? '',
-      name: json['name']?.toString() ?? 'Unknown Club',
-      email: json['email']?.toString(),
-      bio: json['bio']?.toString(),
-      logoUrl: json['logoUrl']?.toString(),
-      website: json['website']?.toString(),
-    );
-  }
-}
 
 class ClubEvent {
   final int id;

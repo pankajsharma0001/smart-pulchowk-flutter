@@ -6,6 +6,7 @@ class Skeleton extends StatelessWidget {
   final double? width;
   final double borderRadius;
   final EdgeInsetsGeometry? margin;
+  final BoxShape shape;
 
   const Skeleton({
     super.key,
@@ -13,6 +14,7 @@ class Skeleton extends StatelessWidget {
     this.width,
     this.borderRadius = 8,
     this.margin,
+    this.shape = BoxShape.rectangle,
   });
 
   @override
@@ -27,7 +29,10 @@ class Skeleton extends StatelessWidget {
         color: isDark
             ? Colors.white.withValues(alpha: 0.25)
             : Colors.black.withValues(alpha: 0.20),
-        borderRadius: BorderRadius.circular(borderRadius),
+        borderRadius: shape == BoxShape.circle
+            ? null
+            : BorderRadius.circular(borderRadius),
+        shape: shape,
       ),
     );
   }
