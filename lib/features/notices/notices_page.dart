@@ -160,7 +160,7 @@ class _NoticesPageState extends State<NoticesPage> {
       context: context,
       isScrollControlled: true,
       backgroundColor: isDark ? AppColors.cardDark : Colors.white,
-      showDragHandle: true,
+      showDragHandle: false,
       builder: (_) => NoticeEditor(notice: notice),
     );
 

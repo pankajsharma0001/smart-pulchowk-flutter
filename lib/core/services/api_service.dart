@@ -379,6 +379,19 @@ class ApiService {
     return url;
   }
 
+  /// Whether a URL belongs to a social media CDN that might have restricted access or headers.
+  static bool isSocialMediaDomain(String? url) {
+    if (url == null || url.isEmpty) return false;
+    final socialDomains = [
+      'fbcdn.net',
+      'akamaihd.net',
+      'instagram.com',
+      'twimg.com',
+      'googleusercontent.com',
+    ];
+    return socialDomains.any((domain) => url.toLowerCase().contains(domain));
+  }
+
   /// Get auth headers with Firebase ID token attached.
   Future<Map<String, String>> _getAuthHeaders() async {
     final currentUser = FirebaseAuth.instance.currentUser;
@@ -2055,6 +2068,22 @@ class ApiService {
     );
   }
 
+  /// Get cached club profile synchronously.
+  ClubProfile? getCachedClubProfile(int id) {
+    final key = '${AppConstants.cacheClubProfile}$id';
+    final mem = getCached<ClubProfile>(key);
+    if (mem != null) return mem;
+
+    try {
+      final persisted = StorageService.readCache(key);
+      if (persisted != null) {
+        final rawJson = jsonDecode(persisted as String);
+        return ClubProfile.fromJson(rawJson as Map<String, dynamic>);
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// Get events for a specific club.
   Future<List<ClubEvent>> getClubEvents(
     int id, {
@@ -2081,6 +2110,24 @@ class ApiService {
               .toList(),
         ) ??
         [];
+  }
+
+  /// Get cached club events synchronously.
+  List<ClubEvent>? getCachedClubEvents(int id) {
+    final key = '${AppConstants.cacheClubEvents}$id';
+    final mem = getCached<List<ClubEvent>>(key);
+    if (mem != null) return mem;
+
+    try {
+      final persisted = StorageService.readCache(key);
+      if (persisted != null) {
+        final rawJson = jsonDecode(persisted as String);
+        return (rawJson as List)
+            .map((e) => ClubEvent.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (_) {}
+    return null;
   }
 
   // ── Club & Event Admin Mutations ───────────────────────────────────────────
@@ -2291,6 +2338,49 @@ class ApiService {
       };
     } catch (e) {
       debugPrint('Error in downloadAndOpenExport: $e');
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Download and open the exported assignment submissions list (CSV or PDF).
+  Future<Map<String, dynamic>> downloadAndOpenAssignmentExport(
+    int assignmentId,
+    String format,
+  ) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        return {'success': false, 'message': 'Not authenticated'};
+      }
+      final token = await currentUser.getIdToken();
+      final uri = Uri.parse(
+        '${AppConstants.fullApiUrl}/classroom/assignments/$assignmentId/export-submissions?format=$format',
+      );
+      final response = await _client.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final ext = format == 'pdf' ? 'pdf' : 'csv';
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/submissions_$assignmentId.$ext');
+        await file.writeAsBytes(response.bodyBytes);
+        final xFile = XFile(file.path);
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [xFile],
+            text: 'Assignment Submissions (ID: $assignmentId)',
+          ),
+        );
+        return {'success': true};
+      }
+      return {
+        'success': false,
+        'message': 'Export failed (status ${response.statusCode})',
+      };
+    } catch (e) {
+      debugPrint('Error in downloadAndOpenAssignmentExport: $e');
       return {'success': false, 'message': 'Error: $e'};
     }
   }

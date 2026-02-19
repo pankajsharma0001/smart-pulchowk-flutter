@@ -832,7 +832,7 @@ class _ClubEditorState extends State<ClubEditor> {
           child: ElevatedButton(
             onPressed: _isSaving ? null : _nextStep,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0A0D14),
+              backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 18),
               shape: RoundedRectangleBorder(

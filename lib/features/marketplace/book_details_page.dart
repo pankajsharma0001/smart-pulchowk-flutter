@@ -1261,12 +1261,24 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
   void _showMoreMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      showDragHandle: true,
+      showDragHandle: false,
       shape: RoundedRectangleBorder(borderRadius: AppRadius.xlAll),
       builder: (ctx) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             ListTile(
               dense: true,
               leading: const Icon(Icons.flag_rounded),
@@ -1357,7 +1369,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
 
     showModalBottomSheet(
       context: context,
-      showDragHandle: true,
+      showDragHandle: false,
       backgroundColor: isDark ? AppColors.cardDark : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -1369,6 +1381,17 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               const SizedBox(height: 16),
               Text(
                 'Contact ${seller.name}',

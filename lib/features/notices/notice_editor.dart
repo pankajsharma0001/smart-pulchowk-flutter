@@ -157,210 +157,232 @@ class _NoticeEditorState extends State<NoticeEditor> {
         color: isDark ? AppColors.cardDark : Colors.white,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 8),
-              Text(
-                widget.notice == null ? 'Add New Notice' : 'Edit Notice',
-                style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.w900),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
               ),
-              const SizedBox(height: 24),
-
-              // Title
-              TextFormField(
-                controller: _titleController,
-                decoration: _inputDecoration('Title', Icons.title_rounded),
-                maxLines: 2,
-                validator: (v) =>
-                    (v == null || v.trim().isEmpty) ? 'Required' : null,
-              ),
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  // Category
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _category,
-                      decoration: _inputDecoration(
-                        'Category',
-                        Icons.category_rounded,
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.notice == null ? 'Add New Notice' : 'Edit Notice',
+                      style: AppTextStyles.h4.copyWith(
+                        fontWeight: FontWeight.w900,
                       ),
-                      items: _categories
-                          .map(
-                            (c) => DropdownMenuItem(
-                              value: c,
-                              child: Text(
-                                c
-                                    .split('_')
-                                    .map(
-                                      (word) =>
-                                          word[0].toUpperCase() +
-                                          word.substring(1),
-                                    )
-                                    .join(' '),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      isExpanded: true,
-                      onChanged: (v) => setState(() => _category = v!),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Level
-                  Expanded(
-                    child: DropdownButtonFormField<String?>(
-                      initialValue: _level,
+                    const SizedBox(height: 24),
+
+                    // Title
+                    TextFormField(
+                      controller: _titleController,
                       decoration: _inputDecoration(
-                        'Level',
-                        Icons.layers_rounded,
+                        'Title',
+                        Icons.title_rounded,
                       ),
-                      items: [
-                        const DropdownMenuItem(
-                          value: null,
-                          child: Text('Global'),
+                      maxLines: 2,
+                      validator: (v) =>
+                          (v == null || v.trim().isEmpty) ? 'Required' : null,
+                    ),
+                    const SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        // Category
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _category,
+                            decoration: _inputDecoration(
+                              'Category',
+                              Icons.category_rounded,
+                            ),
+                            items: _categories
+                                .map(
+                                  (c) => DropdownMenuItem(
+                                    value: c,
+                                    child: Text(
+                                      c
+                                          .split('_')
+                                          .map(
+                                            (word) =>
+                                                word[0].toUpperCase() +
+                                                word.substring(1),
+                                          )
+                                          .join(' '),
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            isExpanded: true,
+                            onChanged: (v) => setState(() => _category = v!),
+                          ),
                         ),
-                        ..._levels.map(
-                          (l) => DropdownMenuItem(
-                            value: l,
-                            child: Text(l.toUpperCase()),
+                        const SizedBox(width: 16),
+                        // Level
+                        Expanded(
+                          child: DropdownButtonFormField<String?>(
+                            initialValue: _level,
+                            decoration: _inputDecoration(
+                              'Level',
+                              Icons.layers_rounded,
+                            ),
+                            items: [
+                              const DropdownMenuItem(
+                                value: null,
+                                child: Text('Global'),
+                              ),
+                              ..._levels.map(
+                                (l) => DropdownMenuItem(
+                                  value: l,
+                                  child: Text(l.toUpperCase()),
+                                ),
+                              ),
+                            ],
+                            isExpanded: true,
+                            onChanged: (v) => setState(() => _level = v),
                           ),
                         ),
                       ],
-                      isExpanded: true,
-                      onChanged: (v) => setState(() => _level = v),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-              // Attachment
-              Row(
-                children: [
-                  Expanded(
-                    child: TextFormField(
-                      controller: _attachmentUrlController,
-                      readOnly: _pickedFile != null,
-                      decoration:
-                          _inputDecoration(
-                            'Attachment URL',
-                            Icons.link_rounded,
-                          ).copyWith(
-                            suffixIcon: _pickedFile != null
-                                ? IconButton(
-                                    icon: const Icon(
-                                      Icons.clear_rounded,
-                                      size: 18,
-                                    ),
-                                    onPressed: () => setState(() {
-                                      _pickedFile = null;
-                                      _attachmentUrlController.clear();
-                                    }),
-                                  )
-                                : null,
+                    // Attachment
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _attachmentUrlController,
+                            readOnly: _pickedFile != null,
+                            decoration:
+                                _inputDecoration(
+                                  'Attachment URL',
+                                  Icons.link_rounded,
+                                ).copyWith(
+                                  suffixIcon: _pickedFile != null
+                                      ? IconButton(
+                                          icon: const Icon(
+                                            Icons.clear_rounded,
+                                            size: 18,
+                                          ),
+                                          onPressed: () => setState(() {
+                                            _pickedFile = null;
+                                            _attachmentUrlController.clear();
+                                          }),
+                                        )
+                                      : null,
+                                ),
                           ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  IconButton.filled(
-                    onPressed: _isUploading ? null : _pickFile,
-                    icon: _isUploading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+                        ),
+                        const SizedBox(width: 12),
+                        IconButton.filled(
+                          onPressed: _isUploading ? null : _pickFile,
+                          icon: _isUploading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.upload_file_rounded),
+                          style: IconButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          )
-                        : const Icon(Icons.upload_file_rounded),
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Source URL
+                    TextFormField(
+                      controller: _sourceUrlController,
+                      decoration: _inputDecoration(
+                        'Source URL (Optional)',
+                        Icons.open_in_browser_rounded,
                       ),
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
 
-              // Source URL
-              TextFormField(
-                controller: _sourceUrlController,
-                decoration: _inputDecoration(
-                  'Source URL (Optional)',
-                  Icons.open_in_browser_rounded,
+                    const SizedBox(height: 32),
+
+                    // Action Buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _isSaving
+                                ? null
+                                : () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              side: BorderSide(
+                                color: Colors.grey.withValues(alpha: 0.2),
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Text('Cancel'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isSaving ? null : _save,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: _isSaving
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text(
+                                    'Save Notice',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
-
-              const SizedBox(height: 32),
-
-              // Action Buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _isSaving
-                          ? null
-                          : () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        side: BorderSide(
-                          color: Colors.grey.withValues(alpha: 0.2),
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _isSaving ? null : _save,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: _isSaving
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              'Save Notice',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 80),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

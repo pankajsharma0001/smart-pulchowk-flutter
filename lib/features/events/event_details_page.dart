@@ -222,7 +222,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
         widget.event.externalRegistrationLink!.isNotEmpty) {
       final url = Uri.parse(widget.event.externalRegistrationLink!);
       if (await canLaunchUrl(url)) {
-        await launchUrl(url);
+        await launchUrl(url, mode: LaunchMode.externalApplication);
       }
       return;
     }
@@ -792,12 +792,50 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       );
     }
 
+    // ── Inactive Status: common for non-enrolled users ────────────────────
+    final bool isInactive =
+        widget.event.isCompleted ||
+        widget.event.isCancelled ||
+        (widget.event.registrationDeadline != null &&
+            widget.event.registrationDeadline!.isBefore(DateTime.now()));
+
+    if (isInactive && !_isEnrolled) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: Colors.grey.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.info_outline_rounded,
+              color: Colors.grey,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              widget.event.isCompleted
+                  ? 'Event Ended'
+                  : widget.event.isCancelled
+                  ? 'Event Cancelled'
+                  : 'Registration Closed',
+              style: AppTextStyles.labelMedium.copyWith(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
     // ── External registration: only show redirect button ─────────────────
     final hasExternalLink =
         widget.event.externalRegistrationLink != null &&
         widget.event.externalRegistrationLink!.isNotEmpty;
 
-    if (hasExternalLink) {
+    if (hasExternalLink && !_isEnrolled) {
       return Row(
         children: [
           Container(
@@ -881,45 +919,42 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               ],
             ),
           ),
-          const SizedBox(height: AppSpacing.md),
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton(
-              onPressed: _isRegistering ? null : _handleCancellation,
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.error),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppRadius.md),
+          if (!widget.event.isCompleted && !widget.event.isCancelled) ...[
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: _isRegistering ? null : _handleCancellation,
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: AppColors.error),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
                 ),
+                child: _isRegistering
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.error,
+                        ),
+                      )
+                    : Text(
+                        'Unregister',
+                        style: AppTextStyles.button.copyWith(
+                          color: AppColors.error,
+                        ),
+                      ),
               ),
-              child: _isRegistering
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.error,
-                      ),
-                    )
-                  : Text(
-                      'Unregister',
-                      style: AppTextStyles.button.copyWith(
-                        color: AppColors.error,
-                      ),
-                    ),
             ),
-          ),
+          ],
         ],
       );
     }
 
     // ── Not enrolled: show join button ────────────────────────────────────
-    final bool canRegister =
-        !widget.event.isCompleted &&
-        !widget.event.isCancelled &&
-        !_isRegistering;
-
     return Row(
       children: [
         Container(
@@ -935,13 +970,11 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
         const SizedBox(width: AppSpacing.base),
         Expanded(
           child: Container(
-            decoration: canRegister
-                ? AppDecorations.gradientCard(borderRadius: AppRadius.md)
-                : null,
+            decoration: AppDecorations.gradientCard(borderRadius: AppRadius.md),
             child: ElevatedButton(
-              onPressed: canRegister ? _handleRegistration : null,
+              onPressed: _isRegistering ? null : _handleRegistration,
               style: ElevatedButton.styleFrom(
-                backgroundColor: canRegister ? Colors.transparent : null,
+                backgroundColor: Colors.transparent,
                 shadowColor: Colors.transparent,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
@@ -958,14 +991,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                       ),
                     )
                   : Text(
-                      widget.event.isCompleted
-                          ? 'Event Ended'
-                          : widget.event.isCancelled
-                          ? 'Cancelled'
-                          : 'Join Event',
-                      style: AppTextStyles.button.copyWith(
-                        color: canRegister ? Colors.white : Colors.grey,
-                      ),
+                      'Join Event',
+                      style: AppTextStyles.button.copyWith(color: Colors.white),
                     ),
             ),
           ),
@@ -1077,33 +1104,36 @@ Join here: $eventUrl
                   width: 18,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              else ...[
-                Tooltip(
-                  message: 'Export CSV',
-                  child: IconButton(
-                    onPressed: () => _exportStudents('csv'),
-                    icon: const Icon(
-                      Icons.table_chart_outlined,
-                      color: AppColors.primary,
+              else
+                PopupMenuButton<String>(
+                  onSelected: _exportStudents,
+                  icon: const Icon(Icons.more_vert_rounded),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'csv',
+                      child: Row(
+                        children: [
+                          Icon(Icons.table_chart_outlined, size: 20),
+                          SizedBox(width: 12),
+                          Text('Export CSV'),
+                        ],
+                      ),
                     ),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ),
-                Tooltip(
-                  message: 'Export PDF',
-                  child: IconButton(
-                    onPressed: () => _exportStudents('pdf'),
-                    icon: const Icon(
-                      Icons.picture_as_pdf_rounded,
-                      color: AppColors.error,
+                    const PopupMenuItem(
+                      value: 'pdf',
+                      child: Row(
+                        children: [
+                          Icon(Icons.picture_as_pdf_rounded, size: 20),
+                          SizedBox(width: 12),
+                          Text('Export PDF'),
+                        ],
+                      ),
                     ),
-                    visualDensity: VisualDensity.compact,
-                  ),
+                  ],
                 ),
-              ],
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.sm),
           if (_isLoadingStudents)
             const ShimmerWrapper(child: ShimmerInfoCard(height: 120))
           else if (_registeredStudents.isEmpty)
@@ -1129,6 +1159,7 @@ Join here: $eventUrl
                   ? AppDecorations.cardDark()
                   : AppDecorations.card(),
               child: ListView.separated(
+                padding: EdgeInsets.zero,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _registeredStudents.length,
@@ -1141,30 +1172,73 @@ Join here: $eventUrl
                       : AppColors.textSecondary;
                   return ListTile(
                     dense: true,
-                    leading: CircleAvatar(
-                      radius: 18,
-                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                      child: Text(
-                        (student.studentName ?? '?')[0].toUpperCase(),
-                        style: AppTextStyles.labelMedium.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                      ),
+                      child: SmartImage(
+                        imageUrl: student.studentPhoto,
+                        fit: BoxFit.cover,
+                        width: 40,
+                        height: 40,
+                        shape: BoxShape.circle,
+                        errorWidget: Center(
+                          child: Text(
+                            (student.studentName ?? '?')[0].toUpperCase(),
+                            style: AppTextStyles.labelMedium.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                     title: Text(
                       student.studentName ?? 'Unknown',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTextStyles.labelMedium.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    subtitle: Text(
-                      student.studentEmail ?? '',
-                      style: AppTextStyles.caption.copyWith(
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondary,
-                      ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          student.studentEmail ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTextStyles.caption.copyWith(
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
+                          ),
+                        ),
+                        if (student.registeredAt != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              'Registered ${DateFormat('MMM d, h:mm a').format(student.registeredAt!)}',
+                              style: AppTextStyles.caption.copyWith(
+                                fontSize: 10,
+                                color: isDark
+                                    ? AppColors.textSecondaryDark.withValues(
+                                        alpha: 0.7,
+                                      )
+                                    : AppColors.textSecondary.withValues(
+                                        alpha: 0.7,
+                                      ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                     trailing: Container(
                       padding: const EdgeInsets.symmetric(

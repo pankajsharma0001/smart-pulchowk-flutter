@@ -39,6 +39,13 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+
+    // Initial load from cache to avoid shimmer
+    _profile = _apiService.getCachedClubProfile(widget.club.id);
+    _events = _apiService.getCachedClubEvents(widget.club.id) ?? [];
+    _isLoadingProfile = _profile == null;
+    _isLoadingEvents = _events.isEmpty;
+
     _loadData();
   }
 
@@ -91,10 +98,12 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
 
   Future<void> _loadProfile({bool forceRefresh = false}) async {
     if (!mounted) return;
-    setState(() {
-      _isLoadingProfile = true;
-      _error = null;
-    });
+    if (forceRefresh || _profile == null) {
+      setState(() {
+        _isLoadingProfile = true;
+        _error = null;
+      });
+    }
 
     try {
       final profile = await _apiService.getClubProfile(
@@ -127,9 +136,11 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
 
   Future<void> _loadEvents({bool forceRefresh = false}) async {
     if (!mounted) return;
-    setState(() {
-      _isLoadingEvents = true;
-    });
+    if (forceRefresh || _events.isEmpty) {
+      setState(() {
+        _isLoadingEvents = true;
+      });
+    }
 
     try {
       final events = await _apiService.getClubEvents(

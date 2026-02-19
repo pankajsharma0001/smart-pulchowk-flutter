@@ -38,34 +38,54 @@ class _MarketplaceActivityPageState extends State<MarketplaceActivityPage> {
         backgroundColor: isDark
             ? AppColors.backgroundDark
             : AppColors.backgroundLight,
-        appBar: AppBar(
-          title: const Text('My Marketplace'),
-          backgroundColor: isDark
-              ? AppColors.backgroundDark
-              : AppColors.backgroundLight,
-          elevation: 0,
-          bottom: TabBar(
-            isScrollable: false,
-            indicatorSize: TabBarIndicatorSize.label,
-            labelStyle: AppTextStyles.labelMedium.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-            unselectedLabelStyle: AppTextStyles.labelMedium,
-            tabs: const [
-              Tab(text: 'Selling'),
-              Tab(text: 'Inquiries'),
-              Tab(text: 'Requests'),
-              Tab(text: 'Saved'),
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // Custom Header (Replacement for AppBar)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_rounded),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    Text(
+                      'My Marketplace',
+                      style: AppTextStyles.h4.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              TabBar(
+                isScrollable: false,
+                indicatorSize: TabBarIndicatorSize.label,
+                labelStyle: AppTextStyles.labelMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                unselectedLabelStyle: AppTextStyles.labelMedium,
+                tabs: const [
+                  Tab(text: 'Selling'),
+                  Tab(text: 'Inquiries'),
+                  Tab(text: 'Requests'),
+                  Tab(text: 'Saved'),
+                ],
+              ),
+              const Expanded(
+                child: TabBarView(
+                  children: [
+                    _SellingView(),
+                    _InquiriesView(),
+                    _RequestsView(),
+                    _SavedView(),
+                  ],
+                ),
+              ),
             ],
           ),
-        ),
-        body: const TabBarView(
-          children: [
-            _SellingView(),
-            _InquiriesView(),
-            _RequestsView(),
-            _SavedView(),
-          ],
         ),
       ),
     );
@@ -879,7 +899,7 @@ class _RequestsViewState extends State<_RequestsView> {
 
     showModalBottomSheet(
       context: context,
-      showDragHandle: true,
+      showDragHandle: false,
       backgroundColor: isDark ? AppColors.cardDark : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
@@ -891,6 +911,17 @@ class _RequestsViewState extends State<_RequestsView> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
               const SizedBox(height: 16),
               Text(
                 'Contact ${seller.name}',

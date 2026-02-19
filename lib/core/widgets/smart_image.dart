@@ -35,11 +35,19 @@ class SmartImage extends StatelessWidget {
     }
 
     // Apply Cloudinary/Drive optimization
+    final isFiniteWidth = width != null && width!.isFinite;
     final processedUrl = useCloudinary
-        ? ApiService.processImageUrl(imageUrl, width: width?.toInt())
+        ? ApiService.processImageUrl(
+            imageUrl,
+            width: isFiniteWidth ? width!.toInt() : null,
+          )
         : imageUrl;
 
     if (processedUrl == null) return _buildError(context);
+
+    // Social media CDNs often block requests with custom User-Agents or specific headers
+    final isSocial = ApiService.isSocialMediaDomain(processedUrl);
+    final headers = isSocial ? null : AppConstants.imageHeaders;
 
     return ClipRRect(
       borderRadius: shape == BoxShape.circle
@@ -52,7 +60,7 @@ class SmartImage extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         child: CachedNetworkImage(
           imageUrl: processedUrl,
-          httpHeaders: AppConstants.imageHeaders,
+          httpHeaders: headers,
           width: width,
           height: height,
           fit: fit,
@@ -64,6 +72,9 @@ class SmartImage extends StatelessWidget {
               shape: shape,
             ),
           ),
+          errorListener: (error) {
+            debugPrint('SmartImage Error [$processedUrl]: $error');
+          },
           errorWidget: (context, url, error) =>
               errorWidget ?? _buildError(context),
         ),

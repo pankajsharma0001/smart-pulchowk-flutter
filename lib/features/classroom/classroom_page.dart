@@ -1331,6 +1331,22 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage>
     }
   }
 
+  Future<void> _exportSubmissions(int assignmentId, String format) async {
+    haptics.lightImpact();
+    try {
+      await _apiService.downloadAndOpenAssignmentExport(assignmentId, format);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
   void _toggleSubmissions(int assignmentId) {
     if (_submissionsMap.containsKey(assignmentId)) {
       setState(() => _submissionsMap.remove(assignmentId));
@@ -2395,6 +2411,59 @@ class _TeacherClassroomPageState extends State<_TeacherClassroomPage>
                     ),
                   ),
                 ),
+              ),
+              const SizedBox(width: 4),
+              PopupMenuButton<String>(
+                padding: EdgeInsets.zero,
+                icon: const Icon(
+                  Icons.more_vert_rounded,
+                  size: 18,
+                  color: Colors.grey,
+                ),
+                onSelected: (format) =>
+                    _exportSubmissions(assignment.id, format),
+                itemBuilder: (ctx) => [
+                  PopupMenuItem(
+                    value: 'csv',
+                    height: 32,
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.table_chart_rounded,
+                          size: 16,
+                          color: Colors.green,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Export CSV',
+                          style: AppTextStyles.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'pdf',
+                    height: 32,
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.picture_as_pdf_rounded,
+                          size: 16,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Export PDF',
+                          style: AppTextStyles.caption.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

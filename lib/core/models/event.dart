@@ -191,6 +191,7 @@ class RegisteredStudent {
   final DateTime? registeredAt;
   final String? studentName;
   final String? studentEmail;
+  final String? studentPhoto;
 
   RegisteredStudent({
     required this.registrationId,
@@ -198,6 +199,7 @@ class RegisteredStudent {
     this.registeredAt,
     this.studentName,
     this.studentEmail,
+    this.studentPhoto,
   });
 
   factory RegisteredStudent.fromJson(Map<String, dynamic> json) {
@@ -212,6 +214,7 @@ class RegisteredStudent {
           : null,
       studentName: student?['name']?.toString(),
       studentEmail: student?['email']?.toString(),
+      studentPhoto: student?['image']?.toString(),
     );
   }
 }
