@@ -97,15 +97,7 @@ class _ClubsPageState extends State<ClubsPage>
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Clubs'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh_rounded),
-              onPressed: () => _loadClubs(forceRefresh: true),
-            ),
-          ],
-        ),
+        appBar: AppBar(title: const Text('Clubs')),
         body: Column(
           children: [
             // Search Bar

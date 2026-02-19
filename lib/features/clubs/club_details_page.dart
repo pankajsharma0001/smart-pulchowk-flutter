@@ -527,9 +527,6 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
             _buildAdditionalInfoCard(context),
 
           const SizedBox(height: AppSpacing.xl),
-
-          // CTA Button
-          _buildActionButtons(),
         ],
       ),
     );
@@ -955,53 +952,57 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
     );
   }
 
-  Widget _buildActionButtons() {
-    if (widget.club.email == null) return const SizedBox.shrink();
-
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: AppRadius.lgAll,
-        boxShadow: AppShadows.glow(AppColors.primary, intensity: 0.3),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _launchURL('mailto:${widget.club.email}'),
-          borderRadius: AppRadius.lgAll,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xl,
-              vertical: AppSpacing.base,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.email_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: AppSpacing.sm),
-                Text(
-                  'Contact Club',
-                  style: AppTextStyles.button.copyWith(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // Removed _buildActionButtons as requested
 
   Future<void> _launchURL(String urlString) async {
-    final Uri url = Uri.parse(urlString);
+    final trimmed = urlString.trim();
+    if (trimmed.isEmpty) return;
+
     try {
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
+      Uri? url;
+
+      // Handle Instagram deep linking
+      if (trimmed.contains('instagram.com/')) {
+        try {
+          // Extract username: https://www.instagram.com/pankaj/ -> pankaj
+          final uri = Uri.parse(trimmed);
+          final pathSegments = uri.pathSegments
+              .where((s) => s.isNotEmpty)
+              .toList();
+          if (pathSegments.isNotEmpty) {
+            final username = pathSegments.first;
+            final nativeUrl = Uri.parse('instagram://user?username=$username');
+
+            // Try native app first
+            if (await canLaunchUrl(nativeUrl)) {
+              await launchUrl(nativeUrl, mode: LaunchMode.externalApplication);
+              return;
+            }
+          }
+        } catch (e) {
+          debugPrint('Instagram deep link parse error: $e');
+        }
       }
+
+      if (trimmed.startsWith('mailto:')) {
+        final email = trimmed.replaceFirst('mailto:', '');
+        url = Uri(scheme: 'mailto', path: email);
+      } else if (trimmed.startsWith('tel:')) {
+        final phone = trimmed.replaceFirst('tel:', '');
+        url = Uri(scheme: 'tel', path: phone);
+      } else {
+        url = Uri.parse(trimmed);
+      }
+
+      await launchUrl(url, mode: LaunchMode.platformDefault);
     } catch (e) {
+      debugPrint('Error launching URL: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open the link.')),
+          SnackBar(
+            content: Text('Could not open contact link.'),
+            backgroundColor: AppColors.error,
+          ),
         );
       }
     }
