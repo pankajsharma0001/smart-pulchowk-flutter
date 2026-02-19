@@ -31,6 +31,14 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   @override
   void initState() {
     super.initState();
+
+    // Instant Load Enrollment from Cache
+    final cachedEnrollment = _apiService.getCachedEnrollment();
+    if (cachedEnrollment != null) {
+      _isEnrolled = cachedEnrollment.any((e) => e.eventId == widget.event.id);
+      _isLoadingEnrollment = false;
+    }
+
     _checkEnrollment();
   }
 
@@ -438,7 +446,16 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                 ],
               ),
               child: _isLoadingEnrollment
-                  ? const Center(child: CircularProgressIndicator())
+                  ? ShimmerWrapper(
+                      child: Container(
+                        height: 48,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    )
                   : _buildActionButtons(),
             ),
           ),

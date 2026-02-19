@@ -3,6 +3,7 @@ import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
+import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_card.dart';
 
 class EventsPage extends StatefulWidget {
@@ -24,7 +25,28 @@ class _EventsPageState extends State<EventsPage>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+
+    // Instant Load from Cache
+    final cachedEvents = _apiService.getCachedEvents();
+    if (cachedEvents != null && cachedEvents.isNotEmpty) {
+      _allEvents = cachedEvents;
+      _isLoading = false;
+      _updateTabSelection(cachedEvents);
+    }
+
     _loadEvents();
+  }
+
+  void _updateTabSelection(List<ClubEvent> events) {
+    if (!mounted) return;
+    // Smart Tab Selection: Default to Ongoing (0)
+    // If Ongoing is empty but Upcoming has events, switch to Upcoming (1)
+    final hasOngoing = events.any((e) => e.isOngoing);
+    final hasUpcoming = events.any((e) => e.isUpcoming);
+
+    if (!hasOngoing && hasUpcoming && _tabController.index == 0) {
+      _tabController.animateTo(1);
+    }
   }
 
   @override
@@ -54,15 +76,7 @@ class _EventsPageState extends State<EventsPage>
           _allEvents = events;
           _isLoading = false;
           _error = null;
-
-          // Smart Tab Selection: Default to Ongoing (0)
-          // If Ongoing is empty but Upcoming has events, switch to Upcoming (1)
-          final hasOngoing = events.any((e) => e.isOngoing);
-          final hasUpcoming = events.any((e) => e.isUpcoming);
-
-          if (!hasOngoing && hasUpcoming && _tabController.index == 0) {
-            _tabController.animateTo(1);
-          }
+          _updateTabSelection(events);
         });
       }
     } catch (e) {
@@ -117,7 +131,14 @@ class _EventsPageState extends State<EventsPage>
 
   Widget _buildRefreshableList(List<ClubEvent> events) {
     return RefreshIndicator(
-      onRefresh: () => _loadEvents(forceRefresh: true),
+      onRefresh: () async {
+        if (mounted) {
+          debugPrint('EventsPage: Manual refresh. Syncing role...');
+          await MainLayout.of(context)?.refreshUserRole();
+          if (!mounted) return;
+        }
+        await _loadEvents(forceRefresh: true);
+      },
       child: events.isEmpty ? _buildEmptyState() : _buildEventList(events),
     );
   }

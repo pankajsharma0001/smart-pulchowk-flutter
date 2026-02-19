@@ -1825,6 +1825,22 @@ class ApiService {
         [];
   }
 
+  /// Get cached events synchronously for UI instant load.
+  List<ClubEvent>? getCachedEvents() {
+    try {
+      final persisted = StorageService.readCache(AppConstants.cacheEventsList);
+      if (persisted != null) {
+        final rawJson = jsonDecode(persisted as String);
+        return (rawJson as List)
+            .map((e) => ClubEvent.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error getting cached events: $e');
+    }
+    return getCached<List<ClubEvent>>(AppConstants.cacheEventsList);
+  }
+
   /// Get upcoming events from the backend.
   Future<List<ClubEvent>> getUpcomingEvents({bool forceRefresh = false}) async {
     return await _cachedFetch<List<ClubEvent>>(
@@ -1919,5 +1935,25 @@ class ApiService {
               .toList(),
         ) ??
         [];
+  }
+
+  /// Get cached enrollment synchronously for UI instant load.
+  List<EventRegistration>? getCachedEnrollment() {
+    try {
+      final persisted = StorageService.readCache(
+        AppConstants.cacheEventsEnrollment,
+      );
+      if (persisted != null) {
+        final rawJson = jsonDecode(persisted as String);
+        return (rawJson as List)
+            .map((e) => EventRegistration.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error getting cached enrollment: $e');
+    }
+    return getCached<List<EventRegistration>>(
+      AppConstants.cacheEventsEnrollment,
+    );
   }
 }
