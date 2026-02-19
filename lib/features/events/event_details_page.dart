@@ -13,8 +13,8 @@ import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:smart_pulchowk/features/clubs/club_details_page.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_editor.dart';
+import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 
 class EventDetailsPage extends StatefulWidget {
@@ -34,6 +34,9 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   bool _isAdmin = false;
   Map<String, dynamic>? _extraDetails;
   bool _isLoadingExtraDetails = true;
+  List<RegisteredStudent> _registeredStudents = [];
+  bool _isLoadingStudents = false;
+  bool _isExporting = false;
 
   @override
   void initState() {
@@ -69,16 +72,24 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
 
   Future<void> _checkAdminStatus() async {
     try {
-      final role = await _apiService.getUserRole();
-      final user = FirebaseAuth.instance.currentUser;
+      final dbUserId = await StorageService.readSecure(
+        AppConstants.dbUserIdKey,
+      );
 
-      // Superadmin or Club Owner
-      final isAdmin =
-          role == 'admin' ||
-          (user != null && user.uid == widget.event.club?.authClubId);
+      // Prefer ID from club object if available, fallback to event's clubId
+      final clubId = widget.event.club?.id ?? widget.event.clubId;
 
+      // Club owner (matches database internal ID)
+      final isOwner =
+          dbUserId != null && dbUserId == widget.event.club?.authClubId;
+
+      // Club-level admin (via clubAdmins table)
+      final isClubAdmin = await _apiService.getIsAdminForClub(clubId);
+
+      final isAdmin = isOwner || isClubAdmin;
       if (mounted) {
         setState(() => _isAdmin = isAdmin);
+        if (isAdmin) _loadRegisteredStudents();
       }
     } catch (e) {
       debugPrint('Error checking admin status: $e');
@@ -99,6 +110,38 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     } catch (e) {
       if (mounted) {
         setState(() => _isLoadingExtraDetails = false);
+      }
+    }
+  }
+
+  Future<void> _loadRegisteredStudents() async {
+    if (!mounted) return;
+    setState(() => _isLoadingStudents = true);
+    try {
+      final students = await _apiService.getRegisteredStudents(widget.event.id);
+      if (mounted) {
+        setState(() {
+          _registeredStudents = students;
+          _isLoadingStudents = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingStudents = false);
+    }
+  }
+
+  Future<void> _exportStudents(String format) async {
+    setState(() => _isExporting = true);
+    final result = await _apiService.downloadAndOpenExport(
+      widget.event.id,
+      format,
+    );
+    if (mounted) {
+      setState(() => _isExporting = false);
+      if (result['success'] != true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? 'Export failed')),
+        );
       }
     }
   }
@@ -662,6 +705,9 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                         ),
                       ],
 
+                      // Registered Students (Admin only)
+                      if (_isAdmin) _buildRegisteredStudentsCard(),
+
                       const SizedBox(
                         height: 200,
                       ), // Increased spacing for bottom interaction to prevent overlap with the floating bottom bar
@@ -715,6 +761,93 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
 
   Widget _buildActionButtons() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // ── Admin: show admin badge, no enrollment buttons ──────────────────
+    if (_isAdmin) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.admin_panel_settings_rounded,
+              color: AppColors.primary,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Admin View — Registration managed by you',
+              style: AppTextStyles.labelMedium.copyWith(
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── External registration: only show redirect button ─────────────────
+    final hasExternalLink =
+        widget.event.externalRegistrationLink != null &&
+        widget.event.externalRegistrationLink!.isNotEmpty;
+
+    if (hasExternalLink) {
+      return Row(
+        children: [
+          Container(
+            decoration: isDark
+                ? AppDecorations.cardDark(borderRadius: AppRadius.md)
+                : AppDecorations.card(borderRadius: AppRadius.md),
+            child: IconButton(
+              onPressed: _shareEvent,
+              icon: const Icon(Icons.share_rounded, color: AppColors.primary),
+              padding: const EdgeInsets.all(12),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.base),
+          Expanded(
+            child: Container(
+              decoration: AppDecorations.gradientCard(
+                borderRadius: AppRadius.md,
+              ),
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  final url = Uri.parse(widget.event.externalRegistrationLink!);
+                  if (await canLaunchUrl(url)) {
+                    await launchUrl(url, mode: LaunchMode.externalApplication);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                ),
+                icon: const Icon(
+                  Icons.open_in_new_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                label: Text(
+                  'Register Externally',
+                  style: AppTextStyles.button.copyWith(color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // ── Enrolled: show cancel button ──────────────────────────────────────
     if (_isEnrolled) {
       return Column(
         mainAxisSize: MainAxisSize.min,
@@ -781,6 +914,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       );
     }
 
+    // ── Not enrolled: show join button ────────────────────────────────────
     final bool canRegister =
         !widget.event.isCompleted &&
         !widget.event.isCancelled &&
@@ -788,7 +922,6 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
 
     return Row(
       children: [
-        // Share Button
         Container(
           decoration: isDark
               ? AppDecorations.cardDark(borderRadius: AppRadius.md)
@@ -800,7 +933,6 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
           ),
         ),
         const SizedBox(width: AppSpacing.base),
-        // Primary Action
         Expanded(
           child: Container(
             decoration: canRegister
@@ -830,8 +962,6 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                           ? 'Event Ended'
                           : widget.event.isCancelled
                           ? 'Cancelled'
-                          : widget.event.externalRegistrationLink != null
-                          ? 'External Registration'
                           : 'Join Event',
                       style: AppTextStyles.button.copyWith(
                         color: canRegister ? Colors.white : Colors.grey,
@@ -904,13 +1034,161 @@ ${widget.event.description ?? ''}
 Join here: $eventUrl
 ''';
 
-    await Share.share(text, subject: 'Event: ${widget.event.title}');
+    await SharePlus.instance.share(
+      ShareParams(text: text, subject: 'Event: ${widget.event.title}'),
+    );
   }
 
   Widget _buildSectionTitle(String title) {
     return Text(
       title,
       style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.bold),
+    );
+  }
+
+  /// Admin-only card showing registered students with export options.
+  Widget _buildRegisteredStudentsCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.people_alt_rounded,
+                color: AppColors.primary,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Registered Students',
+                style: AppTextStyles.h4.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+              const Spacer(),
+              // Export buttons
+              if (_isExporting)
+                const SizedBox(
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else ...[
+                Tooltip(
+                  message: 'Export CSV',
+                  child: IconButton(
+                    onPressed: () => _exportStudents('csv'),
+                    icon: const Icon(
+                      Icons.table_chart_outlined,
+                      color: AppColors.primary,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+                Tooltip(
+                  message: 'Export PDF',
+                  child: IconButton(
+                    onPressed: () => _exportStudents('pdf'),
+                    icon: const Icon(
+                      Icons.picture_as_pdf_rounded,
+                      color: AppColors.error,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          if (_isLoadingStudents)
+            const ShimmerWrapper(child: ShimmerInfoCard(height: 120))
+          else if (_registeredStudents.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(AppSpacing.md),
+              decoration: isDark
+                  ? AppDecorations.cardDark()
+                  : AppDecorations.card(),
+              child: Text(
+                'No students registered yet.',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            )
+          else
+            Container(
+              decoration: isDark
+                  ? AppDecorations.cardDark()
+                  : AppDecorations.card(),
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _registeredStudents.length,
+                separatorBuilder: (context, index) =>
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                itemBuilder: (context, index) {
+                  final student = _registeredStudents[index];
+                  final statusColor = student.status == 'registered'
+                      ? AppColors.success
+                      : AppColors.textSecondary;
+                  return ListTile(
+                    dense: true,
+                    leading: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                      child: Text(
+                        (student.studentName ?? '?')[0].toUpperCase(),
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      student.studentName ?? 'Unknown',
+                      style: AppTextStyles.labelMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    subtitle: Text(
+                      student.studentEmail ?? '',
+                      style: AppTextStyles.caption.copyWith(
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        student.status,
+                        style: AppTextStyles.caption.copyWith(
+                          color: statusColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
     );
   }
 

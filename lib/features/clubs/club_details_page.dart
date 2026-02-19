@@ -11,7 +11,8 @@ import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_card.dart';
 import 'package:smart_pulchowk/features/clubs/widgets/club_editor.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_editor.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smart_pulchowk/core/services/storage_service.dart';
+import 'package:smart_pulchowk/core/constants/app_constants.dart';
 
 class ClubDetailsPage extends StatefulWidget {
   final Club club;
@@ -57,10 +58,15 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
   }
 
   Future<void> _checkAdminStatus() async {
-    final role = await _apiService.getUserRole();
-    final user = FirebaseAuth.instance.currentUser;
-    final isAdmin =
-        role == 'admin' || (user != null && user.uid == widget.club.authClubId);
+    final dbUserId = await StorageService.readSecure(AppConstants.dbUserIdKey);
+
+    // Club-level admin check (via clubAdmins table)
+    final isClubAdmin = await _apiService.getIsAdminForClub(widget.club.id);
+
+    // Club owner
+    final isOwner = dbUserId != null && dbUserId == widget.club.authClubId;
+
+    final isAdmin = isOwner || isClubAdmin;
 
     if (mounted && isAdmin != _isAdmin) {
       WidgetsBinding.instance.addPostFrameCallback((_) {

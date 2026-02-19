@@ -44,7 +44,7 @@ class ClubEvent {
   factory ClubEvent.fromJson(Map<String, dynamic> json) {
     return ClubEvent(
       id: _parseInt(json['id']) ?? 0,
-      clubId: _parseInt(json['clubId']) ?? 0,
+      clubId: _parseInt(json['clubId']) ?? _parseInt(json['club_id']) ?? 0,
       title: json['title']?.toString() ?? 'Untitled Event',
       description: json['description']?.toString(),
       eventType: json['eventType']?.toString() ?? 'event',
@@ -180,6 +180,38 @@ class EventRegistration {
       event: json['event'] != null
           ? ClubEvent.fromJson(json['event'] as Map<String, dynamic>)
           : null,
+    );
+  }
+}
+
+/// A registered student for an event. Used by the admin roster view.
+class RegisteredStudent {
+  final int registrationId;
+  final String status;
+  final DateTime? registeredAt;
+  final String? studentName;
+  final String? studentEmail;
+
+  RegisteredStudent({
+    required this.registrationId,
+    required this.status,
+    this.registeredAt,
+    this.studentName,
+    this.studentEmail,
+  });
+
+  factory RegisteredStudent.fromJson(Map<String, dynamic> json) {
+    final student = json['student'] as Map<String, dynamic>?;
+    return RegisteredStudent(
+      registrationId: json['registrationId'] is int
+          ? json['registrationId']
+          : int.tryParse(json['registrationId']?.toString() ?? '0') ?? 0,
+      status: json['status']?.toString() ?? 'registered',
+      registeredAt: json['registeredAt'] != null
+          ? DateTime.tryParse(json['registeredAt'].toString())
+          : null,
+      studentName: student?['name']?.toString(),
+      studentEmail: student?['email']?.toString(),
     );
   }
 }

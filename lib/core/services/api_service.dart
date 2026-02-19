@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:smart_pulchowk/core/models/book_listing.dart';
@@ -2191,6 +2194,103 @@ class ApiService {
       return jsonDecode(response.body);
     } catch (e) {
       debugPrint('Error in updateExtraEventDetails: $e');
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Check if the current user is an admin of a specific club
+  /// (owner OR club-level admin in the clubAdmins table).
+  Future<bool> getIsAdminForClub(int clubId) async {
+    try {
+      final dbUserId = await StorageService.readSecure(
+        AppConstants.dbUserIdKey,
+      );
+      if (dbUserId == null) return false;
+
+      final response = await _authGet('/events/club/admins/$clubId');
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        // Backend returns { success, admins: [{ id, name, email, image }] } directly
+        if (json is Map && json['admins'] is List) {
+          final admins = json['admins'] as List;
+          return admins.any((a) => a['id']?.toString() == dbUserId);
+        }
+        // Some backends return a flat list
+        if (json is List) {
+          return json.any((a) => a['id']?.toString() == dbUserId);
+        }
+      }
+      return false;
+    } catch (e) {
+      debugPrint('Error in getIsAdminForClub: $e');
+      return false;
+    }
+  }
+
+  /// Get the list of registered students for an event (admin only).
+  Future<List<RegisteredStudent>> getRegisteredStudents(int eventId) async {
+    try {
+      final response = await _authPost(
+        '/events/registered-student',
+        body: {'eventId': eventId},
+      );
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        final data = json['data'];
+        if (data is Map && data['registrations'] is List) {
+          return (data['registrations'] as List)
+              .map((e) => RegisteredStudent.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error in getRegisteredStudents: $e');
+      return [];
+    }
+  }
+
+  /// Download and open the exported student list (CSV or PDF).
+  Future<Map<String, dynamic>> downloadAndOpenExport(
+    int eventId,
+    String format,
+  ) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        return {'success': false, 'message': 'Not authenticated'};
+      }
+      final token = await currentUser.getIdToken();
+      final uri = Uri.parse(
+        '${AppConstants.fullApiUrl}/events/$eventId/export-students?format=$format',
+      );
+      final response = await _client.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final ext = format == 'pdf' ? 'pdf' : 'csv';
+        final tempDir = await getTemporaryDirectory();
+        final file = File(
+          '${tempDir.path}/event_${eventId}_registrations.$ext',
+        );
+        await file.writeAsBytes(response.bodyBytes);
+        final xFile = XFile(file.path);
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [xFile],
+            text: 'Event Registrations (Event #$eventId)',
+          ),
+        );
+        return {'success': true};
+      }
+      return {
+        'success': false,
+        'message': 'Export failed (status ${response.statusCode})',
+      };
+    } catch (e) {
+      debugPrint('Error in downloadAndOpenExport: $e');
       return {'success': false, 'message': 'Error: $e'};
     }
   }
