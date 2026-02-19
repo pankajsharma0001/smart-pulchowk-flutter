@@ -92,6 +92,7 @@ class ClubProfile {
   final String? achievements;
   final String? benefits;
   final String? contactPhone;
+  final String? email;
   final String? address;
   final String? websiteUrl;
   final Map<String, String>? socialLinks;
@@ -108,6 +109,7 @@ class ClubProfile {
     this.achievements,
     this.benefits,
     this.contactPhone,
+    this.email,
     this.address,
     this.websiteUrl,
     this.socialLinks,
@@ -140,6 +142,7 @@ class ClubProfile {
       achievements: json['achievements'] as String?,
       benefits: json['benefits'] as String?,
       contactPhone: json['contactPhone'] as String?,
+      email: json['email'] as String? ?? json['club']?['email'] as String?,
       address: json['address'] as String?,
       websiteUrl: json['websiteUrl'] as String?,
       socialLinks: parsedSocialLinks,

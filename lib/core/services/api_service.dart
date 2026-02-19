@@ -2064,8 +2064,10 @@ class ApiService {
             final response = await _authGet('${AppConstants.clubEvents}/$id');
             if (response.statusCode == 200) {
               final json = jsonDecode(response.body);
-              if (json['success'] == true && json['clubEvents'] != null) {
-                return json['clubEvents'];
+              if (json['data'] != null &&
+                  json['data']['success'] == true &&
+                  json['data']['clubEvents'] != null) {
+                return json['data']['clubEvents'];
               }
             }
             return null;
