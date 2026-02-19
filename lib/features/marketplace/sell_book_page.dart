@@ -4,7 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/core/widgets/interactive_wrapper.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -686,19 +686,12 @@ class _SellBookPageState extends State<SellBookPage> {
                           ),
                         ),
                         clipBehavior: Clip.antiAlias,
-                        child: CachedNetworkImage(
+                        child: SmartImage(
                           imageUrl: entry.value.imageUrl,
                           fit: BoxFit.cover,
                           width: 100,
                           height: 120,
-                          placeholder: (context, url) => Center(
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: cs.primary,
-                            ),
-                          ),
-                          errorWidget: (context, url, error) =>
-                              const Icon(Icons.broken_image_rounded),
+                          errorWidget: const Icon(Icons.broken_image_rounded),
                         ),
                       ),
                       Positioned(

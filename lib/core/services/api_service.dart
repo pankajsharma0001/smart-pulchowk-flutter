@@ -14,6 +14,7 @@ import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:http_parser/http_parser.dart';
+import 'package:path/path.dart' as path;
 
 /// Result class for API operations.
 class ApiResult<T> {
@@ -2143,7 +2144,7 @@ class ApiService {
   /// Create a new event for a club.
   Future<Map<String, dynamic>> createEvent(Map<String, dynamic> data) async {
     try {
-      final response = await _authPost('/events/create-event', body: data);
+      final response = await _authPost(AppConstants.createEvent, body: data);
       final json = jsonDecode(response.body);
       // Backend usually returns { data: { success: true, ... } } or similar
       if (json['data']?['success'] == true || json['success'] == true) {
@@ -2160,16 +2161,111 @@ class ApiService {
     }
   }
 
+  /// Create extra details for an event.
+  Future<Map<String, dynamic>> createExtraEventDetails(
+    int eventId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _authPost(
+        '${AppConstants.eventDetails}/create-event-details',
+        body: {'eventId': eventId, ...data},
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      debugPrint('Error in createExtraEventDetails: $e');
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Update extra details for an event.
+  Future<Map<String, dynamic>> updateExtraEventDetails(
+    int eventId,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _authPut(
+        '${AppConstants.eventDetails}/update-eventdetail',
+        body: {'eventId': eventId, ...data},
+      );
+      return jsonDecode(response.body);
+    } catch (e) {
+      debugPrint('Error in updateExtraEventDetails: $e');
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Get extra details for an event.
+  Future<Map<String, dynamic>> getExtraEventDetails(int eventId) async {
+    try {
+      final response = await _authGet('${AppConstants.eventDetails}/$eventId');
+      return jsonDecode(response.body);
+    } catch (e) {
+      debugPrint('Error in getExtraEventDetails: $e');
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  /// Upload an event banner image.
+  Future<Map<String, dynamic>> uploadEventBanner(
+    int eventId,
+    String? filePath, {
+    String? imageUrl,
+  }) async {
+    try {
+      if (filePath != null) {
+        final request = http.MultipartRequest(
+          'POST',
+          Uri.parse('${AppConstants.fullApiUrl}/events/$eventId/upload-banner'),
+        );
+
+        final authHeaders = await _getAuthHeaders();
+        request.headers.addAll(authHeaders);
+
+        request.files.add(
+          await http.MultipartFile.fromPath(
+            'banner',
+            filePath,
+            contentType: MediaType(
+              'image',
+              path.extension(filePath).substring(1),
+            ),
+          ),
+        );
+
+        final streamedResponse = await request.send();
+        final response = await http.Response.fromStream(streamedResponse);
+        final json = jsonDecode(response.body);
+        if (json['success'] == true) {
+          _invalidateCache(AppConstants.cacheEventsList);
+          _invalidateCache('event_$eventId');
+        }
+        return json;
+      } else if (imageUrl != null) {
+        final response = await _authPost(
+          '/events/$eventId/upload-banner',
+          body: {'imageUrl': imageUrl},
+        );
+        final json = jsonDecode(response.body);
+        if (json['success'] == true) {
+          _invalidateCache('event_$eventId');
+        }
+        return json;
+      }
+      return {'success': false, 'message': 'No file or URL provided'};
+    } catch (e) {
+      debugPrint('Error in uploadEventBanner: $e');
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
   /// Update an existing event.
   Future<Map<String, dynamic>> updateEvent(
     int eventId,
     Map<String, dynamic> data,
   ) async {
     try {
-      final response = await _authPut(
-        '/events/update-event/$eventId',
-        body: data,
-      );
+      final response = await _authPut('/events/$eventId', body: data);
       final json = jsonDecode(response.body);
       if (json['data']?['success'] == true || json['success'] == true) {
         _invalidateCache(AppConstants.cacheEventsList);
@@ -2187,7 +2283,7 @@ class ApiService {
   /// Delete an event.
   Future<Map<String, dynamic>> deleteEvent(int eventId) async {
     try {
-      final response = await _authDelete('/events/delete-event/$eventId');
+      final response = await _authDelete('/events/$eventId');
       final json = jsonDecode(response.body);
       if (json['data']?['success'] == true || json['success'] == true) {
         _invalidateCache(AppConstants.cacheEventsList);

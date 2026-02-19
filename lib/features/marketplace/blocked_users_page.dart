@@ -3,7 +3,7 @@ import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 
 class BlockedUsersPage extends StatefulWidget {
   const BlockedUsersPage({super.key});
@@ -108,13 +108,12 @@ class _BlockedUsersPageState extends State<BlockedUsersPage> {
                     ),
                   ),
                   child: ListTile(
-                    leading: CircleAvatar(
-                      backgroundImage: user?.image != null
-                          ? CachedNetworkImageProvider(user!.image!)
-                          : null,
-                      child: user?.image == null
-                          ? const Icon(Icons.person)
-                          : null,
+                    leading: SmartImage(
+                      imageUrl: user?.image,
+                      width: 40,
+                      height: 40,
+                      shape: BoxShape.circle,
+                      errorWidget: const Icon(Icons.person),
                     ),
                     title: Text(
                       user?.name ?? 'Unknown User',

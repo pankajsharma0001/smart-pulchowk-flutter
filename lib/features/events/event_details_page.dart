@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:ui';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
@@ -8,6 +7,7 @@ import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_status_badge.dart';
 import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
 import 'package:share_plus/share_plus.dart';
@@ -212,10 +212,10 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                               children: [
                                 // Blurred Background
                                 Positioned.fill(
-                                  child: CachedNetworkImage(
-                                    imageUrl: widget.event.bannerUrl!,
+                                  child: SmartImage(
+                                    imageUrl: widget.event.bannerUrl,
                                     fit: BoxFit.cover,
-                                    errorWidget: (_, _, _) => Container(
+                                    errorWidget: Container(
                                       decoration: BoxDecoration(
                                         gradient: AppColors.primaryGradient,
                                       ),
@@ -237,13 +237,10 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                 ),
                                 // Focused Foreground
                                 Positioned.fill(
-                                  child: CachedNetworkImage(
-                                    imageUrl: widget.event.bannerUrl!,
+                                  child: SmartImage(
+                                    imageUrl: widget.event.bannerUrl,
                                     fit: BoxFit.contain,
-                                    placeholder: (_, _) => const ShimmerWrapper(
-                                      child: Skeleton(height: double.infinity),
-                                    ),
-                                    errorWidget: (_, _, _) => Center(
+                                    errorWidget: Center(
                                       child: Icon(
                                         Icons.broken_image_rounded,
                                         size: 48,
@@ -319,16 +316,11 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                           shape: BoxShape.circle,
                                         ),
                                         clipBehavior: Clip.antiAlias,
-                                        child: CachedNetworkImage(
-                                          imageUrl: widget.event.club!.logoUrl!,
+                                        child: SmartImage(
+                                          imageUrl: widget.event.club!.logoUrl,
                                           fit: BoxFit.cover,
-                                          placeholder: (_, _) =>
-                                              const ShimmerWrapper(
-                                                child: Skeleton(
-                                                  height: double.infinity,
-                                                ),
-                                              ),
-                                          errorWidget: (_, _, _) => const Icon(
+                                          shape: BoxShape.circle,
+                                          errorWidget: const Icon(
                                             Icons.business_rounded,
                                             size: 14,
                                             color: AppColors.primary,

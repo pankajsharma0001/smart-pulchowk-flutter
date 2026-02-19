@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/features/marketplace/book_details_page.dart';
 import 'package:smart_pulchowk/features/marketplace/sell_book_page.dart';
 import 'package:smart_pulchowk/features/marketplace/marketplace_activity_page.dart';
@@ -689,12 +689,10 @@ class _BookCard extends StatelessWidget {
                   Hero(
                     tag: 'book_image_${book.id}',
                     child: imageUrl != null && imageUrl.isNotEmpty
-                        ? CachedNetworkImage(
+                        ? SmartImage(
                             imageUrl: imageUrl,
                             fit: BoxFit.cover,
-                            placeholder: (_, _) => _imagePlaceholder(context),
-                            errorWidget: (_, _, _) =>
-                                _imagePlaceholder(context),
+                            errorWidget: _imagePlaceholder(context),
                           )
                         : _imagePlaceholder(context),
                   ),
@@ -845,18 +843,16 @@ class _BookCard extends StatelessWidget {
                           CircleAvatar(
                             radius: 9,
                             backgroundColor: cs.primaryContainer,
-                            backgroundImage: book.seller!.image != null
-                                ? CachedNetworkImageProvider(
-                                    book.seller!.image!,
-                                  )
-                                : null,
-                            child: book.seller!.image == null
-                                ? Icon(
-                                    Icons.person,
-                                    size: 10,
-                                    color: cs.primary,
-                                  )
-                                : null,
+                            child: SmartImage(
+                              imageUrl: book.seller!.image,
+                              shape: BoxShape.circle,
+                              fit: BoxFit.cover,
+                              errorWidget: Icon(
+                                Icons.person,
+                                size: 10,
+                                color: cs.primary,
+                              ),
+                            ),
                           ),
                           const SizedBox(width: 5),
                           Expanded(

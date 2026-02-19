@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/theme/theme_provider.dart';
 import 'package:smart_pulchowk/core/services/auth_service.dart';
@@ -282,19 +282,16 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 30,
-            backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-            backgroundImage: user?.photoURL != null
-                ? CachedNetworkImageProvider(user!.photoURL!)
-                : null,
-            child: user?.photoURL == null
-                ? const Icon(
-                    Icons.person_rounded,
-                    size: 32,
-                    color: AppColors.primary,
-                  )
-                : null,
+          SmartImage(
+            imageUrl: user?.photoURL,
+            width: 60,
+            height: 60,
+            shape: BoxShape.circle,
+            errorWidget: const Icon(
+              Icons.person_rounded,
+              size: 32,
+              color: AppColors.primary,
+            ),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(

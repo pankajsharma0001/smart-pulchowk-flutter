@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
@@ -162,15 +162,16 @@ class _SellerProfilePageState extends State<SellerProfilePage>
                         ),
                       ],
                     ),
-                    child: CircleAvatar(
-                      radius: 36,
-                      backgroundColor: cs.primaryContainer,
-                      backgroundImage: widget.sellerImage != null
-                          ? CachedNetworkImageProvider(widget.sellerImage!)
-                          : null,
-                      child: widget.sellerImage == null
-                          ? Icon(Icons.person, size: 36, color: cs.primary)
-                          : null,
+                    child: SmartImage(
+                      imageUrl: widget.sellerImage,
+                      width: 72,
+                      height: 72,
+                      shape: BoxShape.circle,
+                      errorWidget: Icon(
+                        Icons.person,
+                        size: 36,
+                        color: cs.primary,
+                      ),
                     ),
                   ),
                 ),
@@ -443,16 +444,12 @@ class _ReviewItem extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 12,
-                backgroundColor: (isDark ? cs.primary : cs.primaryContainer)
-                    .withValues(alpha: 0.2),
-                backgroundImage: rating.rater?.image != null
-                    ? CachedNetworkImageProvider(rating.rater!.image!)
-                    : null,
-                child: rating.rater?.image == null
-                    ? Icon(Icons.person, size: 12, color: cs.primary)
-                    : null,
+              SmartImage(
+                imageUrl: rating.rater?.image,
+                width: 24,
+                height: 24,
+                shape: BoxShape.circle,
+                errorWidget: Icon(Icons.person, size: 12, color: cs.primary),
               ),
               const SizedBox(width: 8),
               ...List.generate(
@@ -565,7 +562,7 @@ class _BookCard extends StatelessWidget {
           children: [
             Expanded(
               child: book.primaryImageUrl != null
-                  ? CachedNetworkImage(
+                  ? SmartImage(
                       imageUrl: book.primaryImageUrl!,
                       fit: BoxFit.cover,
                       width: double.infinity,

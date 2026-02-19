@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smart_pulchowk/core/models/club.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_card.dart';
 import 'package:smart_pulchowk/features/clubs/widgets/club_editor.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_editor.dart';
@@ -315,18 +315,12 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
                           ),
                         ),
                         child: ClipOval(
-                          child: widget.club.logoUrl != null
-                              ? CachedNetworkImage(
-                                  imageUrl: widget.club.logoUrl!,
-                                  fit: BoxFit.cover,
-                                  placeholder: (context, url) =>
-                                      const ShimmerWrapper(
-                                        child: Skeleton(shape: BoxShape.circle),
-                                      ),
-                                  errorWidget: (context, url, error) =>
-                                      _buildLogoFallback(),
-                                )
-                              : _buildLogoFallback(),
+                          child: SmartImage(
+                            imageUrl: widget.club.logoUrl,
+                            fit: BoxFit.cover,
+                            shape: BoxShape.circle,
+                            errorWidget: _buildLogoFallback(),
+                          ),
                         ),
                       ),
                     ),
@@ -848,18 +842,17 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
           ),
           TextButton(
             onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
               Navigator.pop(context);
               final result = await _apiService.deleteEvent(event.id);
-              if (mounted) {
-                final success =
-                    result['success'] == true ||
-                    result['data']?['success'] == true;
-                if (success) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Event deleted')),
-                  );
-                  _loadEvents(forceRefresh: true);
-                }
+              final success =
+                  result['success'] == true ||
+                  result['data']?['success'] == true;
+              if (success) {
+                messenger.showSnackBar(
+                  const SnackBar(content: Text('Event deleted')),
+                );
+                _loadEvents(forceRefresh: true);
               }
             },
             child: const Text(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
@@ -657,15 +657,17 @@ class _InquiryCard extends StatelessWidget {
                   },
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor: cs.primaryContainer,
-                        backgroundImage: buyer?.image != null
-                            ? CachedNetworkImageProvider(buyer!.image!)
-                            : null,
-                        child: buyer?.image == null
-                            ? Icon(Icons.person, size: 16, color: cs.primary)
-                            : null,
+                      SmartImage(
+                        width: 32,
+                        height: 32,
+                        imageUrl: buyer?.image,
+                        shape: BoxShape.circle,
+                        fit: BoxFit.cover,
+                        errorWidget: Icon(
+                          Icons.person,
+                          size: 16,
+                          color: cs.primary,
+                        ),
                       ),
                       const SizedBox(width: 10),
                       Text(
@@ -699,19 +701,9 @@ class _InquiryCard extends StatelessWidget {
                       width: 48,
                       height: 64,
                       child: book?.primaryImageUrl != null
-                          ? CachedNetworkImage(
+                          ? SmartImage(
                               imageUrl: book!.primaryImageUrl!,
                               fit: BoxFit.cover,
-                              placeholder: (context, url) => Container(
-                                color:
-                                    (isDark ? cs.primary : cs.primaryContainer)
-                                        .withValues(alpha: 0.1),
-                                child: const Center(
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                ),
-                              ),
                             )
                           : Container(
                               color: (isDark ? cs.primary : cs.primaryContainer)
@@ -1514,22 +1506,7 @@ class _ListingCard extends StatelessWidget {
                 width: 72,
                 height: 96,
                 child: imageUrl != null
-                    ? CachedNetworkImage(
-                        imageUrl: imageUrl,
-                        fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color:
-                              (isDark
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Theme.of(
-                                          context,
-                                        ).colorScheme.primaryContainer)
-                                  .withValues(alpha: 0.1),
-                          child: const Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
-                      )
+                    ? SmartImage(imageUrl: imageUrl, fit: BoxFit.cover)
                     : Container(
                         color:
                             (isDark
@@ -1707,7 +1684,7 @@ class _SavedBookCard extends StatelessWidget {
           children: [
             Expanded(
               child: book.primaryImageUrl != null
-                  ? CachedNetworkImage(
+                  ? SmartImage(
                       imageUrl: book.primaryImageUrl!,
                       fit: BoxFit.cover,
                       width: double.infinity,
@@ -1858,25 +1835,9 @@ class _RequestCard extends StatelessWidget {
                                 width: 56,
                                 height: 72,
                                 child: book?.primaryImageUrl != null
-                                    ? CachedNetworkImage(
+                                    ? SmartImage(
                                         imageUrl: book!.primaryImageUrl!,
                                         fit: BoxFit.cover,
-                                        placeholder: (context, url) => Container(
-                                          color:
-                                              (isDark
-                                                      ? Theme.of(
-                                                          context,
-                                                        ).colorScheme.primary
-                                                      : Theme.of(context)
-                                                            .colorScheme
-                                                            .primaryContainer)
-                                                  .withValues(alpha: 0.1),
-                                          child: const Center(
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          ),
-                                        ),
                                       )
                                     : Container(
                                         color:

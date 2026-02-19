@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smart_pulchowk/core/models/chat.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
@@ -8,6 +7,7 @@ import 'package:smart_pulchowk/features/marketplace/chat_room_page.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 
 class ChatListPage extends StatefulWidget {
@@ -220,18 +220,19 @@ class _ChatListPageState extends State<ChatListPage> {
                         children: [
                           Stack(
                             children: [
-                              CircleAvatar(
-                                radius: 24,
-                                backgroundImage: otherUser?.image != null
-                                    ? CachedNetworkImageProvider(
-                                        otherUser!.image!,
-                                      )
-                                    : null,
-                                child: otherUser?.image == null
-                                    ? Text(
-                                        otherUser?.name[0].toUpperCase() ?? '?',
-                                      )
-                                    : null,
+                              SmartImage(
+                                imageUrl: otherUser?.image,
+                                width: 48,
+                                height: 48,
+                                shape: BoxShape.circle,
+                                errorWidget: Center(
+                                  child: Text(
+                                    otherUser?.name[0].toUpperCase() ?? '?',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ),
                               if (isSelected)
                                 Positioned(

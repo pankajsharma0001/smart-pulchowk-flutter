@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smart_pulchowk/core/widgets/interactive_wrapper.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'dart:ui';
 
 class FullScreenImageViewer extends StatefulWidget {
@@ -54,10 +54,10 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
           children: [
             // Background Blur
             Positioned.fill(
-              child: CachedNetworkImage(
+              child: SmartImage(
                 imageUrl: widget.imageUrls[_currentIndex],
                 fit: BoxFit.cover,
-                errorWidget: (_, _, _) => const SizedBox.shrink(),
+                useCloudinary: false, // Don't optimize background blur
               ),
             ),
             Positioned.fill(
@@ -80,13 +80,12 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
                   child: Center(
                     child: Hero(
                       tag: widget.imageUrls[index],
-                      child: CachedNetworkImage(
+                      child: SmartImage(
                         imageUrl: widget.imageUrls[index],
                         fit: BoxFit.contain,
-                        placeholder: (_, _) => const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
-                        ),
-                        errorWidget: (_, _, _) => const Icon(
+                        useCloudinary:
+                            false, // Don't optimize full screen images to avoid quality loss
+                        errorWidget: const Icon(
                           Icons.broken_image_rounded,
                           color: Colors.white54,
                           size: 64,

@@ -43,7 +43,9 @@ class AppConstants {
   static const String eventsEnrollment = '/events/enrollment';
   static const String clubs = '/events/clubs';
   static const String createNewClub = '/events/create-club';
+  static const String createEvent = '/events/create-event';
   static const String clubProfile = '/clubs/club-profile';
+  static const String eventDetails = '/clubs/event-details';
   static const String clubEvents = '/events/events';
 
   // ── Storage Keys ──────────────────────────────────────────────────────────
@@ -98,4 +100,11 @@ class AppConstants {
   static const String cacheClubsList = 'clubs_list';
   static const String cacheClubProfile = 'clubs_profile_';
   static const String cacheClubEvents = 'clubs_events_';
+  // ── Image Headers ────────────────────────────────────────────────────────
+  static const Map<String, String> imageHeaders = {
+    'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+    'Accept':
+        'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+  };
 }

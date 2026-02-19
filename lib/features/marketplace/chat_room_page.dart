@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/core/models/chat.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
@@ -286,14 +286,17 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
         titleSpacing: 0,
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundImage: widget.recipientImage != null
-                  ? CachedNetworkImageProvider(widget.recipientImage!)
-                  : null,
-              child: widget.recipientImage == null
-                  ? Text(widget.recipientName[0].toUpperCase())
-                  : null,
+            SmartImage(
+              imageUrl: widget.recipientImage,
+              width: 36,
+              height: 36,
+              shape: BoxShape.circle,
+              errorWidget: Center(
+                child: Text(
+                  widget.recipientName[0].toUpperCase(),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(

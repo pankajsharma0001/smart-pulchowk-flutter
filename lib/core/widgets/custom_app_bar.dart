@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/widgets/logo_card.dart';
@@ -508,14 +508,12 @@ class _UserAvatarState extends State<_UserAvatar> {
               width: 2,
             ),
           ),
-          child: CircleAvatar(
-            radius: 14,
-            backgroundImage: widget.photoUrl != null
-                ? CachedNetworkImageProvider(widget.photoUrl!)
-                : null,
-            child: widget.photoUrl == null
-                ? const Icon(Icons.person, size: 16)
-                : null,
+          child: SmartImage(
+            imageUrl: widget.photoUrl,
+            width: 28,
+            height: 28,
+            shape: BoxShape.circle,
+            errorWidget: const Icon(Icons.person, size: 16),
           ),
         ),
       ),

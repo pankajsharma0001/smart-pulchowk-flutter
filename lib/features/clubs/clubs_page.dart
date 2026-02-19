@@ -133,24 +133,37 @@ class _ClubsPageState extends State<ClubsPage>
           ),
         ),
         floatingActionButton: _userRole == 'admin'
-            ? Container(
-                margin: const EdgeInsets.only(bottom: 80),
-                child: FloatingActionButton.extended(
-                  onPressed: () async {
-                    final result = await showModalBottomSheet<bool>(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (context) => const ClubEditor(),
-                    );
-                    if (result == true) {
-                      _loadClubs(forceRefresh: true);
-                    }
-                  },
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('Create Club'),
+            ? AnimatedScale(
+                scale: MediaQuery.of(context).viewInsets.bottom > 0 ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutBack,
+                child: AnimatedOpacity(
+                  opacity: MediaQuery.of(context).viewInsets.bottom > 0
+                      ? 0.0
+                      : 1.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 80),
+                    child: FloatingActionButton.extended(
+                      onPressed: MediaQuery.of(context).viewInsets.bottom > 0
+                          ? null
+                          : () async {
+                              final result = await showModalBottomSheet<bool>(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (context) => const ClubEditor(),
+                              );
+                              if (result == true) {
+                                _loadClubs(forceRefresh: true);
+                              }
+                            },
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text('Create Club'),
+                    ),
+                  ),
                 ),
               )
             : null,

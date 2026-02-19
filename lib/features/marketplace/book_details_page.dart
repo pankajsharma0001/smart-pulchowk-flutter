@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
@@ -15,6 +14,7 @@ import 'package:smart_pulchowk/core/widgets/interactive_wrapper.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:smart_pulchowk/features/marketplace/chat_room_page.dart';
 import 'package:smart_pulchowk/features/marketplace/marketplace_activity_page.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -680,19 +680,16 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                 onTap: openProfile,
                 child: Hero(
                   tag: 'seller_avatar_${seller.id}',
-                  child: CircleAvatar(
-                    radius: 30,
-                    backgroundColor: cs.primaryContainer,
-                    backgroundImage: seller.image != null
-                        ? CachedNetworkImageProvider(seller.image!)
-                        : null,
-                    child: seller.image == null
-                        ? Icon(
-                            Icons.person_rounded,
-                            color: cs.primary,
-                            size: 30,
-                          )
-                        : null,
+                  child: SmartImage(
+                    imageUrl: seller.image,
+                    width: 60,
+                    height: 60,
+                    shape: BoxShape.circle,
+                    errorWidget: Icon(
+                      Icons.person_rounded,
+                      color: cs.primary,
+                      size: 30,
+                    ),
                   ),
                 ),
               ),
@@ -926,10 +923,13 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
             fit: StackFit.expand,
             children: [
               // Blurred Background
-              CachedNetworkImage(
+              SmartImage(
                 imageUrl: images[i].imageUrl,
                 fit: BoxFit.cover,
-                errorWidget: (_, _, _) => const SizedBox.shrink(),
+                width: double.infinity,
+                height: double.infinity,
+                useCloudinary: false,
+                errorWidget: const SizedBox.shrink(),
               ),
               ClipRect(
                 child: BackdropFilter(
@@ -955,16 +955,12 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                 },
                 child: Hero(
                   tag: i == 0 ? 'book_image_${_book.id}' : images[i].imageUrl,
-                  child: CachedNetworkImage(
+                  child: SmartImage(
                     imageUrl: images[i].imageUrl,
                     fit: BoxFit.contain,
-                    placeholder: (_, _) => Container(
-                      color: isDark
-                          ? AppColors.surfaceContainerDark
-                          : AppColors.surfaceContainerLight,
-                      child: const Center(child: CircularProgressIndicator()),
-                    ),
-                    errorWidget: (_, _, _) => Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    errorWidget: Container(
                       color: isDark
                           ? AppColors.surfaceContainerDark
                           : AppColors.surfaceContainerLight,

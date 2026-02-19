@@ -1,8 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/core/models/club.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
-import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/features/clubs/club_details_page.dart';
 
 class ClubCard extends StatelessWidget {
@@ -159,16 +158,14 @@ class ClubCard extends StatelessWidget {
   }
 
   Widget _buildLogo(BuildContext context) {
-    if (club.logoUrl != null && club.logoUrl!.isNotEmpty) {
-      return CachedNetworkImage(
-        imageUrl: club.logoUrl!,
-        fit: BoxFit.contain,
-        placeholder: (_, _) =>
-            const ShimmerWrapper(child: Skeleton(shape: BoxShape.circle)),
-        errorWidget: (_, _, _) => _buildPlaceholderLogo(context),
-      );
-    }
-    return _buildPlaceholderLogo(context);
+    return SmartImage(
+      imageUrl: (club.logoUrl != null && club.logoUrl!.isNotEmpty)
+          ? club.logoUrl
+          : null,
+      shape: BoxShape.circle,
+      fit: BoxFit.contain,
+      errorWidget: _buildPlaceholderLogo(context),
+    );
   }
 
   Widget _buildPlaceholderLogo(BuildContext context) {

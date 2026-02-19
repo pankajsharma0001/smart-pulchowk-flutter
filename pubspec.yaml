@@ -14,6 +14,9 @@ dependencies:
   # Icons
   cupertino_icons: ^1.0.8
 
+  # Path manipulation
+  path: ^1.9.0
+
   # Maps
   maplibre_gl: ^0.25.0
 

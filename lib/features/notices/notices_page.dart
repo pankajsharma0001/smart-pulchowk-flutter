@@ -278,18 +278,22 @@ class _NoticesPageState extends State<NoticesPage> {
                 scale: isKeyboardOpen ? 0.0 : 1.0,
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeOutBack,
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 80),
-                  child: FloatingActionButton.extended(
-                    onPressed: isKeyboardOpen
-                        ? null
-                        : () => _openNoticeEditor(),
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text(
-                      'Add Notice',
-                      style: TextStyle(fontWeight: FontWeight.w900),
+                child: AnimatedOpacity(
+                  opacity: isKeyboardOpen ? 0.0 : 1.0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 80),
+                    child: FloatingActionButton.extended(
+                      onPressed: isKeyboardOpen
+                          ? null
+                          : () => _openNoticeEditor(),
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      icon: const Icon(Icons.add_rounded),
+                      label: const Text(
+                        'Add Notice',
+                        style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
                     ),
                   ),
                 ),

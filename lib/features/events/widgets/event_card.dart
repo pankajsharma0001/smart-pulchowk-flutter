@@ -1,9 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
-import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
+import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/features/events/event_details_page.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_status_badge.dart';
 
@@ -49,17 +48,13 @@ class EventCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  if (event.bannerUrl != null && event.bannerUrl!.isNotEmpty)
-                    CachedNetworkImage(
-                      imageUrl: event.bannerUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (_, _) => const ShimmerWrapper(
-                        child: Skeleton(height: double.infinity),
-                      ),
-                      errorWidget: (_, _, _) => _buildPlaceholder(context),
-                    )
-                  else
-                    _buildPlaceholder(context),
+                  SmartImage(
+                    imageUrl:
+                        (event.bannerUrl != null && event.bannerUrl!.isNotEmpty)
+                        ? event.bannerUrl
+                        : null,
+                    errorWidget: _buildPlaceholder(context),
+                  ),
 
                   // Status Badge
                   Positioned(
