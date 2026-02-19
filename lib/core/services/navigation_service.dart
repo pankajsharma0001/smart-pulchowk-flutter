@@ -82,26 +82,22 @@ class NavigationService {
       case NotificationType.noticeDeleted:
         final attachmentUrl = data['attachmentUrl']?.toString();
         final noticeTitle = data['noticeTitle']?.toString() ?? 'Notice';
+
+        // Always switch to notices tab first so the user is in the right context
+        _navigateToTab(8);
+
         if (attachmentUrl != null && attachmentUrl.isNotEmpty) {
           final urlLower = attachmentUrl.toLowerCase();
           if (urlLower.endsWith('.pdf')) {
-            _navigateToTab(
-              8,
-              subPage: CustomPdfViewer(url: attachmentUrl, title: noticeTitle),
+            _navigateToRoot(
+              CustomPdfViewer(url: attachmentUrl, title: noticeTitle),
             );
           } else if (urlLower.endsWith('.jpg') ||
               urlLower.endsWith('.jpeg') ||
               urlLower.endsWith('.png') ||
               urlLower.endsWith('.webp')) {
-            _navigateToTab(
-              8,
-              subPage: FullScreenImageViewer(imageUrls: [attachmentUrl]),
-            );
-          } else {
-            _navigateToTab(8);
+            _navigateToRoot(FullScreenImageViewer(imageUrls: [attachmentUrl]));
           }
-        } else {
-          _navigateToTab(8);
         }
 
       case NotificationType.lostFoundClaimReceived:
@@ -168,6 +164,8 @@ class NavigationService {
       final attachmentUrl = data['attachmentUrl']?.toString();
       final noticeTitle = data['noticeTitle']?.toString() ?? 'Notice';
 
+      _navigateToTab(8);
+
       if (attachmentUrl != null && attachmentUrl.isNotEmpty) {
         final urlLower = attachmentUrl.toLowerCase();
         final isPdf = urlLower.endsWith('.pdf');
@@ -178,20 +176,12 @@ class NavigationService {
             urlLower.endsWith('.webp');
 
         if (isPdf) {
-          _navigateToTab(
-            8, // Notices tab
-            subPage: CustomPdfViewer(url: attachmentUrl, title: noticeTitle),
+          _navigateToRoot(
+            CustomPdfViewer(url: attachmentUrl, title: noticeTitle),
           );
         } else if (isImage) {
-          _navigateToTab(
-            8, // Notices tab
-            subPage: FullScreenImageViewer(imageUrls: [attachmentUrl]),
-          );
-        } else {
-          _navigateToTab(8); // Notices tab fallback
+          _navigateToRoot(FullScreenImageViewer(imageUrls: [attachmentUrl]));
         }
-      } else {
-        _navigateToTab(8); // Notices tab
       }
     } else if (type == 'new_event' || type == 'event_reminder') {
       final eventIdStr = data['eventId'];
@@ -215,5 +205,10 @@ class NavigationService {
       index,
       subPage: subPage,
     );
+  }
+
+  static void _navigateToRoot(Widget page) {
+    // Push onto root navigator to hide the top/bottom bars
+    navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => page));
   }
 }
