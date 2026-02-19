@@ -13,6 +13,9 @@ import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:smart_pulchowk/features/clubs/club_details_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smart_pulchowk/features/events/widgets/event_editor.dart';
+import 'package:smart_pulchowk/core/services/haptic_service.dart';
 
 class EventDetailsPage extends StatefulWidget {
   final ClubEvent event;
@@ -28,6 +31,9 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
   bool _isRegistering = false;
   bool _isEnrolled = false;
   bool _isLoadingEnrollment = true;
+  bool _isAdmin = false;
+  Map<String, dynamic>? _extraDetails;
+  bool _isLoadingExtraDetails = true;
 
   @override
   void initState() {
@@ -41,6 +47,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     }
 
     _checkEnrollment();
+    _checkAdminStatus();
+    _loadExtraDetails();
   }
 
   Future<void> _checkEnrollment() async {
@@ -56,6 +64,113 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
       if (mounted) {
         setState(() => _isLoadingEnrollment = false);
       }
+    }
+  }
+
+  Future<void> _checkAdminStatus() async {
+    try {
+      final role = await _apiService.getUserRole();
+      final user = FirebaseAuth.instance.currentUser;
+
+      // Superadmin or Club Owner
+      final isAdmin =
+          role == 'admin' ||
+          (user != null && user.uid == widget.event.club?.authClubId);
+
+      if (mounted) {
+        setState(() => _isAdmin = isAdmin);
+      }
+    } catch (e) {
+      debugPrint('Error checking admin status: $e');
+    }
+  }
+
+  Future<void> _loadExtraDetails() async {
+    try {
+      final result = await _apiService.getExtraEventDetails(widget.event.id);
+      if (mounted) {
+        setState(() {
+          if (result['success'] == true) {
+            _extraDetails = result['details'];
+          }
+          _isLoadingExtraDetails = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingExtraDetails = false);
+      }
+    }
+  }
+
+  void _showDeleteConfirmation() {
+    haptics.mediumImpact();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Event'),
+        content: const Text(
+          'Are you sure you want to delete this event? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              _handleDelete();
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleDelete() async {
+    try {
+      final result = await _apiService.deleteEvent(widget.event.id);
+      if (mounted) {
+        if (result['success'] == true || result['data']?['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Event deleted successfully')),
+          );
+          Navigator.pop(context, true); // Go back with refresh signal
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result['message'] ?? 'Failed to delete')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  void _openEditor() async {
+    haptics.selectionClick();
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => EventEditor(event: widget.event),
+    );
+
+    if (result == true && mounted) {
+      // Refresh page or trigger a reload of event data
+      // For now, let's just show a message or pop with true
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Event updated! Please refresh.')),
+      );
     }
   }
 
@@ -198,6 +313,75 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                     ),
                   ),
                 ),
+                actions: [
+                  if (_isAdmin)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                        right: 8.0,
+                        top: 8,
+                        bottom: 8,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.1),
+                              ),
+                            ),
+                            child: PopupMenuButton<String>(
+                              icon: const Icon(
+                                Icons.more_vert_rounded,
+                                color: Colors.white,
+                              ),
+                              onSelected: (value) {
+                                if (value == 'edit') {
+                                  _openEditor();
+                                } else if (value == 'delete') {
+                                  _showDeleteConfirmation();
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                const PopupMenuItem(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit_rounded, size: 20),
+                                      SizedBox(width: 12),
+                                      Text('Edit Event'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.delete_outline_rounded,
+                                        size: 20,
+                                        color: AppColors.error,
+                                      ),
+                                      SizedBox(width: 12),
+                                      Text(
+                                        'Delete Event',
+                                        style: TextStyle(
+                                          color: AppColors.error,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
                 flexibleSpace: FlexibleSpaceBar(
                   stretchModes: const [
                     StretchMode.zoomBackground,
@@ -427,6 +611,57 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                               : AppColors.textSecondary,
                         ),
                       ),
+                      const SizedBox(height: AppSpacing.xl),
+
+                      if (_isLoadingExtraDetails)
+                        const ShimmerWrapper(
+                          child: ShimmerInfoCard(height: 150),
+                        )
+                      else if (_extraDetails != null) ...[
+                        if (_extraDetails!['fullDescription'] != null &&
+                            _extraDetails!['fullDescription']!
+                                .toString()
+                                .isNotEmpty) ...[
+                          _buildSectionTitle('Event Overlook'),
+                          const SizedBox(height: AppSpacing.sm),
+                          Text(
+                            _extraDetails!['fullDescription']!,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              height: 1.6,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                        ],
+                        _buildExtraDetailField(
+                          'Objectives',
+                          _extraDetails!['objectives'],
+                          Icons.auto_awesome_rounded,
+                        ),
+                        _buildExtraDetailField(
+                          'Target Audience',
+                          _extraDetails!['targetAudience'],
+                          Icons.person_search_rounded,
+                        ),
+                        _buildExtraDetailField(
+                          'Prerequisites',
+                          _extraDetails!['prerequisites'],
+                          Icons.rule_rounded,
+                        ),
+                        _buildExtraDetailField(
+                          'Rules & Regulations',
+                          _extraDetails!['rules'],
+                          Icons.gavel_rounded,
+                        ),
+                        _buildExtraDetailField(
+                          'Judging Criteria',
+                          _extraDetails!['judgingCriteria'],
+                          Icons.grading_rounded,
+                        ),
+                      ],
+
                       const SizedBox(
                         height: 200,
                       ), // Increased spacing for bottom interaction to prevent overlap with the floating bottom bar
@@ -670,6 +905,59 @@ Join here: $eventUrl
 ''';
 
     await Share.share(text, subject: 'Event: ${widget.event.title}');
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: AppTextStyles.h4.copyWith(fontWeight: FontWeight.bold),
+    );
+  }
+
+  Widget _buildExtraDetailField(String label, dynamic value, IconData icon) {
+    if (value == null || value.toString().trim().isEmpty) {
+      return const SizedBox.shrink();
+    }
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 20, color: AppColors.primary),
+              const SizedBox(width: 10),
+              Text(
+                label,
+                style: AppTextStyles.labelLarge.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: isDark
+                ? AppDecorations.cardDark(borderRadius: AppRadius.md)
+                : AppDecorations.card(borderRadius: AppRadius.md),
+            child: Text(
+              value.toString(),
+              style: AppTextStyles.bodyMedium.copyWith(
+                height: 1.6,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
