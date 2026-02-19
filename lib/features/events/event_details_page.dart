@@ -12,6 +12,7 @@ import 'package:smart_pulchowk/features/events/widgets/event_status_badge.dart';
 import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:smart_pulchowk/features/clubs/club_details_page.dart';
 
 class EventDetailsPage extends StatefulWidget {
   final ClubEvent event;
@@ -287,49 +288,70 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                           EventStatusBadge(event: widget.event),
                           const Spacer(),
                           if (widget.event.club != null)
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: isDark
-                                  ? AppDecorations.glassDark(borderRadius: 20)
-                                  : AppDecorations.glass(borderRadius: 20),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (widget.event.club!.logoUrl != null) ...[
-                                    Container(
-                                      width: 20,
-                                      height: 20,
-                                      decoration: const BoxDecoration(
-                                        shape: BoxShape.circle,
-                                      ),
-                                      clipBehavior: Clip.antiAlias,
-                                      child: CachedNetworkImage(
-                                        imageUrl: widget.event.club!.logoUrl!,
-                                        fit: BoxFit.cover,
-                                        placeholder: (_, _) =>
-                                            const ShimmerWrapper(
-                                              child: Skeleton(
-                                                height: double.infinity,
-                                              ),
-                                            ),
-                                        errorWidget: (_, _, _) => const Icon(
-                                          Icons.business_rounded,
-                                          size: 14,
-                                          color: AppColors.primary,
-                                        ),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 6),
-                                  ],
-                                  Text(
-                                    widget.event.club!.name,
-                                    style: AppTextStyles.labelSmall.copyWith(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.bold,
+                            InkWell(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => ClubDetailsPage(
+                                      club: widget.event.club!,
                                     ),
                                   ),
-                                  const SizedBox(width: 4),
-                                ],
+                                );
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: isDark
+                                    ? AppDecorations.glassDark(borderRadius: 20)
+                                    : AppDecorations.glass(borderRadius: 20),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (widget.event.club!.logoUrl != null) ...[
+                                      Container(
+                                        width: 20,
+                                        height: 20,
+                                        decoration: const BoxDecoration(
+                                          shape: BoxShape.circle,
+                                        ),
+                                        clipBehavior: Clip.antiAlias,
+                                        child: CachedNetworkImage(
+                                          imageUrl: widget.event.club!.logoUrl!,
+                                          fit: BoxFit.cover,
+                                          placeholder: (_, _) =>
+                                              const ShimmerWrapper(
+                                                child: Skeleton(
+                                                  height: double.infinity,
+                                                ),
+                                              ),
+                                          errorWidget: (_, _, _) => const Icon(
+                                            Icons.business_rounded,
+                                            size: 14,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                    ],
+                                    Text(
+                                      widget.event.club!.name,
+                                      style: AppTextStyles.labelSmall.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    const Icon(
+                                      Icons.chevron_right_rounded,
+                                      size: 14,
+                                      color: AppColors.primary,
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                         ],

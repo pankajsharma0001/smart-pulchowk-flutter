@@ -42,8 +42,11 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
   }
 
   Future<void> _loadData({bool forceRefresh = false}) async {
-    _loadProfile(forceRefresh: forceRefresh);
-    _loadEvents(forceRefresh: forceRefresh);
+    await Future.wait([
+      _loadProfile(forceRefresh: forceRefresh),
+      _loadEvents(forceRefresh: forceRefresh),
+      if (forceRefresh) _apiService.refreshUserRole(),
+    ]);
   }
 
   Future<void> _loadProfile({bool forceRefresh = false}) async {
@@ -105,18 +108,46 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
     return Scaffold(
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [_buildSliverAppBar(context), _buildStickyTabBar(context)];
+          return [
+            _buildSliverAppBar(context),
+            SliverOverlapAbsorber(
+              handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+              sliver: _buildStickyTabBar(context),
+            ),
+          ];
         },
         body: TabBarView(
           controller: _tabController,
           children: [
-            RefreshIndicator(
-              onRefresh: () => _loadData(forceRefresh: true),
-              child: _buildAboutTab(),
+            KeepAliveWrapper(
+              child: Builder(
+                builder: (context) => CustomScrollView(
+                  key: const PageStorageKey('about_tab'),
+                  slivers: [
+                    SliverOverlapInjector(
+                      handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                        context,
+                      ),
+                    ),
+                    _buildAboutTabSliver(),
+                  ],
+                ),
+              ),
             ),
-            RefreshIndicator(
-              onRefresh: () => _loadData(forceRefresh: true),
-              child: _buildEventsTab(),
+            KeepAliveWrapper(
+              child: Builder(
+                builder: (context) => CustomScrollView(
+                  key: const PageStorageKey('events_tab'),
+                  slivers: [
+                    SliverOverlapInjector(
+                      handle: NestedScrollView.sliverOverlapAbsorberHandleFor(
+                        context,
+                      ),
+                    ),
+                    _buildEventsTabSliver(),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
@@ -384,116 +415,121 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
     );
   }
 
-  Widget _buildEventsTab() {
+  Widget _buildEventsTabSliver() {
     if (_isLoadingEvents) {
-      return ListView.builder(
-        padding: const EdgeInsets.all(AppSpacing.md),
-        itemCount: 3,
-        itemBuilder: (context, index) => const Padding(
-          padding: EdgeInsets.only(bottom: AppSpacing.md),
-          child: ShimmerWrapper(child: Skeleton(height: 100)),
+      return SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+        sliver: SliverList(
+          delegate: SliverChildListDelegate(const [
+            ShimmerEventRow(),
+            ShimmerEventRow(),
+            ShimmerEventRow(),
+          ]),
         ),
       );
     }
 
     if (_events.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.xl),
-              decoration: BoxDecoration(
-                color: AppColors.primaryContainer.withValues(alpha: 0.5),
-                shape: BoxShape.circle,
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(AppSpacing.xl),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryContainer.withValues(alpha: 0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.event_busy_rounded,
+                  size: 48,
+                  color: AppColors.primary.withValues(alpha: 0.6),
+                ),
               ),
-              child: Icon(
-                Icons.event_busy_rounded,
-                size: 48,
-                color: AppColors.primary.withValues(alpha: 0.6),
+              const SizedBox(height: AppSpacing.lg),
+              Text(
+                'No events yet',
+                style: AppTextStyles.h5.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'No events yet',
-              style: AppTextStyles.h5.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              'Check back later for upcoming events.',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textMuted,
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                'Check back later for upcoming events.',
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textMuted,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
 
-    return ListView.builder(
+    return SliverPadding(
       padding: const EdgeInsets.all(AppSpacing.md),
-      itemCount: _events.length,
-      itemBuilder: (context, index) {
-        return EventCard(event: _events[index], type: EventCardType.list);
-      },
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) =>
+              EventCard(event: _events[index], type: EventCardType.list),
+          childCount: _events.length,
+        ),
+      ),
     );
   }
 
-  Widget _buildAboutTab() {
+  Widget _buildAboutTabSliver() {
     if (_isLoadingProfile) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(AppSpacing.base),
-        children: const [
-          ShimmerWrapper(
-            child: Skeleton(height: 120, borderRadius: AppRadius.lg),
-          ),
-          SizedBox(height: AppSpacing.md),
-          ShimmerWrapper(
-            child: Skeleton(height: 180, borderRadius: AppRadius.lg),
-          ),
-          SizedBox(height: AppSpacing.md),
-          ShimmerWrapper(
-            child: Skeleton(height: 140, borderRadius: AppRadius.lg),
-          ),
-        ],
+      return SliverPadding(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+        sliver: SliverList(
+          delegate: SliverChildListDelegate(const [
+            ShimmerInfoCard(height: 130),
+            ShimmerInfoCard(height: 160),
+            ShimmerInfoCard(height: 120),
+            ShimmerInfoCard(height: 110),
+          ]),
+        ),
       );
     }
 
     if (_error != null) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline_rounded,
-              size: 48,
-              color: AppColors.error.withValues(alpha: 0.7),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(_error!, style: AppTextStyles.bodyMedium),
-            const SizedBox(height: AppSpacing.md),
-            OutlinedButton.icon(
-              onPressed: () => _loadProfile(forceRefresh: true),
-              icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Retry'),
-            ),
-          ],
+      return SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: AppColors.error.withValues(alpha: 0.7),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Text(_error!, style: AppTextStyles.bodyMedium),
+              const SizedBox(height: AppSpacing.md),
+              OutlinedButton.icon(
+                onPressed: () => _loadProfile(forceRefresh: true),
+                icon: const Icon(Icons.refresh_rounded),
+                label: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
+    return SliverPadding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.base,
         AppSpacing.base,
         AppSpacing.base,
         AppSpacing.massive,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+      sliver: SliverList(
+        delegate: SliverChildListDelegate([
           // Status badge
           if (widget.club.isActive) _buildStatusBadge(context),
 
@@ -527,7 +563,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
             _buildAdditionalInfoCard(context),
 
           const SizedBox(height: AppSpacing.xl),
-        ],
+        ]),
       ),
     );
   }
@@ -1036,7 +1072,25 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) {
-    return false;
+  bool shouldRebuild(_SliverAppBarDelegate oldDelegate) => false;
+}
+
+class KeepAliveWrapper extends StatefulWidget {
+  final Widget child;
+  const KeepAliveWrapper({super.key, required this.child});
+
+  @override
+  State<KeepAliveWrapper> createState() => _KeepAliveWrapperState();
+}
+
+class _KeepAliveWrapperState extends State<KeepAliveWrapper>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
   }
+
+  @override
+  bool get wantKeepAlive => true;
 }

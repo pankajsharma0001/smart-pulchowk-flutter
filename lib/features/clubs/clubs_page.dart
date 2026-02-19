@@ -51,7 +51,13 @@ class _ClubsPageState extends State<ClubsPage>
     }
 
     try {
-      final clubs = await _apiService.getClubs(forceRefresh: forceRefresh);
+      // Sync user role and fetch clubs in parallel on force refresh
+      final results = await Future.wait([
+        _apiService.getClubs(forceRefresh: forceRefresh),
+        if (forceRefresh) _apiService.refreshUserRole(),
+      ]);
+
+      final clubs = results[0] as List<Club>;
       if (mounted) {
         setState(() {
           _allClubs = clubs;
@@ -62,6 +68,17 @@ class _ClubsPageState extends State<ClubsPage>
         _onSearchChanged(_searchController.text);
         _animationController.reset();
         _animationController.forward();
+
+        if (forceRefresh) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Cache updated'),
+              duration: Duration(seconds: 1),
+              behavior: SnackBarBehavior.floating,
+              width: 150,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -98,20 +115,23 @@ class _ClubsPageState extends State<ClubsPage>
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         appBar: AppBar(title: const Text('Clubs')),
-        body: Column(
-          children: [
-            // Search Bar
-            _buildSearchBar(isDark),
+        body: RefreshIndicator(
+          onRefresh: () => _loadClubs(forceRefresh: true),
+          child: Column(
+            children: [
+              // Search Bar
+              _buildSearchBar(isDark),
 
-            // Main Content
-            Expanded(
-              child: _isLoading
-                  ? _buildLoadingState()
-                  : _error != null
-                  ? _buildErrorState()
-                  : _buildClubsGrid(),
-            ),
-          ],
+              // Main Content
+              Expanded(
+                child: _isLoading
+                    ? _buildLoadingState()
+                    : _error != null
+                    ? _buildErrorState()
+                    : _buildClubsGrid(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -171,47 +191,44 @@ class _ClubsPageState extends State<ClubsPage>
       return _buildEmptyState();
     }
 
-    return RefreshIndicator(
-      onRefresh: () => _loadClubs(forceRefresh: true),
-      child: GridView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(
-          AppSpacing.md,
-          AppSpacing.sm,
-          AppSpacing.md,
-          100, // Bottom padding for navbar
-        ),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          childAspectRatio: 0.75,
-          crossAxisSpacing: AppSpacing.md,
-          mainAxisSpacing: AppSpacing.md,
-        ),
-        itemCount: _filteredClubs.length,
-        itemBuilder: (context, index) {
-          final animation = CurvedAnimation(
-            parent: _animationController,
-            curve: Interval(
-              (index / (index + 5) * 0.5).clamp(0.0, 1.0),
-              1.0,
-              curve: Curves.easeOutQuart,
-            ),
-          );
-
-          return AnimatedBuilder(
-            animation: animation,
-            builder: (context, child) {
-              return Transform.translate(
-                offset: Offset(0, 30.0 * (1.0 - animation.value)),
-                child: Opacity(
-                  opacity: animation.value,
-                  child: ClubCard(club: _filteredClubs[index]),
-                ),
-              );
-            },
-          );
-        },
+    return GridView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+        100, // Bottom padding for navbar
       ),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.75,
+        crossAxisSpacing: AppSpacing.md,
+        mainAxisSpacing: AppSpacing.md,
+      ),
+      itemCount: _filteredClubs.length,
+      itemBuilder: (context, index) {
+        final animation = CurvedAnimation(
+          parent: _animationController,
+          curve: Interval(
+            (index / (index + 5) * 0.5).clamp(0.0, 1.0),
+            1.0,
+            curve: Curves.easeOutQuart,
+          ),
+        );
+
+        return AnimatedBuilder(
+          animation: animation,
+          builder: (context, child) {
+            return Transform.translate(
+              offset: Offset(0, 30.0 * (1.0 - animation.value)),
+              child: Opacity(
+                opacity: animation.value,
+                child: ClubCard(club: _filteredClubs[index]),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -225,11 +242,7 @@ class _ClubsPageState extends State<ClubsPage>
         mainAxisSpacing: AppSpacing.md,
       ),
       itemCount: 6,
-      itemBuilder: (context, index) {
-        return const ShimmerWrapper(
-          child: Skeleton(borderRadius: AppRadius.lg),
-        );
-      },
+      itemBuilder: (context, index) => const ShimmerClubCard(),
     );
   }
 
