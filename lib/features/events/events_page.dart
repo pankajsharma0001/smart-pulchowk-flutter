@@ -5,6 +5,7 @@ import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_card.dart';
+import 'package:smart_pulchowk/features/calendar/calendar.dart';
 
 class EventsPage extends StatefulWidget {
   const EventsPage({super.key});
@@ -96,6 +97,18 @@ class _EventsPageState extends State<EventsPage>
       child: Scaffold(
         appBar: AppBar(
           title: const Text('Events'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.calendar_month_rounded),
+              tooltip: 'Calendar View',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CalendarPage()),
+                );
+              },
+            ),
+          ],
           bottom: TabBar(
             controller: _tabController,
             tabs: const [

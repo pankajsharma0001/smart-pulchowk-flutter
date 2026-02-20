@@ -15,6 +15,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:smart_pulchowk/features/clubs/club_details_page.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_editor.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
+import 'package:smart_pulchowk/core/services/calendar_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 
 class EventDetailsPage extends StatefulWidget {
@@ -963,11 +964,39 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               : AppDecorations.card(borderRadius: AppRadius.md),
           child: IconButton(
             onPressed: _shareEvent,
-            icon: const Icon(Icons.share_rounded, color: AppColors.primary),
+            icon: Icon(Icons.share_rounded, color: AppColors.primary),
             padding: const EdgeInsets.all(12),
           ),
         ),
-        const SizedBox(width: AppSpacing.base),
+        const SizedBox(width: AppSpacing.sm),
+        Container(
+          decoration: isDark
+              ? AppDecorations.cardDark(borderRadius: AppRadius.md)
+              : AppDecorations.card(borderRadius: AppRadius.md),
+          child: IconButton(
+            onPressed: () async {
+              final success = await CalendarService.addEventToCalendar(
+                widget.event,
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      success
+                          ? 'Event added to calendar'
+                          : 'Could not add event to calendar',
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            icon: Icon(Icons.event_note_rounded, color: AppColors.primary),
+            padding: const EdgeInsets.all(12),
+            tooltip: 'Add to Calendar',
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm),
         Expanded(
           child: Container(
             decoration: AppDecorations.gradientCard(borderRadius: AppRadius.md),
