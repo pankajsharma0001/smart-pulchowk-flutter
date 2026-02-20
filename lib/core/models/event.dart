@@ -178,7 +178,9 @@ class EventRegistration {
           ? (DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now())
           : DateTime.now(),
       event: json['event'] != null
-          ? ClubEvent.fromJson(json['event'] as Map<String, dynamic>)
+          ? (json['event'] is Map<String, dynamic>
+                ? ClubEvent.fromJson(json['event'])
+                : null)
           : null,
     );
   }
