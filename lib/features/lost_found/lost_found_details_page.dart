@@ -491,6 +491,7 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
   Widget _buildClaimAction() {
     if (_myClaim != null) {
       return Container(
+        width: double.infinity,
         padding: EdgeInsets.fromLTRB(
           AppSpacing.md,
           AppSpacing.md,
@@ -557,6 +558,7 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
     }
 
     return Container(
+      width: double.infinity,
       padding: EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.md,
@@ -574,24 +576,27 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
         ],
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: FilledButton(
-        onPressed: () => _showClaimDialog(),
-        style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: double.infinity,
+        child: FilledButton(
+          onPressed: () => _showClaimDialog(),
+          style: FilledButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            elevation: 4,
+            shadowColor: AppColors.primary.withValues(alpha: 0.4),
           ),
-          elevation: 4,
-          shadowColor: AppColors.primary.withValues(alpha: 0.4),
-        ),
-        child: const Text(
-          'Claim This Item',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
+          child: const Text(
+            'Claim This Item',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
           ),
         ),
       ),
@@ -602,45 +607,61 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (context) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
-          left: AppSpacing.md,
-          right: AppSpacing.md,
-          top: AppSpacing.lg,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Submit a Claim', style: AppTextStyles.h4),
-            const SizedBox(height: AppSpacing.sm),
-            const Text(
-              'Explain how you know this item belongs to you (e.g., unique marks, contents).',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Submit a Claim', style: AppTextStyles.h4),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                const Text(
+                  'Explain how you know this item belongs to you (e.g., unique marks, contents).',
+                  style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                TextField(
+                  controller: _claimController,
+                  maxLines: 4,
+                  decoration: AppDecorations.input(
+                    hint: 'Proof of ownership...',
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                FilledButton(
+                  onPressed: _isActionLoading ? null : _submitClaim,
+                  child: _isActionLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text('Submit Claim'),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.md),
-            TextField(
-              controller: _claimController,
-              maxLines: 4,
-              decoration: AppDecorations.input(hint: 'Proof of ownership...'),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            FilledButton(
-              onPressed: _isActionLoading ? null : _submitClaim,
-              child: _isActionLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text('Submit Claim'),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-          ],
+          ),
         ),
       ),
     );
