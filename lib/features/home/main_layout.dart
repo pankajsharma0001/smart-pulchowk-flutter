@@ -14,6 +14,7 @@ import 'package:smart_pulchowk/features/marketplace/book_marketplace_page.dart';
 import 'package:smart_pulchowk/features/classroom/classroom_page.dart';
 import 'package:smart_pulchowk/features/clubs/clubs_page.dart';
 import 'package:smart_pulchowk/features/lost_found/lost_found.dart';
+import 'package:smart_pulchowk/features/admin/admin_page.dart';
 import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
@@ -267,10 +268,7 @@ class MainLayoutState extends State<MainLayout>
         return const _PlaceholderPage(title: 'Map', icon: Icons.map_rounded);
       case 2:
         if (_userRole == 'admin') {
-          return const _PlaceholderPage(
-            title: 'Admin',
-            icon: Icons.admin_panel_settings_rounded,
-          );
+          return const AdminPage();
         } else if (_userRole == 'notice_manager') {
           return const NotificationsPage();
         }
@@ -287,10 +285,7 @@ class MainLayoutState extends State<MainLayout>
       case 6:
         return const EventsPage();
       case 7:
-        return const _PlaceholderPage(
-          title: 'Admin Dashboard',
-          icon: Icons.dashboard_customize_rounded,
-        );
+        return const AdminPage();
       case 8:
         return const NoticesPage();
       case 9:

@@ -53,6 +53,14 @@ class AppConstants {
   static const String eventDetails = '/clubs/event-details';
   static const String clubEvents = '/events/events';
 
+  // ── Admin Endpoints ────────────────────────────────────────────────────────
+  static const String adminOverview = '/admin/overview';
+  static const String adminUsers = '/admin/users';
+  static const String adminReports = '/admin/reports';
+  static const String adminRatings = '/admin/ratings';
+  static const String adminBlocks = '/admin/blocks';
+  static const String adminAnnouncements = '/admin/announcements';
+
   // ── Storage Keys ──────────────────────────────────────────────────────────
   static const String dbUserIdKey = 'db_user_id';
   static const String userRoleKey = 'user_role';
@@ -110,6 +118,10 @@ class AppConstants {
   static const String cacheMyLostFoundItems = 'lost_found_my_items';
   static const String cacheMyLostFoundClaims = 'lost_found_my_claims';
   static const String cacheLostFoundDetail = 'lost_found_detail_';
+
+  // ── Admin Cache Keys ───────────────────────────────────────────────────
+  static const String cacheAdminOverview = 'admin_overview';
+
   // ── Image Headers ────────────────────────────────────────────────────────
   static const Map<String, String> imageHeaders = {
     'User-Agent':

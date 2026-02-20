@@ -13,6 +13,7 @@ import 'package:smart_pulchowk/core/models/notice.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/core/models/club.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
+import 'package:smart_pulchowk/core/models/admin.dart';
 import 'package:smart_pulchowk/core/services/auth_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
@@ -2929,6 +2930,224 @@ class ApiService {
         return ApiResult(success: true);
       }
       return ApiResult.failure(json['message'] ?? 'Failed to upload image');
+    } catch (e) {
+      return ApiResult.failure('Error: $e');
+    }
+  }
+
+  // ── Admin Services ────────────────────────────────────────────────────────
+
+  /// Get system-wide overview statistics.
+  Future<AdminDashboardStats?> getAdminOverview({
+    bool forceRefresh = false,
+  }) async {
+    return _cachedFetch<AdminDashboardStats>(
+      key: AppConstants.cacheAdminOverview,
+      ttl: AppConstants.cacheExpiry,
+      forceRefresh: forceRefresh,
+      fetcher: () async {
+        final response = await _authGet(AppConstants.adminOverview);
+        if (response.statusCode == 200) {
+          final json = jsonDecode(response.body);
+          if (json['success'] == true && json['data'] != null) {
+            return json['data'];
+          }
+        }
+        return null;
+      },
+      parser: (data) =>
+          AdminDashboardStats.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  /// List all users with optional filtering (Admin only).
+  Future<List<AdminUser>> getAdminUsers({
+    String? search,
+    String? role,
+    int? limit,
+  }) async {
+    try {
+      final queryParams = {
+        if (search != null) 'search': search,
+        if (role != null) 'role': role,
+        if (limit != null) 'limit': limit.toString(),
+      };
+      final response = await _authGet(
+        AppConstants.adminUsers,
+        queryParams: queryParams,
+      );
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        if (json['success'] == true && json['data'] != null) {
+          final List data = json['data'];
+          return data
+              .map((e) => AdminUser.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getAdminUsers: $e');
+    }
+    return [];
+  }
+
+  /// Update a user's role (Admin only).
+  Future<ApiResult> updateAdminUserRole(String userId, String role) async {
+    try {
+      final response = await _authPut(
+        '/admin/users/$userId/role',
+        body: {'role': role},
+      );
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCache(AppConstants.cacheAdminOverview);
+        return ApiResult(success: true);
+      }
+      return ApiResult.failure(json['message'] ?? 'Failed to update role');
+    } catch (e) {
+      return ApiResult.failure('Error: $e');
+    }
+  }
+
+  /// Toggle seller verification for a user (Admin only).
+  Future<ApiResult> toggleSellerVerification(
+    String userId,
+    bool verified,
+  ) async {
+    try {
+      final response = await _authPut(
+        '/admin/users/$userId/verify-seller',
+        body: {'verified': verified},
+      );
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCache(AppConstants.cacheAdminOverview);
+        return ApiResult(success: true);
+      }
+      return ApiResult.failure(
+        json['message'] ?? 'Failed to update verification',
+      );
+    } catch (e) {
+      return ApiResult.failure('Error: $e');
+    }
+  }
+
+  /// Get moderation reports (Admin only).
+  Future<List<MarketplaceReport>> getModerationReports({String? status}) async {
+    try {
+      final queryParams = status != null ? {'status': status} : null;
+      final response = await _authGet(
+        AppConstants.adminReports,
+        queryParams: queryParams,
+      );
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        if (json['success'] == true && json['data'] != null) {
+          final List data = json['data'];
+          return data
+              .map((e) => MarketplaceReport.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getModerationReports: $e');
+    }
+    return [];
+  }
+
+  /// Update moderation report status (Admin only).
+  Future<ApiResult> updateModerationReport(
+    int reportId, {
+    required String status,
+    String? resolutionNotes,
+  }) async {
+    try {
+      final response = await _authPut(
+        '/admin/reports/$reportId',
+        body: {'status': status, 'resolutionNotes': resolutionNotes},
+      );
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCache(AppConstants.cacheAdminOverview);
+        return ApiResult(success: true);
+      }
+      return ApiResult.failure(json['message'] ?? 'Failed to update report');
+    } catch (e) {
+      return ApiResult.failure('Error: $e');
+    }
+  }
+
+  /// Get all seller ratings (Admin only).
+  Future<List<SellerRating>> getAdminRatings() async {
+    try {
+      final response = await _authGet(AppConstants.adminRatings);
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        if (json['success'] == true && json['data'] != null) {
+          final List data = json['data'];
+          return data
+              .map((e) => SellerRating.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getAdminRatings: $e');
+    }
+    return [];
+  }
+
+  /// Get all platform blocks (Admin only).
+  Future<List<BlockedUser>> getAdminBlocks() async {
+    try {
+      final response = await _authGet(AppConstants.adminBlocks);
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        if (json['success'] == true && json['data'] != null) {
+          final List data = json['data'];
+          return data
+              .map((e) => BlockedUser.fromJson(e as Map<String, dynamic>))
+              .toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error getAdminBlocks: $e');
+    }
+    return [];
+  }
+
+  /// Unblock a user globally (Admin only).
+  Future<ApiResult> unblockUserByAdmin(int blockId) async {
+    try {
+      final response = await _authDelete('/admin/blocks/$blockId');
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCache(AppConstants.cacheAdminOverview);
+        return ApiResult(success: true);
+      }
+      return ApiResult.failure(json['message'] ?? 'Failed to unblock user');
+    } catch (e) {
+      return ApiResult.failure('Error: $e');
+    }
+  }
+
+  /// Publish a system-wide announcement (Admin only).
+  Future<ApiResult> publishSystemAnnouncement({
+    required String title,
+    required String body,
+    String? audience,
+  }) async {
+    try {
+      final response = await _authPost(
+        AppConstants.adminAnnouncements,
+        body: {'title': title, 'body': body, 'audience': audience},
+      );
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        return ApiResult(success: true);
+      }
+      return ApiResult.failure(
+        json['message'] ?? 'Failed to publish announcement',
+      );
     } catch (e) {
       return ApiResult.failure('Error: $e');
     }
