@@ -121,6 +121,9 @@ class AppConstants {
 
   // ── Admin Cache Keys ───────────────────────────────────────────────────
   static const String cacheAdminOverview = 'admin_overview';
+  static const String cacheAdminUsers = 'admin_users';
+  static const String cacheAdminReports = 'admin_reports';
+  static const String cacheAdminBlocks = 'admin_blocks';
 
   // ── Image Headers ────────────────────────────────────────────────────────
   static const Map<String, String> imageHeaders = {

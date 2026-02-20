@@ -3,6 +3,7 @@ import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/models/admin.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
+import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 
 class AdminUsersTab extends StatefulWidget {
   const AdminUsersTab({super.key});
@@ -11,7 +12,11 @@ class AdminUsersTab extends StatefulWidget {
   State<AdminUsersTab> createState() => _AdminUsersTabState();
 }
 
-class _AdminUsersTabState extends State<AdminUsersTab> {
+class _AdminUsersTabState extends State<AdminUsersTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   final TextEditingController _searchController = TextEditingController();
   String _selectedRole = '';
   List<AdminUser> _users = [];
@@ -87,6 +92,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
@@ -166,7 +172,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
         ),
         Expanded(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const ShimmerAdminUsers()
               : _users.isEmpty
               ? const Center(child: Text('No users found'))
               : ListView.separated(
@@ -352,6 +358,52 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                 ),
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class ShimmerAdminUsers extends StatelessWidget {
+  const ShimmerAdminUsers({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return ListView.separated(
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 100),
+      itemCount: 8,
+      separatorBuilder: (_, __) => Divider(
+        height: 1,
+        indent: 64,
+        color: isDark ? AppColors.borderDark : AppColors.borderLight,
+      ),
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: ShimmerWrapper(
+            child: Row(
+              children: [
+                const Skeleton(width: 40, height: 40, shape: BoxShape.circle),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Skeleton(height: 14, width: 120, borderRadius: 4),
+                      const SizedBox(height: 6),
+                      Skeleton(height: 12, width: 180, borderRadius: 4),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Skeleton(width: 24, height: 24, borderRadius: 6),
+                const SizedBox(width: 8),
+                const Skeleton(width: 24, height: 24, borderRadius: 6),
+              ],
+            ),
           ),
         );
       },

@@ -5,6 +5,7 @@ import 'package:smart_pulchowk/features/admin/widgets/admin_users_tab.dart';
 import 'package:smart_pulchowk/features/admin/widgets/admin_moderation_tab.dart';
 import 'package:smart_pulchowk/features/admin/widgets/admin_blocks_tab.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
+import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 
 class AdminPage extends StatefulWidget {
   const AdminPage({super.key});
@@ -72,16 +73,26 @@ class _AdminPageState extends State<AdminPage>
   }
 }
 
-class AdminOverviewTab extends StatelessWidget {
+class AdminOverviewTab extends StatefulWidget {
   const AdminOverviewTab({super.key});
 
   @override
+  State<AdminOverviewTab> createState() => _AdminOverviewTabState();
+}
+
+class _AdminOverviewTabState extends State<AdminOverviewTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
   Widget build(BuildContext context) {
+    super.build(context);
     return FutureBuilder<AdminDashboardStats?>(
       future: ApiService().getAdminOverview(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const ShimmerAdminOverview();
         }
         if (snapshot.hasError || snapshot.data == null) {
           return const Center(child: Text('Failed to load admin overview'));
@@ -91,7 +102,7 @@ class AdminOverviewTab extends StatelessWidget {
 
         return RefreshIndicator(
           onRefresh: () async {
-            // Force refresh logic would go here if needed
+            setState(() {});
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -270,6 +281,84 @@ class AdminOverviewTab extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ShimmerAdminOverview extends StatelessWidget {
+  const ShimmerAdminOverview({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ShimmerWrapper(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Skeleton(height: 30, width: 200, borderRadius: 8),
+                const SizedBox(height: 8),
+                Skeleton(height: 14, width: 300, borderRadius: 6),
+                const SizedBox(height: 6),
+                Skeleton(height: 14, width: 200, borderRadius: 6),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: 1.5,
+            children: List.generate(
+              4,
+              (index) => Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceContainerDark : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDark
+                        ? AppColors.borderDark.withValues(alpha: 0.5)
+                        : Colors.black.withValues(alpha: 0.05),
+                  ),
+                ),
+                child: ShimmerWrapper(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Skeleton(width: 34, height: 34, borderRadius: 10),
+                          Skeleton(width: 40, height: 24, borderRadius: 6),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Skeleton(height: 10, width: 60, borderRadius: 4),
+                          const SizedBox(height: 4),
+                          Skeleton(height: 10, width: 80, borderRadius: 4),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
+import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 
 class AdminModerationTab extends StatefulWidget {
   const AdminModerationTab({super.key});
@@ -11,7 +12,11 @@ class AdminModerationTab extends StatefulWidget {
   State<AdminModerationTab> createState() => _AdminModerationTabState();
 }
 
-class _AdminModerationTabState extends State<AdminModerationTab> {
+class _AdminModerationTabState extends State<AdminModerationTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   List<MarketplaceReport> _reports = [];
   bool _isLoading = true;
   String _selectedStatus = 'open';
@@ -97,6 +102,7 @@ class _AdminModerationTabState extends State<AdminModerationTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     return Column(
       children: [
         Padding(
@@ -128,7 +134,7 @@ class _AdminModerationTabState extends State<AdminModerationTab> {
         ),
         Expanded(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const ShimmerAdminModeration()
               : _reports.isEmpty
               ? Center(
                   child: Column(
@@ -432,5 +438,68 @@ class _AdminModerationTabState extends State<AdminModerationTab> {
       case ReportCategory.other:
         return AppColors.textMuted;
     }
+  }
+}
+
+class ShimmerAdminModeration extends StatelessWidget {
+  const ShimmerAdminModeration({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return ListView.builder(
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 100),
+      itemCount: 4,
+      itemBuilder: (context, index) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceContainerDark : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            ),
+          ),
+          child: ShimmerWrapper(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Skeleton(height: 18, width: 80, borderRadius: 6),
+                    Skeleton(height: 14, width: 100, borderRadius: 4),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Skeleton(height: 14, width: double.infinity, borderRadius: 4),
+                const SizedBox(height: 6),
+                Skeleton(height: 14, width: 200, borderRadius: 4),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Skeleton(height: 12, width: 100, borderRadius: 4),
+                    const SizedBox(width: 8),
+                    Skeleton(height: 12, width: 80, borderRadius: 4),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: Skeleton(height: 36, borderRadius: 8)),
+                    const SizedBox(width: 8),
+                    Expanded(child: Skeleton(height: 36, borderRadius: 8)),
+                    const SizedBox(width: 8),
+                    Expanded(child: Skeleton(height: 36, borderRadius: 8)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 }

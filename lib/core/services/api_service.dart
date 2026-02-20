@@ -2965,7 +2965,33 @@ class ApiService {
     String? search,
     String? role,
     int? limit,
+    bool forceRefresh = false,
   }) async {
+    // Cache only the default request (no search/filters)
+    final isDefault = search == null && role == null && limit == null;
+
+    if (isDefault) {
+      return await _cachedFetch<List<AdminUser>>(
+            key: AppConstants.cacheAdminUsers,
+            ttl: AppConstants.cacheExpiry,
+            forceRefresh: forceRefresh,
+            fetcher: () async {
+              final response = await _authGet(AppConstants.adminUsers);
+              if (response.statusCode == 200) {
+                final json = jsonDecode(response.body);
+                if (json['success'] == true && json['data'] != null) {
+                  return json['data'];
+                }
+              }
+              return null;
+            },
+            parser: (data) => (data as List)
+                .map((e) => AdminUser.fromJson(e as Map<String, dynamic>))
+                .toList(),
+          ) ??
+          [];
+    }
+
     try {
       final queryParams = {
         if (search != null) 'search': search,
@@ -3001,6 +3027,7 @@ class ApiService {
       final json = jsonDecode(response.body);
       if (json['success'] == true) {
         _invalidateCache(AppConstants.cacheAdminOverview);
+        _invalidateCache(AppConstants.cacheAdminUsers);
         return ApiResult(success: true);
       }
       return ApiResult.failure(json['message'] ?? 'Failed to update role');
@@ -3022,6 +3049,7 @@ class ApiService {
       final json = jsonDecode(response.body);
       if (json['success'] == true) {
         _invalidateCache(AppConstants.cacheAdminOverview);
+        _invalidateCache(AppConstants.cacheAdminUsers);
         return ApiResult(success: true);
       }
       return ApiResult.failure(
@@ -3033,9 +3061,39 @@ class ApiService {
   }
 
   /// Get moderation reports (Admin only).
-  Future<List<MarketplaceReport>> getModerationReports({String? status}) async {
+  Future<List<MarketplaceReport>> getModerationReports({
+    String? status,
+    bool forceRefresh = false,
+  }) async {
+    // Cache only the default request (all reports)
+    final isDefault = status == null;
+
+    if (isDefault) {
+      return await _cachedFetch<List<MarketplaceReport>>(
+            key: AppConstants.cacheAdminReports,
+            ttl: AppConstants.cacheExpiry,
+            forceRefresh: forceRefresh,
+            fetcher: () async {
+              final response = await _authGet(AppConstants.adminReports);
+              if (response.statusCode == 200) {
+                final json = jsonDecode(response.body);
+                if (json['success'] == true && json['data'] != null) {
+                  return json['data'];
+                }
+              }
+              return null;
+            },
+            parser: (data) => (data as List)
+                .map(
+                  (e) => MarketplaceReport.fromJson(e as Map<String, dynamic>),
+                )
+                .toList(),
+          ) ??
+          [];
+    }
+
     try {
-      final queryParams = status != null ? {'status': status} : null;
+      final queryParams = {'status': status};
       final response = await _authGet(
         AppConstants.adminReports,
         queryParams: queryParams,
@@ -3069,6 +3127,7 @@ class ApiService {
       final json = jsonDecode(response.body);
       if (json['success'] == true) {
         _invalidateCache(AppConstants.cacheAdminOverview);
+        _invalidateCache(AppConstants.cacheAdminReports);
         return ApiResult(success: true);
       }
       return ApiResult.failure(json['message'] ?? 'Failed to update report');
@@ -3097,22 +3156,26 @@ class ApiService {
   }
 
   /// Get all platform blocks (Admin only).
-  Future<List<BlockedUser>> getAdminBlocks() async {
-    try {
-      final response = await _authGet(AppConstants.adminBlocks);
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
-        if (json['success'] == true && json['data'] != null) {
-          final List data = json['data'];
-          return data
+  Future<List<BlockedUser>> getAdminBlocks({bool forceRefresh = false}) async {
+    return await _cachedFetch<List<BlockedUser>>(
+          key: AppConstants.cacheAdminBlocks,
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet(AppConstants.adminBlocks);
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true && json['data'] != null) {
+                return json['data'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
               .map((e) => BlockedUser.fromJson(e as Map<String, dynamic>))
-              .toList();
-        }
-      }
-    } catch (e) {
-      debugPrint('Error getAdminBlocks: $e');
-    }
-    return [];
+              .toList(),
+        ) ??
+        [];
   }
 
   /// Unblock a user globally (Admin only).
@@ -3122,6 +3185,7 @@ class ApiService {
       final json = jsonDecode(response.body);
       if (json['success'] == true) {
         _invalidateCache(AppConstants.cacheAdminOverview);
+        _invalidateCache(AppConstants.cacheAdminBlocks);
         return ApiResult(success: true);
       }
       return ApiResult.failure(json['message'] ?? 'Failed to unblock user');

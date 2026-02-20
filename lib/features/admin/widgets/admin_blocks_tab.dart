@@ -4,6 +4,7 @@ import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
+import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 
 class AdminBlocksTab extends StatefulWidget {
   const AdminBlocksTab({super.key});
@@ -12,7 +13,11 @@ class AdminBlocksTab extends StatefulWidget {
   State<AdminBlocksTab> createState() => _AdminBlocksTabState();
 }
 
-class _AdminBlocksTabState extends State<AdminBlocksTab> {
+class _AdminBlocksTabState extends State<AdminBlocksTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   List<BlockedUser> _blocks = [];
   bool _isLoading = true;
   int? _busyBlockId;
@@ -71,6 +76,7 @@ class _AdminBlocksTabState extends State<AdminBlocksTab> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
@@ -95,7 +101,7 @@ class _AdminBlocksTabState extends State<AdminBlocksTab> {
         ),
         Expanded(
           child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? const ShimmerAdminBlocks()
               : _blocks.isEmpty
               ? Center(
                   child: Column(
@@ -198,6 +204,51 @@ class _AdminBlocksTabState extends State<AdminBlocksTab> {
                 ),
         ),
       ],
+    );
+  }
+}
+
+class ShimmerAdminBlocks extends StatelessWidget {
+  const ShimmerAdminBlocks({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return ListView.separated(
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 100),
+      itemCount: 5,
+      separatorBuilder: (_, __) => Divider(
+        height: 1,
+        color: isDark ? AppColors.borderDark : AppColors.borderLight,
+      ),
+      itemBuilder: (context, index) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: ShimmerWrapper(
+            child: Row(
+              children: [
+                const Skeleton(width: 40, height: 40, shape: BoxShape.circle),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Skeleton(height: 14, width: 140, borderRadius: 4),
+                      const SizedBox(height: 6),
+                      Skeleton(height: 12, width: 180, borderRadius: 4),
+                      const SizedBox(height: 4),
+                      Skeleton(height: 10, width: 100, borderRadius: 4),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Skeleton(width: 24, height: 24, borderRadius: 6),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
