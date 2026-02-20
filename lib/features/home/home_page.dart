@@ -93,7 +93,7 @@ class _RegisteredEventsSection extends StatelessWidget {
         if (!authSnapshot.hasData) return const SizedBox.shrink();
 
         return FutureBuilder<List<EventRegistration>>(
-          future: apiService.getStudentEnrollment(),
+          future: apiService.getStudentEnrollment(forceRefresh: true),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const _RegisteredEventsLoader();
