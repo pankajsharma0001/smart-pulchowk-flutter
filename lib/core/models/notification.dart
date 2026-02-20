@@ -90,8 +90,9 @@ class InAppNotification {
         }
 
         // Check explicit mime/type flags
-        if (entry.key.toLowerCase().contains('type') && val == 'pdf')
+        if (entry.key.toLowerCase().contains('type') && val == 'pdf') {
           return true;
+        }
       }
 
       // Heuristic for notices: notice_created usually implies a document/attachment
@@ -106,8 +107,9 @@ class InAppNotification {
               attLower.contains('.jpeg') ||
               attLower.contains('.png') ||
               attLower.contains('.webp');
-          if (!isImage)
-            return true; // If notice has attachment and it's not an image, assume PDF
+          if (!isImage) {
+            return true;
+          } // If notice has attachment and it's not an image, assume PDF
         }
       }
     }

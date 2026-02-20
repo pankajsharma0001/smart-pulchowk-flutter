@@ -164,17 +164,31 @@ class NavigationService {
           ),
         );
       }
-    } else if (type == 'lost_found_claim_received') {
+    } else if (type == 'lost_found_claim_received' ||
+        type == 'lost_found_claim_accepted' ||
+        type == 'lost_found_claim_rejected' ||
+        type == 'lost_found_published') {
       _navigateToTab(9); // Lost & Found tab
     } else if (type == 'notice_created' || type == 'notice_updated') {
       final attachmentUrl = data['attachmentUrl']?.toString();
       final noticeTitle = data['noticeTitle']?.toString() ?? 'Notice';
+      final body = data['body']?.toString().toLowerCase() ?? '';
+      final title = data['title']?.toString().toLowerCase() ?? '';
 
       _navigateToTab(8);
 
       if (attachmentUrl != null && attachmentUrl.isNotEmpty) {
         final urlLower = attachmentUrl.toLowerCase();
-        final isPdf = urlLower.endsWith('.pdf');
+
+        // Robust PDF check for push payload
+        final isPdf =
+            urlLower.endsWith('.pdf') ||
+            urlLower.contains('.pdf?') ||
+            title.contains('pdf') ||
+            body.contains('pdf') ||
+            (urlLower.contains('drive.google.com') &&
+                (title.contains('notice') || body.contains('notice')));
+
         final isImage =
             urlLower.endsWith('.jpg') ||
             urlLower.endsWith('.jpeg') ||
