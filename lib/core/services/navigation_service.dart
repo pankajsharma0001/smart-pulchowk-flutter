@@ -120,6 +120,8 @@ class NavigationService {
       case NotificationType.roleChanged:
       case NotificationType.securityAlert:
       case NotificationType.systemAnnouncement:
+      case NotificationType.sellerVerified:
+      case NotificationType.sellerRevoked:
       case NotificationType.system:
         break; // No specific navigation
     }
@@ -216,6 +218,9 @@ class NavigationService {
       } else {
         _navigateToTab(6); // Events tab
       }
+    } else if (type == 'seller_verified' || type == 'seller_revoked') {
+      // In foreground, we might want to refresh user data or just show the toast
+      // For now, no specific navigation target
     }
   }
 

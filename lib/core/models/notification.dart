@@ -35,6 +35,8 @@ enum NotificationType {
   roleChanged('role_changed'),
   securityAlert('security_alert'),
   systemAnnouncement('system_announcement'),
+  sellerVerified('seller_verified'),
+  sellerRevoked('seller_revoked'),
   system('system');
 
   final String value;
@@ -204,7 +206,10 @@ class InAppNotification {
         return Icons.assignment_rounded;
       case NotificationType.roleChanged:
       case NotificationType.securityAlert:
+      case NotificationType.sellerRevoked:
         return Icons.shield_rounded;
+      case NotificationType.sellerVerified:
+        return Icons.verified_user_rounded;
       case NotificationType.systemAnnouncement:
       case NotificationType.system:
         return Icons.notifications_active_rounded;
@@ -247,7 +252,10 @@ class InAppNotification {
         return Colors.cyan;
       case NotificationType.roleChanged:
       case NotificationType.securityAlert:
+      case NotificationType.sellerRevoked:
         return Colors.red;
+      case NotificationType.sellerVerified:
+        return Colors.green;
       case NotificationType.systemAnnouncement:
       case NotificationType.system:
         return Colors.blueGrey;
