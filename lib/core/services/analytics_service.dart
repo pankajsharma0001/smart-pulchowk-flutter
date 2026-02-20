@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/material.dart';
 
@@ -5,14 +6,26 @@ import 'package:flutter/material.dart';
 class AnalyticsService {
   AnalyticsService._();
 
-  static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
-  static final FirebaseAnalyticsObserver observer = FirebaseAnalyticsObserver(
-    analytics: _analytics,
-  );
+  static FirebaseAnalytics? _analytics;
+
+  static bool get _isFirebaseReady => Firebase.apps.isNotEmpty;
+
+  static FirebaseAnalytics? get _instance {
+    if (!_isFirebaseReady) return null;
+    return _analytics ??= FirebaseAnalytics.instance;
+  }
+
+  static List<NavigatorObserver> get navigatorObservers {
+    final analytics = _instance;
+    if (analytics == null) return const <NavigatorObserver>[];
+    return <NavigatorObserver>[FirebaseAnalyticsObserver(analytics: analytics)];
+  }
 
   static Future<void> logAppOpen() async {
     try {
-      await _analytics.logAppOpen();
+      final analytics = _instance;
+      if (analytics == null) return;
+      await analytics.logAppOpen();
     } catch (e) {
       debugPrint('Analytics error [logAppOpen]: $e');
     }
@@ -20,7 +33,9 @@ class AnalyticsService {
 
   static Future<void> logScreenView(String screenName) async {
     try {
-      await _analytics.logScreenView(screenName: screenName);
+      final analytics = _instance;
+      if (analytics == null) return;
+      await analytics.logScreenView(screenName: screenName);
     } catch (e) {
       debugPrint('Analytics error [logScreenView]: $e');
     }
@@ -28,7 +43,9 @@ class AnalyticsService {
 
   static Future<void> logLogin(String method) async {
     try {
-      await _analytics.logLogin(loginMethod: method);
+      final analytics = _instance;
+      if (analytics == null) return;
+      await analytics.logLogin(loginMethod: method);
     } catch (e) {
       debugPrint('Analytics error [logLogin]: $e');
     }
@@ -39,7 +56,9 @@ class AnalyticsService {
     Map<String, Object>? parameters,
   ]) async {
     try {
-      await _analytics.logEvent(name: name, parameters: parameters);
+      final analytics = _instance;
+      if (analytics == null) return;
+      await analytics.logEvent(name: name, parameters: parameters);
     } catch (e) {
       debugPrint('Analytics error [logEvent]: $e');
     }

@@ -109,7 +109,7 @@ class NavigationService {
       case NotificationType.newAssignment:
       case NotificationType.gradingUpdate:
       case NotificationType.assignmentDeadline:
-        _navigateToTab(4); // Classroom tab
+        _navigateToTab(2); // Classroom/Admin role tab
 
       case NotificationType.roleChanged:
       case NotificationType.securityAlert:

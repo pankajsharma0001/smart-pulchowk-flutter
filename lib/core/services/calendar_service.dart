@@ -1,4 +1,5 @@
 import 'package:add_2_calendar/add_2_calendar.dart';
+import 'package:flutter/foundation.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
 
 class CalendarService {
@@ -15,7 +16,7 @@ class CalendarService {
     try {
       return await Add2Calendar.addEvent2Cal(deviceEvent);
     } catch (e) {
-      print('Error adding event to calendar: $e');
+      debugPrint('Error adding event to calendar: $e');
       return false;
     }
   }

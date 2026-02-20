@@ -173,7 +173,9 @@ class HomePage extends StatelessWidget {
           onTap: () {
             haptics.mediumImpact();
             if (isLoggedIn) {
-              MainLayout.of(context)?.setSelectedIndex(4); // Profile/Dashboard
+              MainLayout.of(context)?.setSelectedIndex(
+                2,
+              ); // Role-specific primary dashboard tab
             }
           },
           borderRadius: BorderRadius.circular(20),

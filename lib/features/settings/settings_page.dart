@@ -402,10 +402,13 @@ class _SettingsPageState extends State<SettingsPage> {
             title: 'Haptic Feedback',
             subtitle: 'Provide tactile feedback on tap',
             trailing: Switch.adaptive(
-              value: true,
+              value: themeProvider.hapticsEnabled,
               activeTrackColor: AppColors.primary,
-              onChanged: (val) {
-                haptics.selectionClick();
+              onChanged: (val) async {
+                await themeProvider.setHapticsEnabled(val);
+                if (val) {
+                  haptics.selectionClick();
+                }
               },
             ),
           ),

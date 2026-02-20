@@ -2740,7 +2740,7 @@ class ApiService {
           ttl: AppConstants.cacheExpiry,
           forceRefresh: forceRefresh,
           fetcher: () async {
-            final response = await _authGet(AppConstants.MyLostFoundItems);
+            final response = await _authGet(AppConstants.myLostFoundItems);
             if (response.statusCode == 200) {
               final json = jsonDecode(response.body);
               if (json['success'] == true && json['data'] != null) {
@@ -2811,7 +2811,7 @@ class ApiService {
           ttl: AppConstants.cacheExpiry,
           forceRefresh: forceRefresh,
           fetcher: () async {
-            final response = await _authGet(AppConstants.MyLostFoundClaims);
+            final response = await _authGet(AppConstants.myLostFoundClaims);
             if (response.statusCode == 200) {
               final json = jsonDecode(response.body);
               if (json['success'] == true && json['data'] != null) {

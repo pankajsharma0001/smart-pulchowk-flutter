@@ -554,7 +554,7 @@ class _ClassroomPageState extends State<ClassroomPage>
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final roleLabel = widget.userRole == 'teacher'
         ? 'Teacher'
-        : widget.userRole == 'notice manager'
+        : widget.userRole == 'notice_manager'
         ? 'Notice Manager'
         : widget.userRole;
 

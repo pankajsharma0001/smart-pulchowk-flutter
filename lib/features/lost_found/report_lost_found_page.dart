@@ -49,6 +49,7 @@ class _ReportLostFoundPageState extends State<ReportLostFoundPage> {
         });
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error picking image: $e')));

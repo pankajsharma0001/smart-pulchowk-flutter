@@ -6,8 +6,9 @@ void main() {
   testWidgets('App renders smoke test', (WidgetTester tester) async {
     final themeProvider = ThemeProvider();
     await tester.pumpWidget(SmartPulchowkApp(themeProvider: themeProvider));
+    await tester.pump(const Duration(milliseconds: 300));
 
-    // Verify the app title is shown
-    expect(find.text('Smart Pulchowk'), findsOneWidget);
+    // Verify initial login screen content is shown.
+    expect(find.text('Continue with Google'), findsOneWidget);
   });
 }

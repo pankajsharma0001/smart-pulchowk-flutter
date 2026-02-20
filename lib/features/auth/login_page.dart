@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:smart_pulchowk/core/services/auth_service.dart';
@@ -15,6 +17,7 @@ class _LoginPageState extends State<LoginPage>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  Timer? _startupAnimationTimer;
   bool _isLoading = false;
 
   @override
@@ -38,13 +41,14 @@ class _LoginPageState extends State<LoginPage>
           ),
         );
 
-    Future.delayed(const Duration(milliseconds: 200), () {
+    _startupAnimationTimer = Timer(const Duration(milliseconds: 200), () {
       if (mounted) _animationController.forward();
     });
   }
 
   @override
   void dispose() {
+    _startupAnimationTimer?.cancel();
     _animationController.dispose();
     super.dispose();
   }

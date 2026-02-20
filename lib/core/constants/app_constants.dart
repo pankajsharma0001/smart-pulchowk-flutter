@@ -33,8 +33,8 @@ class AppConstants {
 
   // ── Lost & Found Endpoints ────────────────────────────────────────────────
   static const String lostFound = '/lost-found';
-  static const String MyLostFoundItems = '/lost-found/my/items';
-  static const String MyLostFoundClaims = '/lost-found/my/claims';
+  static const String myLostFoundItems = '/lost-found/my/items';
+  static const String myLostFoundClaims = '/lost-found/my/claims';
 
   // ── Notice Endpoints ───────────────────────────────────────────────────────
   static const String notices = '/notices';
