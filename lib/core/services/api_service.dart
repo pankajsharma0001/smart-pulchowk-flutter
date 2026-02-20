@@ -262,30 +262,32 @@ class ApiService {
   }
 
   /// Fetch the full current user profile from the backend.
-  Future<AppUser?> getCurrentUser() async {
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) return null;
+  Future<AppUser?> getCurrentUser({bool forceRefresh = false}) async {
+    return _cachedFetch<AppUser>(
+      key: AppConstants.cacheUserProfile,
+      ttl: AppConstants.cacheExpiry,
+      forceRefresh: forceRefresh,
+      fetcher: () async {
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser == null) return null;
 
-      final token = await currentUser.getIdToken();
-      final response = await _get(
-        AppConstants.userProfile,
-        headers: {'Authorization': 'Bearer $token'},
-      );
+        final token = await currentUser.getIdToken();
+        final response = await _get(
+          AppConstants.userProfile,
+          headers: {'Authorization': 'Bearer $token'},
+        );
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
-        if (responseData['data']?['success'] == true &&
-            responseData['data']?['user'] != null) {
-          return AppUser.fromJson(
-            responseData['data']['user'] as Map<String, dynamic>,
-          );
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> responseData = jsonDecode(response.body);
+          if (responseData['data']?['success'] == true &&
+              responseData['data']?['user'] != null) {
+            return responseData['data']['user'];
+          }
         }
-      }
-    } catch (e) {
-      debugPrint('Error fetching current user profile: $e');
-    }
-    return null;
+        return null;
+      },
+      parser: (data) => AppUser.fromJson(data as Map<String, dynamic>),
+    );
   }
 
   /// Force refresh the user role from the backend.
@@ -1119,10 +1121,14 @@ class ApiService {
   // ── Trust & Safety ────────────────────────────────────────────────────────
 
   /// Get a seller's reputation data.
-  Future<SellerReputation?> getSellerReputation(String sellerId) async {
+  Future<SellerReputation?> getSellerReputation(
+    String sellerId, {
+    bool forceRefresh = false,
+  }) async {
     return _cachedFetch<SellerReputation>(
       key: '${AppConstants.cacheSellerReputation}$sellerId',
       ttl: AppConstants.cacheExpiry,
+      forceRefresh: forceRefresh,
       fetcher: () async {
         final response = await _authGet(
           '/books/trust/sellers/$sellerId/reputation',

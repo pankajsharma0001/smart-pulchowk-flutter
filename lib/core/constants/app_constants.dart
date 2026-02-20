@@ -125,6 +125,9 @@ class AppConstants {
   static const String cacheAdminReports = 'admin_reports';
   static const String cacheAdminBlocks = 'admin_blocks';
 
+  // ── User Cache Keys ────────────────────────────────────────────────────
+  static const String cacheUserProfile = 'user_profile';
+
   // ── Image Headers ────────────────────────────────────────────────────────
   static const Map<String, String> imageHeaders = {
     'User-Agent':

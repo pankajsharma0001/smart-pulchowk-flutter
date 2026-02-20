@@ -42,28 +42,63 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    final results = await Future.wait([
-      _api.getCurrentUser(),
-      _api.getMyBookListings(),
-    ]);
+    // 1. Initial Load (Try Cache first for instant feel)
+    setState(
+      () => _isLoading = _user == null,
+    ); // Only show loading if we have NO data at all
 
-    if (mounted) {
-      setState(() {
-        _user = results[0] as AppUser?;
-        _myListings = results[1] as List<BookListing>? ?? [];
-      });
+    try {
+      final results = await Future.wait([
+        _api.getCurrentUser(),
+        _api.getMyBookListings(),
+      ]);
 
-      // Load reputation if user is found
-      if (_user != null) {
-        final rep = await _api.getSellerReputation(_user!.id);
-        if (mounted) {
-          setState(() {
-            _reputation = rep;
-            _isLoading = false;
-          });
+      if (mounted) {
+        setState(() {
+          _user = results[0] as AppUser?;
+          _myListings = results[1] as List<BookListing>? ?? [];
+          if (_user != null) _isLoading = false;
+        });
+
+        if (_user != null) {
+          final rep = await _api.getSellerReputation(_user!.id);
+          if (mounted) {
+            setState(() {
+              _reputation = rep;
+              _isLoading = false;
+            });
+          }
         }
-      } else {
+      }
+
+      // 2. Background Refresh (Force refresh from network)
+      final refreshResults = await Future.wait([
+        _api.getCurrentUser(forceRefresh: true),
+        _api.getMyBookListings(forceRefresh: true),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _user = refreshResults[0] as AppUser? ?? _user;
+          _myListings = refreshResults[1] as List<BookListing>? ?? _myListings;
+        });
+
+        if (_user != null) {
+          final rep = await _api.getSellerReputation(
+            _user!.id,
+            forceRefresh: true,
+          );
+          if (mounted) {
+            setState(() {
+              _reputation = rep ?? _reputation;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading profile data: $e');
+    } finally {
+      if (mounted) {
         setState(() => _isLoading = false);
       }
     }
