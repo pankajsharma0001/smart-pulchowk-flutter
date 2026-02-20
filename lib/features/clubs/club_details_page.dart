@@ -30,6 +30,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
 
   bool _isLoadingProfile = true;
   bool _isLoadingEvents = true;
+  late Club _club;
   ClubProfile? _profile;
   List<ClubEvent> _events = [];
   String? _error;
@@ -40,9 +41,12 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
 
+    // Initialize club with widget data first
+    _club = widget.club;
+
     // Initial load from cache to avoid shimmer
-    _profile = _apiService.getCachedClubProfile(widget.club.id);
-    _events = _apiService.getCachedClubEvents(widget.club.id) ?? [];
+    _profile = _apiService.getCachedClubProfile(_club.id);
+    _events = _apiService.getCachedClubEvents(_club.id) ?? [];
     _isLoadingProfile = _profile == null;
     _isLoadingEvents = _events.isEmpty;
 
@@ -57,6 +61,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
 
   Future<void> _loadData({bool forceRefresh = false}) async {
     await Future.wait([
+      _loadClubInfo(forceRefresh: forceRefresh),
       _loadProfile(forceRefresh: forceRefresh),
       _loadEvents(forceRefresh: forceRefresh),
       _checkAdminStatus(),
@@ -64,14 +69,30 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
     ]);
   }
 
+  Future<void> _loadClubInfo({bool forceRefresh = false}) async {
+    try {
+      final clubData = await _apiService.getClub(
+        _club.id,
+        forceRefresh: forceRefresh,
+      );
+      if (mounted && clubData != null) {
+        setState(() {
+          _club = clubData;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading full club info: $e');
+    }
+  }
+
   Future<void> _checkAdminStatus() async {
     final dbUserId = await StorageService.readSecure(AppConstants.dbUserIdKey);
 
     // Club-level admin check (via clubAdmins table)
-    final isClubAdmin = await _apiService.getIsAdminForClub(widget.club.id);
+    final isClubAdmin = await _apiService.getIsAdminForClub(_club.id);
 
     // Club owner
-    final isOwner = dbUserId != null && dbUserId == widget.club.authClubId;
+    final isOwner = dbUserId != null && dbUserId == _club.authClubId;
 
     final isAdmin = isOwner || isClubAdmin;
 
@@ -107,7 +128,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
 
     try {
       final profile = await _apiService.getClubProfile(
-        widget.club.id,
+        _club.id,
         forceRefresh: forceRefresh,
       );
       if (mounted) {
@@ -144,7 +165,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
 
     try {
       final events = await _apiService.getClubEvents(
-        widget.club.id,
+        _club.id,
         forceRefresh: forceRefresh,
       );
       if (mounted) {
@@ -318,7 +339,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
                   children: [
                     // Club Logo
                     Hero(
-                      tag: 'club_logo_${widget.club.id}',
+                      tag: 'club_logo_${_club.id}',
                       child: Container(
                         width: 80,
                         height: 80,
@@ -333,7 +354,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
                         ),
                         child: ClipOval(
                           child: SmartImage(
-                            imageUrl: widget.club.logoUrl,
+                            imageUrl: _club.logoUrl,
                             fit: BoxFit.cover,
                             shape: BoxShape.circle,
                             errorWidget: _buildLogoFallback(),
@@ -345,7 +366,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
 
                     // Club name
                     Text(
-                      widget.club.name,
+                      _club.name,
                       style: AppTextStyles.h3.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -360,11 +381,11 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
                       textAlign: TextAlign.center,
                     ),
 
-                    if (widget.club.description != null &&
-                        widget.club.description!.isNotEmpty) ...[
+                    if (_club.description != null &&
+                        _club.description!.isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.xs),
                       Text(
-                        widget.club.description!,
+                        _club.description!,
                         style: AppTextStyles.bodySmall.copyWith(
                           color: Colors.white.withValues(alpha: 0.8),
                         ),
@@ -382,19 +403,19 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
                       children: [
                         _buildStatChip(
                           Icons.event_rounded,
-                          '${widget.club.upcomingEvents}',
+                          '${_club.upcomingEvents}',
                           'Upcoming',
                         ),
                         const SizedBox(width: AppSpacing.md),
                         _buildStatChip(
                           Icons.check_circle_rounded,
-                          '${widget.club.completedEvents}',
+                          '${_club.completedEvents}',
                           'Completed',
                         ),
                         const SizedBox(width: AppSpacing.md),
                         _buildStatChip(
                           Icons.people_rounded,
-                          '${widget.club.totalParticipants}',
+                          '${_club.totalParticipants}',
                           'Members',
                         ),
                       ],
@@ -414,7 +435,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
       color: AppColors.primaryContainer,
       child: Center(
         child: Text(
-          widget.club.name[0].toUpperCase(),
+          _club.name[0].toUpperCase(),
           style: AppTextStyles.h2.copyWith(
             color: AppColors.primary,
             fontWeight: FontWeight.bold,
@@ -615,11 +636,6 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
       ),
       sliver: SliverList(
         delegate: SliverChildListDelegate([
-          // Status badge
-          if (widget.club.isActive) _buildStatusBadge(context),
-
-          const SizedBox(height: AppSpacing.base),
-
           // About section
           _buildInfoCard(
             context,
@@ -627,7 +643,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
             title: 'About',
             child: Text(
               _profile?.aboutClub ??
-                  widget.club.description ??
+                  _club.description ??
                   'No description available.',
               style: AppTextStyles.bodyMedium.copyWith(height: 1.7),
             ),
@@ -681,7 +697,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
                 builder: (context) =>
-                    ClubEditor(club: widget.club, profile: _profile),
+                    ClubEditor(club: _club, profile: _profile),
               );
               if (result == true) _loadProfile(forceRefresh: true);
             },
@@ -697,7 +713,7 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
                 context: context,
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
-                builder: (context) => EventEditor(clubId: widget.club.id),
+                builder: (context) => EventEditor(clubId: _club.id),
               );
               if (result == true) _loadEvents(forceRefresh: true);
             },
@@ -875,41 +891,6 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
             child: const Text(
               'Delete',
               style: TextStyle(color: AppColors.error),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusBadge(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.successContainer,
-        borderRadius: AppRadius.fullAll,
-        border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 7,
-            height: 7,
-            decoration: const BoxDecoration(
-              color: AppColors.success,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            'Active Club',
-            style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.success,
-              fontWeight: FontWeight.w700,
             ),
           ),
         ],
