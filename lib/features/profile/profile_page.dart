@@ -9,6 +9,8 @@ import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/features/marketplace/book_details_page.dart';
 import 'package:smart_pulchowk/features/settings/settings_page.dart';
+import 'package:smart_pulchowk/core/services/haptic_service.dart';
+import 'dart:ui' as ui;
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -102,6 +104,11 @@ class _ProfilePageState extends State<ProfilePage>
       );
     }
 
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+    const double bottomHeight = 48.0;
+    const double toolbarHeight = 60.0;
+    const double expandedHeight = 320.0;
+
     return Scaffold(
       backgroundColor: isDark
           ? AppColors.backgroundDark
@@ -111,38 +118,61 @@ class _ProfilePageState extends State<ProfilePage>
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
-            _buildAppBar(context, isDark, cs),
-            SliverToBoxAdapter(child: _buildReputationSummary(isDark, cs)),
-            SliverPersistentHeader(
+            SliverAppBar(
               pinned: true,
-              delegate: _SliverTabDelegate(
-                child: Container(
-                  color: isDark
-                      ? AppColors.backgroundDark
-                      : AppColors.backgroundLight,
-                  child: TabBar(
-                    controller: _tabController,
-                    indicatorColor: cs.primary,
-                    labelColor: cs.primary,
-                    unselectedLabelColor: isDark
-                        ? Colors.white54
-                        : Colors.black54,
-                    labelStyle: AppTextStyles.labelLarge.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    tabs: const [
-                      Tab(text: 'My Listings'),
-                      Tab(text: 'Reviews'),
-                    ],
-                    onTap: (index) => setState(() {}),
+              expandedHeight: expandedHeight,
+              toolbarHeight: toolbarHeight,
+              backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
+              elevation: 0,
+              leading: const SizedBox.shrink(), // Remove back button space
+              leadingWidth: 0,
+              flexibleSpace: LayoutBuilder(
+                builder: (context, constraints) {
+                  final double progress =
+                      ((expandedHeight +
+                                  statusBarHeight -
+                                  constraints.maxHeight) /
+                              (expandedHeight - toolbarHeight - bottomHeight))
+                          .clamp(0.0, 1.0);
+
+                  return _buildFlexibleHeader(
+                    isDark,
+                    cs,
+                    progress,
+                    statusBarHeight,
+                  );
+                },
+              ),
+              bottom: _GlassTabBar(
+                isDark: isDark,
+                child: TabBar(
+                  controller: _tabController,
+                  indicatorColor: cs.primary,
+                  indicatorWeight: 3,
+                  labelColor: cs.primary,
+                  unselectedLabelColor: isDark
+                      ? Colors.white54
+                      : Colors.black54,
+                  labelStyle: AppTextStyles.labelLarge.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
+                  tabs: const [
+                    Tab(text: 'My Listings'),
+                    Tab(text: 'Reviews'),
+                  ],
+                  onTap: (index) => setState(() {}),
                 ),
               ),
             ),
+
+            // Reputation Summary (Now scrolls away under the pinned appbar)
+            SliverToBoxAdapter(child: _buildReputationSummary(isDark, cs)),
+
             if (_tabController.index == 0)
               _buildListingsGrid(isDark)
             else
               _buildReviewsList(isDark, cs),
+
             const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
         ),
@@ -150,133 +180,149 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildAppBar(BuildContext context, bool isDark, ColorScheme cs) {
-    return SliverAppBar(
-      expandedHeight: 220,
-      pinned: true,
-      elevation: 0,
-      backgroundColor: isDark ? AppColors.cardDark : Colors.white,
-      foregroundColor: isDark ? Colors.white : Colors.black,
-      surfaceTintColor: Colors.transparent,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.settings_outlined),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const SettingsPage()),
-          ),
-        ),
-        const SizedBox(width: 8),
-      ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: Stack(
-          fit: StackFit.expand,
-          children: [
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: 140,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      cs.primary.withValues(alpha: isDark ? 0.4 : 0.15),
-                      cs.primary.withValues(alpha: 0),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  borderRadius: const BorderRadius.vertical(
-                    bottom: Radius.elliptical(150, 20),
-                  ),
+  Widget _buildFlexibleHeader(
+    bool isDark,
+    ColorScheme cs,
+    double progress,
+    double statusBarHeight,
+  ) {
+    // Reuse the logic from the previous ProfileHeaderDelegate.build
+    final double avatarSize = 120 - (80 * progress); // 120 -> 40
+    final double infoOpacity = (1 - (progress * 2.5)).clamp(0.0, 1.0);
+    final double bgOpacity = (progress > 0.8)
+        ? 1.0
+        : (progress * 1.2).clamp(0.0, 1.0);
+    final double screenWidth = MediaQuery.of(context).size.width;
+
+    return Container(
+      color: (isDark ? AppColors.backgroundDark : Colors.white).withValues(
+        alpha: bgOpacity,
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Background Gradient
+          Opacity(
+            opacity: (1 - progress).clamp(0.0, 1.0),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    cs.primary.withValues(alpha: isDark ? 0.4 : 0.15),
+                    cs.primary.withValues(alpha: 0),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
               ),
             ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          ),
+
+          // Scaling Avatar
+          Positioned(
+            left:
+                (screenWidth / 2 - avatarSize / 2) * (1 - progress) +
+                (20 * progress),
+            top: statusBarHeight + (45 * (1 - progress)) + (10 * progress),
+            child: Stack(
               children: [
-                const SizedBox(height: 50),
-                Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 4),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
-                      child: SmartImage(
-                        imageUrl: _user?.image,
-                        width: 88,
-                        height: 88,
-                        shape: BoxShape.circle,
-                        errorWidget: Icon(
-                          Icons.person,
-                          size: 44,
-                          color: cs.primary,
-                        ),
-                      ),
-                    ),
-                    if (_user?.isVerifiedSeller == true)
-                      Positioned(
-                        bottom: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.verified_rounded,
-                            size: 22,
-                            color: Colors.blue,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  _user?.name ?? 'Profile',
-                  style: AppTextStyles.h4.copyWith(
-                    color: isDark ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                Text(
-                  _user?.email ?? '',
-                  style: AppTextStyles.bodySmall.copyWith(color: Colors.grey),
-                ),
-                const SizedBox(height: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
                   decoration: BoxDecoration(
-                    color: cs.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 2 + (2 * (1 - progress)),
+                    ),
                   ),
-                  child: Text(
-                    _user?.role.toUpperCase() ?? 'STUDENT',
-                    style: AppTextStyles.overline.copyWith(
+                  child: SmartImage(
+                    imageUrl: _user!.image,
+                    width: avatarSize,
+                    height: avatarSize,
+                    shape: BoxShape.circle,
+                    errorWidget: Icon(
+                      Icons.person,
+                      size: avatarSize / 2,
                       color: cs.primary,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.1,
                     ),
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+
+          // Name and Info
+          if (infoOpacity > 0)
+            Positioned(
+              top: statusBarHeight + 120 + 55,
+              left: 20,
+              right: 20,
+              child: Opacity(
+                opacity: infoOpacity,
+                child: Column(
+                  children: [
+                    Text(
+                      _user!.name,
+                      style: AppTextStyles.h4.copyWith(
+                        color: isDark ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.w900,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    Text(
+                      _user!.email,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // Compact Title
+          if (progress > 0.8)
+            Positioned(
+              left: 72,
+              top: statusBarHeight + 10, // Vertically centered in 60px toolbar
+              child: Opacity(
+                opacity: ((progress - 0.8) / 0.2).clamp(0.0, 1.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _user!.name,
+                      style: AppTextStyles.bodyLarge.copyWith(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      _user!.role.toUpperCase(),
+                      style: AppTextStyles.overline.copyWith(
+                        color: cs.primary,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+          // Settings Button
+          Positioned(
+            top: statusBarHeight,
+            right: 8,
+            child: IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsPage()),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -287,38 +333,107 @@ class _ProfilePageState extends State<ProfilePage>
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : Colors.white,
+        color: (isDark ? AppColors.cardDark : Colors.white).withValues(
+          alpha: 0.8,
+        ),
         borderRadius: AppRadius.lgAll,
         border: Border.all(
           color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildStatItem(
-            'Rating',
-            rep.averageRating.toStringAsFixed(1),
-            Icons.star_rounded,
-            Colors.orange,
-          ),
-          _buildStatDivider(),
-          _buildStatItem(
-            'Sold',
-            rep.soldCount.toString(),
-            Icons.shopping_bag_rounded,
-            cs.primary,
-          ),
-          _buildStatDivider(),
-          _buildStatItem(
-            'Reviews',
-            rep.totalRatings.toString(),
-            Icons.reviews_rounded,
-            Colors.green,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatItem(
+                'Rating',
+                rep.averageRating.toStringAsFixed(1),
+                Icons.star_rounded,
+                Colors.orange,
+              ),
+              _buildStatDivider(),
+              _buildStatItem(
+                'Sold',
+                rep.soldCount.toString(),
+                Icons.shopping_bag_rounded,
+                cs.primary,
+              ),
+              _buildStatDivider(),
+              _buildStatItem(
+                'Reviews',
+                rep.totalRatings.toString(),
+                Icons.reviews_rounded,
+                Colors.green,
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          const Divider(height: 1, thickness: 0.5),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey),
+              const SizedBox(width: 8),
+              Text(
+                'Member since ${DateFormat('MMMM yyyy').format(_user!.createdAt)}',
+                style: AppTextStyles.caption.copyWith(color: Colors.grey),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
+    return InkWell(
+      onTap: () => haptics.selectionClick(),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: AppTextStyles.labelLarge.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+            Text(
+              label,
+              style: AppTextStyles.overline.copyWith(
+                color: Colors.grey,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -366,28 +481,6 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildStatItem(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Column(
-      children: [
-        Icon(icon, color: color, size: 24),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: AppTextStyles.labelLarge.copyWith(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-        Text(label, style: AppTextStyles.overline.copyWith(color: Colors.grey)),
-      ],
-    );
-  }
-
   Widget _buildStatDivider() => Container(
     height: 30,
     width: 1,
@@ -431,18 +524,16 @@ class _ProfilePageState extends State<ProfilePage>
               ),
             ),
           ),
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _SliverTabDelegate(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Skeleton(height: 30, width: 100, borderRadius: 15),
-                    const SizedBox(width: 16),
-                    Skeleton(height: 30, width: 100, borderRadius: 15),
-                  ],
-                ),
+          SliverToBoxAdapter(
+            child: Container(
+              height: 48,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Skeleton(height: 30, width: 100, borderRadius: 15),
+                  const SizedBox(width: 16),
+                  Skeleton(height: 30, width: 100, borderRadius: 15),
+                ],
               ),
             ),
           ),
@@ -561,26 +652,28 @@ class _ReviewItem extends StatelessWidget {
   }
 }
 
-class _SliverTabDelegate extends SliverPersistentHeaderDelegate {
+class _GlassTabBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget child;
-  _SliverTabDelegate({required this.child});
+  final bool isDark;
+
+  const _GlassTabBar({required this.child, required this.isDark});
 
   @override
-  double get minExtent => 48;
-  @override
-  double get maxExtent => 48;
-
-  @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
-    return child;
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+        child: Container(
+          color: (isDark ? AppColors.backgroundDark : AppColors.backgroundLight)
+              .withValues(alpha: 0.7),
+          child: child,
+        ),
+      ),
+    );
   }
 
   @override
-  bool shouldRebuild(_SliverTabDelegate oldDelegate) => false;
+  Size get preferredSize => const Size.fromHeight(48);
 }
 
 class _BookCard extends StatelessWidget {
