@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfx/pdfx.dart';
@@ -42,26 +43,19 @@ class _CustomPdfViewerState extends State<CustomPdfViewer> {
 
   Future<void> _loadPdf() async {
     try {
-      final response = await http.get(Uri.parse(widget.url));
-      if (response.statusCode == 200) {
-        final bytes = response.bodyBytes;
-        final dir = await getTemporaryDirectory();
-        final file = File(
-          '${dir.path}/temp_pdf_${DateTime.now().millisecondsSinceEpoch}.pdf',
-        );
-        await file.writeAsBytes(bytes);
+      final bytes = await _downloadPdfBytes();
+      final dir = await getTemporaryDirectory();
+      final file = File(
+        '${dir.path}/temp_pdf_${DateTime.now().millisecondsSinceEpoch}.pdf',
+      );
+      await file.writeAsBytes(bytes);
 
-        _pdfController = PdfController(
-          document: PdfDocument.openFile(file.path),
-        );
+      _pdfController = PdfController(document: PdfDocument.openFile(file.path));
 
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
-      } else {
-        throw 'Failed to load PDF (Status: ${response.statusCode})';
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -70,6 +64,50 @@ class _CustomPdfViewerState extends State<CustomPdfViewer> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<Uint8List> _downloadPdfBytes() async {
+    try {
+      final response = await http.get(Uri.parse(widget.url));
+      if (response.statusCode == 200) {
+        return response.bodyBytes;
+      }
+      throw Exception('Failed to load PDF (Status: ${response.statusCode})');
+    } catch (e) {
+      if (_isTlsCertificateError(e)) {
+        final fallbackBytes = await _downloadPdfBytesWithFallback();
+        if (fallbackBytes != null) return fallbackBytes;
+      }
+      rethrow;
+    }
+  }
+
+  bool _isTlsCertificateError(Object error) {
+    final message = error.toString().toLowerCase();
+    return message.contains('certificate_verify_failed') ||
+        message.contains('handshakeexception') ||
+        message.contains('handshake error');
+  }
+
+  Future<Uint8List?> _downloadPdfBytesWithFallback() async {
+    final uri = Uri.parse(widget.url);
+    // Accept the certificate for the same host as the PDF URL (handles
+    // self-signed / local-issuer certs on the app's own server).
+    final client = HttpClient();
+    client.badCertificateCallback = (cert, host, port) => host == uri.host;
+    try {
+      final request = await client.getUrl(uri);
+      final response = await request.close();
+      if (response.statusCode != HttpStatus.ok) return null;
+
+      final bytes = BytesBuilder(copy: false);
+      await for (final chunk in response) {
+        bytes.add(chunk);
+      }
+      return bytes.takeBytes();
+    } finally {
+      client.close(force: true);
     }
   }
 

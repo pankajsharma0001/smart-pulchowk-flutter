@@ -212,13 +212,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           'Notifications',
           style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         actions: [
           if (_notifications.any((n) => !n.isRead))
@@ -467,8 +467,9 @@ class _NotificationTile extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final timeStr = DateFormat.jm().format(notification.createdAt);
-    final dateStr = DateFormat.MMMd().format(notification.createdAt);
+    final localCreatedAt = notification.createdAt.toLocal();
+    final timeStr = DateFormat.jm().format(localCreatedAt);
+    final dateStr = DateFormat.MMMd().format(localCreatedAt);
 
     final isUnread = !notification.isRead;
 
@@ -640,12 +641,19 @@ class _NotificationTile extends StatelessWidget {
   }
 
   Widget _buildTrailing(ColorScheme cs, bool isUnread) {
+    final thumb = notification.thumbnailUrl;
+
+    // Detect PDF notices
+    if (notification.isPdf) {
+      return _buildPdfPlaceholder(cs);
+    }
+
     // Thumbnail image
-    if (notification.thumbnailUrl != null) {
+    if (thumb != null) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(AppRadius.sm),
         child: CachedNetworkImage(
-          imageUrl: notification.thumbnailUrl!,
+          imageUrl: thumb,
           width: 52,
           height: 52,
           fit: BoxFit.cover,
@@ -660,6 +668,48 @@ class _NotificationTile extends StatelessWidget {
     }
 
     return _buildUnreadDot(cs, isUnread);
+  }
+
+  Widget _buildPdfPlaceholder(ColorScheme cs) {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: Colors.red.withValues(alpha: 0.8),
+                width: 1.5,
+              ),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: const Icon(
+              Icons.picture_as_pdf_rounded,
+              color: Colors.red,
+              size: 18,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            'PDF',
+            style: TextStyle(
+              color: Colors.red.shade700,
+              fontWeight: FontWeight.w900,
+              fontSize: 8,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildUnreadDot(ColorScheme cs, bool isUnread) {

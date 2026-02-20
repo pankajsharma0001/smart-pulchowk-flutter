@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_pulchowk/core/services/api_service.dart';
 
 class Notice {
   final int id;
@@ -31,9 +32,17 @@ class Notice {
       title: json['title'] as String,
       category: json['category'] as String,
       level: json['level'] as String?,
-      attachmentUrl: json['attachmentUrl'] as String?,
+      attachmentUrl: ApiService.processImageUrl(
+        (json['attachmentUrl'] ?? json['attachment_url']) as String?,
+        optimizeCloudinary: false,
+      ),
       publishedDate: json['publishedDate'] as String?,
-      sourceUrl: json['sourceUrl'] as String?,
+      sourceUrl:
+          ApiService.processImageUrl(
+            (json['sourceUrl'] ?? json['source_url']) as String?,
+            optimizeCloudinary: false,
+          ) ??
+          (json['sourceUrl'] ?? json['source_url']) as String?,
       externalRef: json['externalRef'] as String?,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),

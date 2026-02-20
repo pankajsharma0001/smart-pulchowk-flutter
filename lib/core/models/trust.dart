@@ -234,37 +234,54 @@ class MarketplaceReport {
   });
 
   factory MarketplaceReport.fromJson(Map<String, dynamic> json) {
+    final reporterJson =
+        json['reporter'] ?? json['reporterUser'] ?? json['reporter_user'];
+    final reportedUserJson =
+        json['reportedUser'] ??
+        json['reported_user'] ??
+        json['reportedUserInfo'];
+    final reviewerJson =
+        json['reviewer'] ?? json['reviewerUser'] ?? json['reviewer_user'];
+
     return MarketplaceReport(
       id: SellerRating._parseInt(json['id']) ?? 0,
-      reporterId: json['reporterId'] as String? ?? '',
-      reportedUserId: json['reportedUserId'] as String? ?? '',
-      listingId: SellerRating._parseInt(json['listingId']),
+      reporterId: (json['reporterId'] ?? json['reporter_id'] ?? '').toString(),
+      reportedUserId: (json['reportedUserId'] ?? json['reported_user_id'] ?? '')
+          .toString(),
+      listingId: SellerRating._parseInt(
+        json['listingId'] ?? json['listing_id'],
+      ),
       category: ReportCategory.fromString(
         json['category'] as String? ?? 'other',
       ),
       description: json['description'] as String? ?? '',
       status: ReportStatus.fromString(json['status'] as String? ?? 'open'),
-      resolutionNotes: json['resolutionNotes'] as String?,
-      reviewedBy: json['reviewedBy'] as String?,
-      reviewedAt: json['reviewedAt'] != null
-          ? DateTime.tryParse(json['reviewedAt'] as String)
-          : null,
-      createdAt:
-          DateTime.tryParse(json['createdAt'] as String? ?? '') ??
-          DateTime.now(),
-      updatedAt:
-          DateTime.tryParse(json['updatedAt'] as String? ?? '') ??
-          DateTime.now(),
-      reporter: json['reporter'] != null
-          ? ReportUserInfo.fromJson(json['reporter'] as Map<String, dynamic>)
-          : null,
-      reportedUser: json['reportedUser'] != null
-          ? ReportUserInfo.fromJson(
-              json['reportedUser'] as Map<String, dynamic>,
+      resolutionNotes:
+          (json['resolutionNotes'] ?? json['resolution_notes']) as String?,
+      reviewedBy: (json['reviewedBy'] ?? json['reviewed_by']) as String?,
+      reviewedAt: (json['reviewedAt'] ?? json['reviewed_at']) != null
+          ? DateTime.tryParse(
+              (json['reviewedAt'] ?? json['reviewed_at']) as String,
             )
           : null,
-      reviewer: json['reviewer'] != null
-          ? ReportUserInfo.fromJson(json['reviewer'] as Map<String, dynamic>)
+      createdAt:
+          DateTime.tryParse(
+            (json['createdAt'] ?? json['created_at']) as String? ?? '',
+          ) ??
+          DateTime.now(),
+      updatedAt:
+          DateTime.tryParse(
+            (json['updatedAt'] ?? json['updated_at']) as String? ?? '',
+          ) ??
+          DateTime.now(),
+      reporter: reporterJson != null
+          ? ReportUserInfo.fromJson(reporterJson as Map<String, dynamic>)
+          : null,
+      reportedUser: reportedUserJson != null
+          ? ReportUserInfo.fromJson(reportedUserJson as Map<String, dynamic>)
+          : null,
+      reviewer: reviewerJson != null
+          ? ReportUserInfo.fromJson(reviewerJson as Map<String, dynamic>)
           : null,
       listing: json['listing'] != null
           ? ListingInfo.fromJson(json['listing'] as Map<String, dynamic>)
@@ -283,8 +300,9 @@ class ReportUserInfo {
 
   factory ReportUserInfo.fromJson(Map<String, dynamic> json) {
     return ReportUserInfo(
-      id: json['id'] as String? ?? '',
-      name: json['name'] as String? ?? '',
+      id: (json['id'] ?? '').toString(),
+      name: (json['name'] ?? json['fullName'] ?? json['full_name'] ?? '')
+          .toString(),
       email: json['email'] as String?,
     );
   }

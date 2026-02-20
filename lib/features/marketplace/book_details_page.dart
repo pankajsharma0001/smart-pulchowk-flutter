@@ -227,15 +227,22 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     }
   }
 
-  void _shareListing() {
+  Future<void> _shareListing() async {
+    final listingUrl = '${AppConstants.baseUrl}/books/${_book.id}';
     final text =
-        'Check out this book on Smart Pulchowk: \n\n'
-        '${_book.title}\n'
-        'Price: Rs. ${_book.price}\n'
-        'Condition: ${_book.condition.name}\n\n'
-        'Download the app to see more!';
-    // ignore: deprecated_member_use
-    Share.share(text, subject: 'Book Listing: ${_book.title}');
+        '''
+Check out this book listing: ${_book.title}
+
+Price: Rs. ${_book.price}
+Condition: ${_book.condition.displayName}
+Author: ${_book.author}
+
+View listing: $listingUrl
+''';
+
+    await SharePlus.instance.share(
+      ShareParams(text: text, subject: 'Book Listing: ${_book.title}'),
+    );
   }
 
   @override

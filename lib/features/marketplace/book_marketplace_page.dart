@@ -357,6 +357,7 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
   }
 
   void _openBookDetails(BookListing book) async {
+    _searchFocusNode.unfocus();
     final didChange = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => BookDetailsPage(listing: book)),

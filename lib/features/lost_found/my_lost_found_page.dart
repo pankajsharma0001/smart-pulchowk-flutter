@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/core/models/lost_found.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
-import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/features/lost_found/widgets/lost_found_card.dart';
 import 'package:smart_pulchowk/features/lost_found/lost_found_details_page.dart';
 import 'package:smart_pulchowk/core/widgets/smart_image.dart';
@@ -106,6 +105,7 @@ class _MyLostFoundPageState extends State<MyLostFoundPage>
           return LostFoundCard(
             item: _myItems[index],
             type: LostFoundCardType.list,
+            showOwner: false,
             onTap: () async {
               await Navigator.push(
                 context,
@@ -123,7 +123,9 @@ class _MyLostFoundPageState extends State<MyLostFoundPage>
   }
 
   Widget _buildClaimsList() {
-    if (_isLoading && _myClaims.isEmpty) return _buildLoadingState();
+    if (_isLoading && _myClaims.isEmpty) {
+      return _buildLoadingState(isClaims: true);
+    }
     if (_error != null) return _buildErrorState();
     if (_myClaims.isEmpty) {
       return _buildEmptyState(
@@ -247,12 +249,98 @@ class _MyLostFoundPageState extends State<MyLostFoundPage>
     );
   }
 
-  Widget _buildLoadingState() {
-    return ListView.builder(
+  Widget _buildLoadingState({bool isClaims = false}) {
+    return ListView.separated(
       padding: const EdgeInsets.all(AppSpacing.md),
+      physics: const NeverScrollableScrollPhysics(),
       itemCount: 5,
-      itemBuilder: (context, index) =>
-          const ShimmerEventRow(), // Using ShimmerEventRow as it matches list layout
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
+      itemBuilder: (context, index) {
+        if (isClaims) {
+          return _buildClaimShimmer(context);
+        }
+        return _buildItemShimmer(context);
+      },
+    );
+  }
+
+  Widget _buildItemShimmer(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Row(
+        children: [
+          _shimmerBox(80, 80, radius: AppRadius.md),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _shimmerBox(double.infinity, 16),
+                const SizedBox(height: 8),
+                _shimmerBox(160, 12),
+                const SizedBox(height: 8),
+                _shimmerBox(100, 12),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildClaimShimmer(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.sm),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Row(
+        children: [
+          _shimmerBox(60, 60, radius: AppRadius.md),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _shimmerBox(double.infinity, 14),
+                const SizedBox(height: 6),
+                _shimmerBox(180, 12),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          _shimmerBox(60, 22, radius: 6),
+        ],
+      ),
+    );
+  }
+
+  Widget _shimmerBox(double width, double height, {double radius = 4}) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.3, end: 0.8),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeInOut,
+      onEnd: () {
+        /* triggers rebuild for pulsing effect */
+      },
+      builder: (context, value, _) {
+        return Opacity(
+          opacity: value,
+          child: Container(
+            width: width,
+            height: height,
+            decoration: BoxDecoration(
+              color: Colors.grey.withValues(alpha: 0.25),
+              borderRadius: BorderRadius.circular(radius),
+            ),
+          ),
+        );
+      },
     );
   }
 

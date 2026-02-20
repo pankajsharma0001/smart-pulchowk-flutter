@@ -324,8 +324,24 @@ class _NotificationBellState extends State<_NotificationBell> {
             haptics.selectionClick();
             await Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const NotificationsPage(),
+              PageRouteBuilder(
+                pageBuilder: (_, animation, secondaryAnimation) =>
+                    const NotificationsPage(),
+                transitionsBuilder: (_, animation, secondaryAnimation, child) {
+                  final offsetTween = Tween<Offset>(
+                    begin: const Offset(0, 0.04),
+                    end: Offset.zero,
+                  ).chain(CurveTween(curve: Curves.easeOutCubic));
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: animation.drive(offsetTween),
+                      child: child,
+                    ),
+                  );
+                },
+                transitionDuration: const Duration(milliseconds: 260),
+                reverseTransitionDuration: const Duration(milliseconds: 220),
               ),
             );
             // Refresh count when returning
@@ -351,7 +367,7 @@ class _NotificationBellState extends State<_NotificationBell> {
               constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Center(
                 child: Text(
-                  _unreadCount > 9 ? '9+' : '$_unreadCount',
+                  _unreadCount > 99 ? '99+' : '$_unreadCount',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 9,

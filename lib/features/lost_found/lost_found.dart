@@ -3,6 +3,7 @@ import 'package:smart_pulchowk/core/models/lost_found.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
+import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/features/lost_found/widgets/lost_found_card.dart';
 import 'package:smart_pulchowk/features/lost_found/lost_found_details_page.dart';
 import 'package:smart_pulchowk/features/lost_found/report_lost_found_page.dart';
@@ -20,8 +21,11 @@ class _LostFoundPageState extends State<LostFoundPage>
   late TabController _tabController;
   final ApiService _apiService = ApiService();
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _categoryScrollController = ScrollController();
+  final Map<String, GlobalKey> _categoryChipKeys = {};
 
   List<LostFoundItem> _items = [];
+  final Map<String, List<LostFoundItem>> _itemsByQuery = {};
   bool _isLoading = true;
   String? _error;
   LostFoundCategory? _selectedCategory;
@@ -33,6 +37,7 @@ class _LostFoundPageState extends State<LostFoundPage>
     _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(_handleTabChange);
     _loadItems();
+    _warmInitialTabCaches();
   }
 
   @override
@@ -40,6 +45,7 @@ class _LostFoundPageState extends State<LostFoundPage>
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     _searchController.dispose();
+    _categoryScrollController.dispose();
     super.dispose();
   }
 
@@ -52,8 +58,14 @@ class _LostFoundPageState extends State<LostFoundPage>
   Future<void> _loadItems({bool forceRefresh = false}) async {
     if (!mounted) return;
 
+    final queryKey = _buildQueryKey();
+    final cachedItems = _itemsByQuery[queryKey];
+
     setState(() {
-      _isLoading = true;
+      _isLoading = forceRefresh ? true : cachedItems == null;
+      if (!forceRefresh && cachedItems != null) {
+        _items = cachedItems;
+      }
       _error = null;
     });
 
@@ -62,7 +74,7 @@ class _LostFoundPageState extends State<LostFoundPage>
       if (_tabController.index == 1) type = 'lost';
       if (_tabController.index == 2) type = 'found';
 
-      final items = await _apiService.getLostFoundItems(
+      final fetchedItems = await _apiService.getLostFoundItems(
         itemType: type,
         category: _selectedCategory?.name,
         q: _searchQuery.isNotEmpty ? _searchQuery : null,
@@ -71,7 +83,8 @@ class _LostFoundPageState extends State<LostFoundPage>
 
       if (mounted) {
         setState(() {
-          _items = items;
+          _itemsByQuery[queryKey] = fetchedItems;
+          _items = fetchedItems;
           _isLoading = false;
         });
       }
@@ -83,6 +96,58 @@ class _LostFoundPageState extends State<LostFoundPage>
         });
       }
     }
+  }
+
+  Future<void> _refreshItems() async {
+    await MainLayout.of(context)?.refreshUserRole();
+    if (!mounted) return;
+    await _loadItems(forceRefresh: true);
+  }
+
+  Future<void> _warmInitialTabCaches() async {
+    try {
+      final results = await Future.wait([
+        _apiService.getLostFoundItems(),
+        _apiService.getLostFoundItems(itemType: 'lost'),
+        _apiService.getLostFoundItems(itemType: 'found'),
+      ]);
+      if (!mounted) return;
+      _itemsByQuery['all|all|'] = results[0];
+      _itemsByQuery['lost|all|'] = results[1];
+      _itemsByQuery['found|all|'] = results[2];
+    } catch (_) {
+      // Ignore warm-up failures; normal loading path will still work.
+    }
+  }
+
+  String _buildQueryKey() {
+    String itemType = 'all';
+    if (_tabController.index == 1) itemType = 'lost';
+    if (_tabController.index == 2) itemType = 'found';
+    final category = _selectedCategory?.name ?? 'all';
+    final query = _searchQuery.trim();
+    return '$itemType|$category|$query';
+  }
+
+  GlobalKey _keyForCategory(LostFoundCategory? category) {
+    final key = category?.name ?? 'all';
+    return _categoryChipKeys.putIfAbsent(key, () => GlobalKey());
+  }
+
+  void _selectCategory(LostFoundCategory? category) {
+    setState(() => _selectedCategory = category);
+    _loadItems();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final chipContext = _keyForCategory(category).currentContext;
+      if (chipContext != null) {
+        Scrollable.ensureVisible(
+          chipContext,
+          duration: const Duration(milliseconds: 260),
+          curve: Curves.easeOutCubic,
+          alignment: 0.5,
+        );
+      }
+    });
   }
 
   @override
@@ -97,6 +162,7 @@ class _LostFoundPageState extends State<LostFoundPage>
               icon: const Icon(Icons.person_outline_rounded),
               tooltip: 'My Items',
               onPressed: () {
+                FocusScope.of(context).unfocus();
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -158,7 +224,7 @@ class _LostFoundPageState extends State<LostFoundPage>
             _buildCategoryFilter(),
             Expanded(
               child: RefreshIndicator(
-                onRefresh: () => _loadItems(forceRefresh: true),
+                onRefresh: _refreshItems,
                 child: _isLoading && _items.isEmpty
                     ? _buildLoadingState()
                     : _error != null
@@ -176,6 +242,7 @@ class _LostFoundPageState extends State<LostFoundPage>
                 padding: const EdgeInsets.only(bottom: 80),
                 child: FloatingActionButton.extended(
                   onPressed: () async {
+                    FocusScope.of(context).unfocus();
                     final result = await Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -199,6 +266,7 @@ class _LostFoundPageState extends State<LostFoundPage>
       height: 50,
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: ListView.builder(
+        controller: _categoryScrollController,
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         itemCount: LostFoundCategory.values.length + 1,
@@ -206,14 +274,14 @@ class _LostFoundPageState extends State<LostFoundPage>
           if (index == 0) {
             final isSelected = _selectedCategory == null;
             return Padding(
+              key: _keyForCategory(null),
               padding: const EdgeInsets.only(right: AppSpacing.sm),
               child: FilterChip(
                 label: const Text('All Categories'),
                 selected: isSelected,
                 onSelected: (selected) {
                   if (selected) {
-                    setState(() => _selectedCategory = null);
-                    _loadItems();
+                    _selectCategory(null);
                   }
                 },
               ),
@@ -223,13 +291,13 @@ class _LostFoundPageState extends State<LostFoundPage>
           final category = LostFoundCategory.values[index - 1];
           final isSelected = _selectedCategory == category;
           return Padding(
+            key: _keyForCategory(category),
             padding: const EdgeInsets.only(right: AppSpacing.sm),
             child: FilterChip(
               label: Text(_formatCategoryName(category)),
               selected: isSelected,
               onSelected: (selected) {
-                setState(() => _selectedCategory = selected ? category : null);
-                _loadItems();
+                _selectCategory(selected ? category : null);
               },
             ),
           );
@@ -264,6 +332,7 @@ class _LostFoundPageState extends State<LostFoundPage>
         return LostFoundCard(
           item: _items[index],
           onTap: () {
+            FocusScope.of(context).unfocus();
             Navigator.push(
               context,
               MaterialPageRoute(

@@ -9,12 +9,14 @@ class LostFoundCard extends StatelessWidget {
   final LostFoundItem item;
   final LostFoundCardType type;
   final VoidCallback? onTap;
+  final bool showOwner;
 
   const LostFoundCard({
     super.key,
     required this.item,
     this.type = LostFoundCardType.grid,
     this.onTap,
+    this.showOwner = true,
   });
 
   @override
@@ -140,50 +142,41 @@ class LostFoundCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Container(
-                          width: 16,
-                          height: 16,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: ClipOval(
-                            child: item.owner?['image'] != null
-                                ? SmartImage(
-                                    imageUrl: item.owner!['image'],
-                                    fit: BoxFit.cover,
-                                    errorWidget: const Icon(
-                                      Icons.person,
-                                      size: 10,
-                                      color: AppColors.primary,
-                                    ),
-                                  )
-                                : const Icon(
+                    if (showOwner && item.owner != null) ...[
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 8,
+                            backgroundColor: AppColors.primary.withValues(
+                              alpha: 0.1,
+                            ),
+                            backgroundImage: item.owner!['image'] != null
+                                ? NetworkImage(item.owner!['image'])
+                                : null,
+                            child: item.owner!['image'] == null
+                                ? const Icon(
                                     Icons.person,
                                     size: 10,
                                     color: AppColors.primary,
-                                  ),
+                                  )
+                                : null,
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            item.owner?['name']?.toString() ?? 'Unknown',
-                            style: AppTextStyles.caption.copyWith(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: isDark
-                                  ? AppColors.textPrimaryDark
-                                  : AppColors.textPrimary,
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              item.owner!['name'] ?? 'User',
+                              style: AppTextStyles.caption.copyWith(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                    ],
                     const Spacer(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -286,51 +279,34 @@ class LostFoundCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: ClipOval(
-                          child: item.owner?['image'] != null
-                              ? SmartImage(
-                                  imageUrl: item.owner!['image'],
-                                  fit: BoxFit.cover,
-                                  errorWidget: const Icon(
-                                    Icons.person,
-                                    size: 10,
-                                    color: AppColors.primary,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.person,
-                                  size: 10,
-                                  color: AppColors.primary,
-                                ),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          item.owner?['name']?.toString() ?? 'Unknown',
-                          style: AppTextStyles.caption.copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: isDark
-                                ? AppColors.textPrimaryDark
-                                : AppColors.textPrimary,
+                  if (showOwner && item.owner != null) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 7,
+                          backgroundColor: AppColors.primary.withValues(
+                            alpha: 0.1,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          backgroundImage: item.owner!['image'] != null
+                              ? NetworkImage(item.owner!['image'])
+                              : null,
+                          child: item.owner!['image'] == null
+                              ? const Icon(
+                                  Icons.person,
+                                  size: 8,
+                                  color: AppColors.primary,
+                                )
+                              : null,
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 4),
+                        Text(
+                          item.owner!['name'] ?? 'User',
+                          style: AppTextStyles.caption.copyWith(fontSize: 10),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 4),
                   Row(
                     children: [

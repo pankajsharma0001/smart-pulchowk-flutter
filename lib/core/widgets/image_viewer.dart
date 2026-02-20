@@ -30,6 +30,13 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
     _pageController = PageController(initialPage: widget.initialIndex);
     // Hide status and navigation bars for immersive viewing
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarDividerColor: Colors.transparent,
+      ),
+    );
   }
 
   @override
@@ -75,7 +82,7 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
               physics: const BouncingScrollPhysics(),
               itemBuilder: (context, index) {
                 return InteractiveViewer(
-                  minScale: 0.5,
+                  minScale: 1.0,
                   maxScale: 4.0,
                   child: Center(
                     child: Hero(

@@ -80,8 +80,11 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
     }
   }
 
-  Future<void> _fetchItemClaims() async {
-    final claims = await _apiService.getLostFoundItemClaims(widget.itemId);
+  Future<void> _fetchItemClaims({bool forceRefresh = false}) async {
+    final claims = await _apiService.getLostFoundItemClaims(
+      widget.itemId,
+      forceRefresh: forceRefresh,
+    );
     if (mounted) {
       setState(() {
         _itemClaims = claims;
@@ -137,7 +140,7 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
           context,
         ).showSnackBar(SnackBar(content: Text('Claim $status')));
         _fetchItemDetails(forceRefresh: true);
-        _fetchItemClaims();
+        _fetchItemClaims(forceRefresh: true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result.error ?? 'Failed to update claim')),
@@ -178,8 +181,9 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Fix 6: Show skeleton loading instead of plain spinner
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return _buildSkeletonPage();
     }
 
     if (_item == null) {
@@ -257,14 +261,15 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
                   const SizedBox(height: AppSpacing.lg),
                   _buildContactSection(isOwner),
                   if (isOwner) ...[
-                    const SizedBox(height: AppSpacing.xl),
+                    const SizedBox(height: AppSpacing.md),
                     _buildOwnerControls(),
-                    const SizedBox(height: AppSpacing.xl),
+                    if (_item!.status == LostFoundStatus.open)
+                      const SizedBox(height: AppSpacing.md),
                     _buildClaimsList(),
                   ],
                   const SizedBox(
-                    height: 160,
-                  ), // Increased space for bottom action
+                    height: 220,
+                  ), // Increased space for bottom action to avoid overlap
                 ],
               ),
             ),
@@ -277,6 +282,91 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
     );
   }
 
+  // Fix 6: Skeleton loading page
+  Widget _buildSkeletonPage() {
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 300,
+            pinned: true,
+            flexibleSpace: FlexibleSpaceBar(
+              background: _buildShimmer(
+                child: ColoredBox(
+                  color: Colors.grey.withValues(alpha: 0.25),
+                  child: const SizedBox.expand(),
+                ),
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Badges
+                  Row(
+                    children: [
+                      _skeletonBox(width: 60, height: 24, radius: 8),
+                      const SizedBox(width: AppSpacing.sm),
+                      _skeletonBox(width: 80, height: 24, radius: 8),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  // Title
+                  _skeletonBox(width: double.infinity, height: 28, radius: 6),
+                  const SizedBox(height: AppSpacing.xs),
+                  _skeletonBox(width: 200, height: 16, radius: 4),
+                  const SizedBox(height: AppSpacing.lg),
+                  // Detail rows
+                  _skeletonBox(width: double.infinity, height: 50, radius: 8),
+                  const SizedBox(height: AppSpacing.sm),
+                  _skeletonBox(width: double.infinity, height: 50, radius: 8),
+                  const Divider(height: AppSpacing.xl),
+                  _skeletonBox(width: 120, height: 20, radius: 4),
+                  const SizedBox(height: AppSpacing.sm),
+                  _skeletonBox(width: double.infinity, height: 80, radius: 8),
+                  const SizedBox(height: AppSpacing.lg),
+                  _skeletonBox(width: double.infinity, height: 80, radius: 12),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmer({required Widget child}) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.4, end: 0.9),
+      duration: const Duration(milliseconds: 900),
+      curve: Curves.easeInOut,
+      builder: (context, value, _) {
+        return Opacity(opacity: value, child: child);
+      },
+      onEnd: () => setState(() {}),
+    );
+  }
+
+  Widget _skeletonBox({
+    required double width,
+    required double height,
+    double radius = 4,
+  }) {
+    return _buildShimmer(
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.grey.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(radius),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAppBar(BuildContext context) {
     return SliverAppBar(
       expandedHeight: 300,
@@ -286,13 +376,13 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
           fit: StackFit.expand,
           children: [
             if (_item!.images.isNotEmpty)
+              // Fix 1: Use regular navigator (no rootNavigator) so it shares the same Navigator
               PageView.builder(
                 itemCount: _item!.images.length,
                 itemBuilder: (context, index) {
                   return GestureDetector(
                     onTap: () {
-                      Navigator.push(
-                        context,
+                      Navigator.of(context, rootNavigator: true).push(
                         MaterialPageRoute(
                           builder: (context) => FullScreenImageViewer(
                             imageUrls: _item!.images
@@ -321,18 +411,20 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
               ),
             // Gradient Overlay
             Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withValues(alpha: 0.4),
-                      Colors.transparent,
-                      Colors.transparent,
-                      Colors.black.withValues(alpha: 0.6),
-                    ],
-                    stops: const [0, 0.2, 0.7, 1],
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.4),
+                        Colors.transparent,
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.6),
+                      ],
+                      stops: const [0, 0.2, 0.7, 1],
+                    ),
                   ),
                 ),
               ),
@@ -385,9 +477,8 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
   }
 
   Widget _buildPostedBy() {
-    final ownerName = _item!.owner?['name'] as String? ?? 'Student';
     return Text(
-      'Posted by $ownerName • ${_item!.timeAgo}',
+      'Posted ${_item!.timeAgo}',
       style: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
     );
   }
@@ -468,7 +559,7 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
         AppSpacing.md,
         AppSpacing.md,
         AppSpacing.md,
-        AppSpacing.md + MediaQuery.of(context).padding.bottom,
+        AppSpacing.lg + MediaQuery.of(context).padding.bottom,
       ),
       color: AppColors.warning.withValues(alpha: 0.1),
       child: Row(
@@ -476,11 +567,32 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
           const Icon(Icons.info_outline_rounded, color: AppColors.warning),
           const SizedBox(width: AppSpacing.md),
           Expanded(
-            child: Text(
-              'This is a lost item. If you found it, please contact the owner.',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.warningContainerDark,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'This is a lost item. If you found it, please notify the owner.',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: AppColors.warningContainerDark,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton.icon(
+                  onPressed: () => _showClaimDialog(),
+                  icon: const Icon(Icons.handshake_rounded, size: 16),
+                  label: const Text('I FOUND THIS'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.warningContainerDark,
+                    side: BorderSide(color: AppColors.warningContainerDark),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -563,7 +675,7 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
         AppSpacing.md,
         AppSpacing.md,
         AppSpacing.md,
-        AppSpacing.md + MediaQuery.of(context).padding.bottom,
+        AppSpacing.lg + MediaQuery.of(context).padding.bottom,
       ),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
@@ -633,9 +745,14 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
                   ],
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                const Text(
-                  'Explain how you know this item belongs to you (e.g., unique marks, contents).',
-                  style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+                Text(
+                  _item!.itemType == LostFoundItemType.lost
+                      ? 'Tell the owner where you found it and any relevant details.'
+                      : 'Explain how you know this item belongs to you (e.g., unique marks, contents).',
+                  style: const TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 13,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 TextField(
@@ -648,6 +765,13 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
                 const SizedBox(height: AppSpacing.lg),
                 FilledButton(
                   onPressed: _isActionLoading ? null : _submitClaim,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                   child: _isActionLoading
                       ? const SizedBox(
                           height: 20,
@@ -657,8 +781,15 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text('Submit Claim'),
+                      : const Text(
+                          'Submit Claim',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
                 ),
+                const SizedBox(height: AppSpacing.lg),
               ],
             ),
           ),
@@ -714,8 +845,9 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Fix 4: Removed excessive SizedBox - let column spacing handle it naturally
         Text('Claims (${_itemClaims.length})', style: AppTextStyles.h4),
-        const SizedBox(height: AppSpacing.md),
+        const SizedBox(height: AppSpacing.sm),
         if (_itemClaims.isEmpty)
           const Text(
             'No claims yet.',
@@ -723,6 +855,7 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
           )
         else
           ListView.separated(
+            padding: EdgeInsets.zero,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _itemClaims.length,
@@ -759,10 +892,13 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.sm),
-          Text(claim.message, style: AppTextStyles.bodyMedium),
+          const SizedBox(height: AppSpacing.xs),
+          Text(
+            claim.message.replaceAll(RegExp(r'\s+'), ' ').trim(),
+            style: AppTextStyles.bodyMedium,
+          ),
           if (claim.status == LostFoundClaimStatus.pending) ...[
-            const SizedBox(height: AppSpacing.md),
+            const SizedBox(height: AppSpacing.sm),
             Row(
               children: [
                 Expanded(

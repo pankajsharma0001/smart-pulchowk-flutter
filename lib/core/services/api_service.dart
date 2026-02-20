@@ -378,27 +378,46 @@ class ApiService {
   }
 
   /// Process image URLs to handle Google Drive and Cloudinary optimizations.
-  static String? processImageUrl(String? url, {int? width}) {
+  static String? processImageUrl(
+    String? url, {
+    int? width,
+    bool optimizeCloudinary = true,
+  }) {
     if (url == null || url.isEmpty) return null;
+    final normalizedUrl = url.trim();
 
     // Handle Google Drive links
-    if (url.contains('drive.google.com')) {
+    if (normalizedUrl.contains('drive.google.com')) {
       final regExp = RegExp(r'\/file\/d\/([^\/]+)\/');
-      final match = regExp.firstMatch(url);
+      final match = regExp.firstMatch(normalizedUrl);
       if (match != null && match.groupCount >= 1) {
         final fileId = match.group(1);
         return 'https://docs.google.com/uc?export=download&id=$fileId';
       }
     }
 
-    // Handle Cloudinary optimizations
-    if (url.contains('cloudinary.com') && url.contains('/upload/')) {
-      final transform =
-          'f_auto,q_auto${width != null ? ',w_$width,c_limit' : ''}';
-      return url.replaceFirst('/upload/', '/upload/$transform/');
+    // Handle relative paths returned by backend (e.g., /uploads/.. or uploads/..)
+    if (normalizedUrl.startsWith('/')) {
+      return '${AppConstants.baseUrl}$normalizedUrl';
+    }
+    final parsed = Uri.tryParse(normalizedUrl);
+    if (parsed != null &&
+        !parsed.hasScheme &&
+        parsed.host.isEmpty &&
+        !normalizedUrl.startsWith('data:')) {
+      return '${AppConstants.baseUrl}/${normalizedUrl.replaceFirst(RegExp(r'^/+'), '')}';
     }
 
-    return url;
+    // Handle Cloudinary optimizations
+    if (optimizeCloudinary &&
+        normalizedUrl.contains('cloudinary.com') &&
+        normalizedUrl.contains('/upload/')) {
+      final transform =
+          'f_auto,q_auto${width != null ? ',w_$width,c_limit' : ''}';
+      return normalizedUrl.replaceFirst('/upload/', '/upload/$transform/');
+    }
+
+    return normalizedUrl;
   }
 
   /// Whether a URL belongs to a social media CDN that might have restricted access or headers.
@@ -2770,6 +2789,7 @@ class ApiService {
       if (json['success'] == true && json['data'] != null) {
         _invalidateCache(AppConstants.cacheMyLostFoundClaims);
         _invalidateCache('${AppConstants.cacheLostFoundDetail}$itemId');
+        _invalidateCache('lost_found_item_claims_$itemId');
         return ApiResult.success(
           LostFoundClaim.fromJson(json['data'] as Map<String, dynamic>),
         );
@@ -2794,6 +2814,7 @@ class ApiService {
       final json = jsonDecode(response.body);
       if (json['success'] == true) {
         _invalidateCache('${AppConstants.cacheLostFoundDetail}$itemId');
+        _invalidateCache('lost_found_item_claims_$itemId');
         return ApiResult(success: true);
       }
       return ApiResult.failure(json['message'] ?? 'Failed to update claim');
@@ -2828,22 +2849,31 @@ class ApiService {
   }
 
   /// Get claims for a specific item (owner only).
-  Future<List<LostFoundClaim>> getLostFoundItemClaims(int itemId) async {
-    try {
-      final response = await _authGet(
-        '${AppConstants.lostFound}/$itemId/claims',
-      );
-      final json = jsonDecode(response.body);
-      if (json['success'] == true && json['data'] != null) {
-        return (json['data'] as List)
-            .map((e) => LostFoundClaim.fromJson(e as Map<String, dynamic>))
-            .toList();
-      }
-      return [];
-    } catch (e) {
-      debugPrint('Error getting item claims: $e');
-      return [];
-    }
+  Future<List<LostFoundClaim>> getLostFoundItemClaims(
+    int itemId, {
+    bool forceRefresh = false,
+  }) async {
+    return await _cachedFetch<List<LostFoundClaim>>(
+          key: 'lost_found_item_claims_$itemId',
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet(
+              '${AppConstants.lostFound}/$itemId/claims',
+            );
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true && json['data'] != null) {
+                return json['data'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
+              .map((e) => LostFoundClaim.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        ) ??
+        [];
   }
 
   /// Update item status (owner only).
@@ -2875,7 +2905,7 @@ class ApiService {
       final request = http.MultipartRequest(
         'POST',
         Uri.parse(
-          '${AppConstants.baseUrl}${AppConstants.lostFound}/$itemId/images',
+          '${AppConstants.fullApiUrl}${AppConstants.lostFound}/$itemId/images',
         ),
       );
 

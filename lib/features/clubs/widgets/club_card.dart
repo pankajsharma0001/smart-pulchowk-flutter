@@ -215,6 +215,7 @@ class ClubCard extends StatelessWidget {
   }
 
   void _navigateToDetails(BuildContext context) {
+    FocusScope.of(context).unfocus();
     Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => ClubDetailsPage(club: club)),

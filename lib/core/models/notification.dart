@@ -62,6 +62,59 @@ class InAppNotification {
   final String? actorAvatarUrl;
   final String? actorName;
 
+  bool get isPdf {
+    final titleLower = title.toLowerCase();
+    final bodyLower = body.toLowerCase();
+
+    // Check title/body for explicit PDF mentions
+    if (titleLower.contains('pdf') || bodyLower.contains('pdf')) return true;
+
+    // Check processed thumbnail URL
+    if (thumbnailUrl?.toLowerCase().contains('.pdf') ?? false) return true;
+
+    // Deep scan all data fields for PDF indicators
+    if (data != null) {
+      for (final entry in data!.entries) {
+        final val = entry.value?.toString().toLowerCase() ?? '';
+        if (val.isEmpty) continue;
+
+        // Check for extension
+        if (val.endsWith('.pdf') || val.contains('.pdf?')) return true;
+
+        // Check for Google Drive PDF indicators (often have "pdf" in metadata or title in data)
+        if (val.contains('drive.google.com') &&
+            (titleLower.contains('notice') || bodyLower.contains('notice'))) {
+          // Heuristic: If it's a notice and has a drive link, it's almost certainly a PDF
+          // unless it explicitly looks like an image (which we check for elsewhere)
+          return true;
+        }
+
+        // Check explicit mime/type flags
+        if (entry.key.toLowerCase().contains('type') && val == 'pdf')
+          return true;
+      }
+
+      // Heuristic for notices: notice_created usually implies a document/attachment
+      if (type == NotificationType.noticeCreated ||
+          type == NotificationType.noticeUpdated) {
+        final attachment =
+            data!['attachmentUrl']?.toString() ?? data!['url']?.toString();
+        if (attachment != null && attachment.isNotEmpty) {
+          final attLower = attachment.toLowerCase();
+          final isImage =
+              attLower.contains('.jpg') ||
+              attLower.contains('.jpeg') ||
+              attLower.contains('.png') ||
+              attLower.contains('.webp');
+          if (!isImage)
+            return true; // If notice has attachment and it's not an image, assume PDF
+        }
+      }
+    }
+
+    return false;
+  }
+
   InAppNotification({
     required this.id,
     required this.title,

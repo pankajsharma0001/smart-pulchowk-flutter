@@ -87,16 +87,22 @@ class NavigationService {
         _navigateToTab(8);
 
         if (attachmentUrl != null && attachmentUrl.isNotEmpty) {
-          final urlLower = attachmentUrl.toLowerCase();
-          if (urlLower.endsWith('.pdf')) {
+          if (notification.isPdf) {
             _navigateToRoot(
               CustomPdfViewer(url: attachmentUrl, title: noticeTitle),
             );
-          } else if (urlLower.endsWith('.jpg') ||
-              urlLower.endsWith('.jpeg') ||
-              urlLower.endsWith('.png') ||
-              urlLower.endsWith('.webp')) {
-            _navigateToRoot(FullScreenImageViewer(imageUrls: [attachmentUrl]));
+          } else {
+            final urlLower = attachmentUrl.toLowerCase();
+            final isImage =
+                urlLower.contains('.jpg') ||
+                urlLower.contains('.jpeg') ||
+                urlLower.contains('.png') ||
+                urlLower.contains('.webp');
+            if (isImage) {
+              _navigateToRoot(
+                FullScreenImageViewer(imageUrls: [attachmentUrl]),
+              );
+            }
           }
         }
 
