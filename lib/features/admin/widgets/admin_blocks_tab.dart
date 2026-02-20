@@ -71,6 +71,8 @@ class _AdminBlocksTabState extends State<AdminBlocksTab> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       children: [
         Padding(
@@ -120,14 +122,21 @@ class _AdminBlocksTabState extends State<AdminBlocksTab> {
                     bottom: 100,
                   ),
                   itemCount: _blocks.length,
-                  separatorBuilder: (_, __) => const Divider(),
+                  separatorBuilder: (_, __) => Divider(
+                    height: 1,
+                    color: isDark
+                        ? AppColors.borderDark
+                        : AppColors.borderLight,
+                  ),
                   itemBuilder: (context, index) {
                     final block = _blocks[index];
                     final isBusy = _busyBlockId == block.id;
 
                     return ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: AppColors.errorContainer,
+                        backgroundColor: isDark
+                            ? AppColors.error.withValues(alpha: 0.2)
+                            : AppColors.errorContainer,
                         backgroundImage: block.blockedUser?.image != null
                             ? CachedNetworkImageProvider(
                                 ApiService.processImageUrl(

@@ -31,35 +31,42 @@ class _AdminPageState extends State<AdminPage>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
-      appBar: AppBar(
-        title: const Text(
-          'Admin Control Center',
-          style: TextStyle(fontWeight: FontWeight.w900),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.backgroundDark
+            : AppColors.backgroundLight,
+        appBar: AppBar(
+          title: const Text(
+            'Admin Control Center',
+            style: TextStyle(fontWeight: FontWeight.w900),
+          ),
+          bottom: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            labelColor: AppColors.secondary,
+            unselectedLabelColor: AppColors.textSecondary.withValues(
+              alpha: 0.7,
+            ),
+            indicatorColor: AppColors.secondary,
+            tabs: const [
+              Tab(text: 'Overview'),
+              Tab(text: 'User Roles'),
+              Tab(text: 'Moderation'),
+              Tab(text: 'Blocks'),
+            ],
+          ),
         ),
-        bottom: TabBar(
+        body: TabBarView(
           controller: _tabController,
-          isScrollable: true,
-          labelColor: AppColors.secondary,
-          unselectedLabelColor: AppColors.textSecondary.withOpacity(0.7),
-          indicatorColor: AppColors.secondary,
-          tabs: const [
-            Tab(text: 'Overview'),
-            Tab(text: 'User Roles'),
-            Tab(text: 'Moderation'),
-            Tab(text: 'Blocks'),
+          children: const [
+            AdminOverviewTab(),
+            AdminUsersTab(),
+            AdminModerationTab(),
+            AdminBlocksTab(),
           ],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: const [
-          AdminOverviewTab(),
-          AdminUsersTab(),
-          AdminModerationTab(),
-          AdminBlocksTab(),
-        ],
       ),
     );
   }
@@ -97,12 +104,14 @@ class AdminOverviewTab extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Platform Overview',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
-                    color: AppColors.textPrimary,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -110,7 +119,9 @@ class AdminOverviewTab extends StatelessWidget {
                   'Manage users, verify sellers, and moderate content to keep the platform safe.',
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -123,36 +134,36 @@ class AdminOverviewTab extends StatelessWidget {
                   childAspectRatio: 1.5,
                   children: [
                     _buildStatCard(
+                      context,
                       'Total Users',
                       stats.users.toString(),
                       '${stats.teachers} Teachers',
-                      const Color(0xFFEDE9FE), // violet-100
                       const Color(0xFF7C3AED), // violet-600
                       Icons.people_alt_rounded,
                     ),
                     _buildStatCard(
+                      context,
                       'Active Listings',
                       stats.listingsAvailable.toString(),
                       'Marketplace is active',
-                      const Color(0xFFDCFCE7), // emerald-100
                       const Color(0xFF059669), // emerald-600
                       Icons.shopping_bag_rounded,
                     ),
                     _buildStatCard(
+                      context,
                       'Open Reports',
                       stats.openReports.toString(),
                       '${stats.activeBlocks} blocked users',
-                      const Color(0xFFFEF3C7), // amber-100
                       stats.openReports > 0
                           ? const Color(0xFFD97706)
-                          : AppColors.textPrimary,
+                          : AppColors.primary,
                       Icons.report_problem_rounded,
                     ),
                     _buildStatCard(
+                      context,
                       'Avg Rating',
                       stats.averageSellerRating.toStringAsFixed(1),
                       '${stats.ratingsCount} reviews total',
-                      AppColors.infoContainer,
                       AppColors.info,
                       Icons.star_rounded,
                     ),
@@ -167,22 +178,37 @@ class AdminOverviewTab extends StatelessWidget {
   }
 
   Widget _buildStatCard(
+    BuildContext context,
     String title,
     String value,
     String subtitle,
-    Color bgColor,
-    Color textColor,
+    Color color,
     IconData icon,
   ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // In dark mode, use the color as the text/icon color but make it lighter
+    // In light mode, use a faint version for background and dark version for text
+    final Color displayColor = isDark
+        ? Color.lerp(color, Colors.white, 0.4)!
+        : color;
+    final Color iconBackgroundColor = isDark
+        ? color.withValues(alpha: 0.2)
+        : color.withValues(alpha: 0.15);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? AppColors.surfaceContainerDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: bgColor),
+        border: Border.all(
+          color: isDark
+              ? AppColors.borderDark.withValues(alpha: 0.5)
+              : color.withValues(alpha: 0.1),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -198,10 +224,10 @@ class AdminOverviewTab extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: bgColor,
+                  color: iconBackgroundColor,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, size: 18, color: textColor),
+                child: Icon(icon, size: 18, color: displayColor),
               ),
               const SizedBox(width: 4),
               Flexible(
@@ -210,7 +236,7 @@ class AdminOverviewTab extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w900,
-                    color: textColor,
+                    color: isDark ? AppColors.textPrimaryDark : displayColor,
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -227,7 +253,9 @@ class AdminOverviewTab extends StatelessWidget {
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.2,
-                  color: AppColors.textSecondary,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 2),
@@ -235,7 +263,9 @@ class AdminOverviewTab extends StatelessWidget {
                 subtitle,
                 style: TextStyle(
                   fontSize: 10,
-                  color: textColor.withOpacity(0.8),
+                  color: isDark
+                      ? AppColors.textMutedDark
+                      : displayColor.withValues(alpha: 0.8),
                   fontWeight: FontWeight.w500,
                 ),
               ),

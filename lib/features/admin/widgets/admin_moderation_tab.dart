@@ -171,7 +171,11 @@ class _AdminModerationTabState extends State<AdminModerationTab> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppColors.borderLight),
+        side: BorderSide(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? AppColors.borderDark
+              : AppColors.borderLight,
+        ),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -310,9 +314,15 @@ class _AdminModerationTabState extends State<AdminModerationTab> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.backgroundLight,
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? AppColors.surfaceContainerDark
+                      : AppColors.backgroundLight,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.borderLight),
+                  border: Border.all(
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? AppColors.borderDark
+                        : AppColors.borderLight,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -337,10 +347,9 @@ class _AdminModerationTabState extends State<AdminModerationTab> {
                 report.status == ReportStatus.inReview) ...[
               const SizedBox(height: 16),
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   if (report.status == ReportStatus.open) ...[
-                    Flexible(
+                    Expanded(
                       child: TextButton.icon(
                         onPressed: () => _updateStatus(report, 'in_review'),
                         icon: const Icon(Icons.pending_outlined, size: 16),
@@ -349,13 +358,19 @@ class _AdminModerationTabState extends State<AdminModerationTab> {
                           style: TextStyle(fontSize: 12),
                         ),
                         style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          backgroundColor: AppColors.primary.withValues(
+                            alpha: 0.1,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: 8),
                   ],
-                  Flexible(
+                  Expanded(
                     child: TextButton.icon(
                       onPressed: () => _updateStatus(report, 'rejected'),
                       icon: const Icon(Icons.close, size: 16),
@@ -365,12 +380,16 @@ class _AdminModerationTabState extends State<AdminModerationTab> {
                       ),
                       style: TextButton.styleFrom(
                         foregroundColor: AppColors.error,
-                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4),
-                  Flexible(
+                  const SizedBox(width: 8),
+                  Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () => _updateStatus(report, 'resolved'),
                       icon: const Icon(Icons.check, size: 16),
@@ -382,8 +401,10 @@ class _AdminModerationTabState extends State<AdminModerationTab> {
                         backgroundColor: AppColors.success,
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        minimumSize: const Size(0, 36),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
                   ),
