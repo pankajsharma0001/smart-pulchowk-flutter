@@ -15,6 +15,7 @@ import 'package:smart_pulchowk/features/classroom/classroom_page.dart';
 import 'package:smart_pulchowk/features/clubs/clubs_page.dart';
 import 'package:smart_pulchowk/features/lost_found/lost_found.dart';
 import 'package:smart_pulchowk/features/admin/admin_page.dart';
+import 'package:smart_pulchowk/features/profile/profile_page.dart';
 import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
@@ -276,10 +277,7 @@ class MainLayoutState extends State<MainLayout>
       case 3:
         return const BookMarketplacePage();
       case 4:
-        return const _PlaceholderPage(
-          title: 'Profile',
-          icon: Icons.person_rounded,
-        );
+        return const ProfilePage();
       case 5:
         return const ClubsPage();
       case 6:

@@ -14,6 +14,7 @@ import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/core/models/club.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:smart_pulchowk/core/models/admin.dart';
+import 'package:smart_pulchowk/core/models/user.dart';
 import 'package:smart_pulchowk/core/services/auth_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
@@ -258,6 +259,33 @@ class ApiService {
     }
 
     return 'student'; // Fallback
+  }
+
+  /// Fetch the full current user profile from the backend.
+  Future<AppUser?> getCurrentUser() async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return null;
+
+      final token = await currentUser.getIdToken();
+      final response = await _get(
+        AppConstants.userProfile,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        if (responseData['data']?['success'] == true &&
+            responseData['data']?['user'] != null) {
+          return AppUser.fromJson(
+            responseData['data']['user'] as Map<String, dynamic>,
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching current user profile: $e');
+    }
+    return null;
   }
 
   /// Force refresh the user role from the backend.
