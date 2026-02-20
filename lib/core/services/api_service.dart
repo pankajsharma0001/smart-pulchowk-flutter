@@ -2389,6 +2389,27 @@ class ApiService {
     }
   }
 
+  /// Get the active user count in the last 15 minutes
+  Future<int> getActiveUserCount({bool forceRefresh = false}) async {
+    return await _cachedFetch<int>(
+          key: 'active_user_count',
+          ttl: const Duration(minutes: 5), // Cache for 5 mins to prevent spam
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet('/users/active-count');
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true && json['data'] != null) {
+                return json['data'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data['activeCount'] as num).toInt(),
+        ) ??
+        0; // Fallback to 0 if failed
+  }
+
   /// Get the list of registered students for an event (admin only).
   Future<List<RegisteredStudent>> getRegisteredStudents(int eventId) async {
     try {

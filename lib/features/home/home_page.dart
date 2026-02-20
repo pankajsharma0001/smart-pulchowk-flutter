@@ -563,24 +563,35 @@ class _HeroSection extends StatelessWidget {
             children: [
               const _StatusPing(),
               const SizedBox(width: 8),
-              RichText(
-                text: TextSpan(
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondary,
-                  ),
-                  children: [
-                    TextSpan(
-                      text: '142 students ',
-                      style: TextStyle(
-                        color: AppColors.success,
-                        fontWeight: FontWeight.bold,
+              FutureBuilder<int>(
+                future: ApiService().getActiveUserCount(),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  final countText =
+                      snapshot.connectionState == ConnectionState.waiting
+                      ? '...'
+                      : '$count';
+
+                  return RichText(
+                    text: TextSpan(
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
                       ),
+                      children: [
+                        TextSpan(
+                          text: '$countText students ',
+                          style: const TextStyle(
+                            color: AppColors.success,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const TextSpan(text: 'active on campus'),
+                      ],
                     ),
-                    const TextSpan(text: 'active on campus'),
-                  ],
-                ),
+                  );
+                },
               ),
             ],
           ),
