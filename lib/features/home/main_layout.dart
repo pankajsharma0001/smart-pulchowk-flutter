@@ -13,6 +13,7 @@ import 'package:smart_pulchowk/features/settings/settings.dart';
 import 'package:smart_pulchowk/features/marketplace/book_marketplace_page.dart';
 import 'package:smart_pulchowk/features/classroom/classroom_page.dart';
 import 'package:smart_pulchowk/features/clubs/clubs_page.dart';
+import 'package:smart_pulchowk/features/lost_found/lost_found.dart';
 import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
@@ -293,10 +294,7 @@ class MainLayoutState extends State<MainLayout>
       case 8:
         return const NoticesPage();
       case 9:
-        return const _PlaceholderPage(
-          title: 'Lost & Found',
-          icon: Icons.search_rounded,
-        );
+        return const LostFoundPage();
       case 10:
         return const SettingsPage();
       default:
@@ -327,7 +325,7 @@ class MainLayoutState extends State<MainLayout>
       case 8:
         return AppPage.notices;
       case 9:
-        return AppPage.home; // Lost & Found
+        return AppPage.lostAndFound;
       case 10:
         return AppPage.settings;
       default:

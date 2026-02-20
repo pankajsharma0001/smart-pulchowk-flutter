@@ -7,11 +7,13 @@ import 'package:http/http.dart' as http;
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/models/chat.dart';
 import 'package:smart_pulchowk/core/models/classroom.dart';
+import 'package:smart_pulchowk/core/models/lost_found.dart';
 import 'package:smart_pulchowk/core/models/notification.dart';
 import 'package:smart_pulchowk/core/models/notice.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/core/models/club.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
+import 'package:smart_pulchowk/core/services/auth_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:flutter/foundation.dart';
@@ -2589,6 +2591,316 @@ class ApiService {
     } catch (e) {
       debugPrint('Error in uploadClubLogo: $e');
       return ApiResult.failure('Upload failed: $e');
+    }
+  }
+
+  // ── Lost & Found ─────────────────────────────────────────────────────────
+
+  /// Get list of lost and found items.
+  Future<List<LostFoundItem>> getLostFoundItems({
+    String? itemType,
+    String? category,
+    String? q,
+    bool forceRefresh = false,
+  }) async {
+    final queryParams = <String, String>{};
+    if (itemType != null) queryParams['itemType'] = itemType;
+    if (category != null) queryParams['category'] = category;
+    if (q != null) queryParams['q'] = q;
+
+    final queryString = queryParams.isNotEmpty
+        ? '?${Uri(queryParameters: queryParams).query}'
+        : '';
+
+    return await _cachedFetch<List<LostFoundItem>>(
+          key: '${AppConstants.cacheLostFoundList}$queryString',
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet(
+              '${AppConstants.lostFound}$queryString',
+            );
+            debugPrint(
+              'LostFound API Response: ${response.statusCode} - ${response.body}',
+            );
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true && json['data'] != null) {
+                // Return items list if nested in 'items' key
+                if (json['data'] is Map && json['data']['items'] != null) {
+                  return json['data']['items'];
+                }
+                // Fallback for direct list
+                return json['data'];
+              }
+            }
+            return null;
+          },
+          parser: (data) {
+            if (data is! List) return <LostFoundItem>[];
+            return data
+                .map((e) => LostFoundItem.fromJson(e as Map<String, dynamic>))
+                .toList();
+          },
+        ) ??
+        [];
+  }
+
+  /// Get a single lost and found item details.
+  Future<LostFoundItem?> getLostFoundItem(
+    int id, {
+    bool forceRefresh = false,
+  }) async {
+    return await _cachedFetch<LostFoundItem>(
+      key: '${AppConstants.cacheLostFoundDetail}$id',
+      ttl: AppConstants.cacheExpiry,
+      forceRefresh: forceRefresh,
+      fetcher: () async {
+        final response = await _authGet('${AppConstants.lostFound}/$id');
+        if (response.statusCode == 200) {
+          final json = jsonDecode(response.body);
+          if (json['success'] == true && json['data'] != null) {
+            return json['data'];
+          }
+        }
+        return null;
+      },
+      parser: (data) => LostFoundItem.fromJson(data as Map<String, dynamic>),
+    );
+  }
+
+  /// Create a new lost and found item.
+  Future<ApiResult<LostFoundItem>> createLostFoundItem(
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _authPost(AppConstants.lostFound, body: data);
+      final json = jsonDecode(response.body);
+      if (json['success'] == true && json['data'] != null) {
+        _invalidateCachePrefix(AppConstants.cacheLostFoundList);
+        _invalidateCache(AppConstants.cacheMyLostFoundItems);
+        return ApiResult.success(
+          LostFoundItem.fromJson(json['data'] as Map<String, dynamic>),
+        );
+      }
+      return ApiResult.failure(json['message'] ?? 'Failed to create item');
+    } catch (e) {
+      return ApiResult.failure('Error: $e');
+    }
+  }
+
+  /// Update an existing lost and found item.
+  Future<ApiResult<LostFoundItem>> updateLostFoundItem(
+    int id,
+    Map<String, dynamic> data,
+  ) async {
+    try {
+      final response = await _authPut(
+        '${AppConstants.lostFound}/$id',
+        body: data,
+      );
+      final json = jsonDecode(response.body);
+      if (json['success'] == true && json['data'] != null) {
+        _invalidateCachePrefix(AppConstants.cacheLostFoundList);
+        _invalidateCache(AppConstants.cacheMyLostFoundItems);
+        _invalidateCache('${AppConstants.cacheLostFoundDetail}$id');
+        return ApiResult.success(
+          LostFoundItem.fromJson(json['data'] as Map<String, dynamic>),
+        );
+      }
+      return ApiResult.failure(json['message'] ?? 'Failed to update item');
+    } catch (e) {
+      return ApiResult.failure('Error: $e');
+    }
+  }
+
+  /// Delete a lost and found item.
+  Future<ApiResult> deleteLostFoundItem(int id) async {
+    try {
+      final response = await _authDelete('${AppConstants.lostFound}/$id');
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCachePrefix(AppConstants.cacheLostFoundList);
+        _invalidateCache(AppConstants.cacheMyLostFoundItems);
+        _invalidateCache('${AppConstants.cacheLostFoundDetail}$id');
+        return ApiResult(success: true);
+      }
+      return ApiResult.failure(json['message'] ?? 'Failed to delete item');
+    } catch (e) {
+      return ApiResult.failure('Error: $e');
+    }
+  }
+
+  /// Get my lost and found items.
+  Future<List<LostFoundItem>> getMyLostFoundItems({
+    bool forceRefresh = false,
+  }) async {
+    return await _cachedFetch<List<LostFoundItem>>(
+          key: AppConstants.cacheMyLostFoundItems,
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet(AppConstants.MyLostFoundItems);
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true && json['data'] != null) {
+                return json['data'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
+              .map((e) => LostFoundItem.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        ) ??
+        [];
+  }
+
+  /// Create a claim for a found/lost item.
+  Future<ApiResult<LostFoundClaim>> createLostFoundClaim({
+    required int itemId,
+    required String message,
+  }) async {
+    try {
+      final response = await _authPost(
+        '${AppConstants.lostFound}/$itemId/claims',
+        body: {'message': message},
+      );
+      final json = jsonDecode(response.body);
+      if (json['success'] == true && json['data'] != null) {
+        _invalidateCache(AppConstants.cacheMyLostFoundClaims);
+        _invalidateCache('${AppConstants.cacheLostFoundDetail}$itemId');
+        return ApiResult.success(
+          LostFoundClaim.fromJson(json['data'] as Map<String, dynamic>),
+        );
+      }
+      return ApiResult.failure(json['message'] ?? 'Failed to create claim');
+    } catch (e) {
+      return ApiResult.failure('Error: $e');
+    }
+  }
+
+  /// Update claim status (admin/owner action).
+  Future<ApiResult> updateLostFoundClaimStatus({
+    required int itemId,
+    required int claimId,
+    required String status,
+  }) async {
+    try {
+      final response = await _authPut(
+        '${AppConstants.lostFound}/$itemId/claims/$claimId',
+        body: {'status': status},
+      );
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCache('${AppConstants.cacheLostFoundDetail}$itemId');
+        return ApiResult(success: true);
+      }
+      return ApiResult.failure(json['message'] ?? 'Failed to update claim');
+    } catch (e) {
+      return ApiResult.failure('Error: $e');
+    }
+  }
+
+  /// Get my lost/found claims.
+  Future<List<LostFoundClaim>> getMyLostFoundClaims({
+    bool forceRefresh = false,
+  }) async {
+    return await _cachedFetch<List<LostFoundClaim>>(
+          key: AppConstants.cacheMyLostFoundClaims,
+          ttl: AppConstants.cacheExpiry,
+          forceRefresh: forceRefresh,
+          fetcher: () async {
+            final response = await _authGet(AppConstants.MyLostFoundClaims);
+            if (response.statusCode == 200) {
+              final json = jsonDecode(response.body);
+              if (json['success'] == true && json['data'] != null) {
+                return json['data'];
+              }
+            }
+            return null;
+          },
+          parser: (data) => (data as List)
+              .map((e) => LostFoundClaim.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        ) ??
+        [];
+  }
+
+  /// Get claims for a specific item (owner only).
+  Future<List<LostFoundClaim>> getLostFoundItemClaims(int itemId) async {
+    try {
+      final response = await _authGet(
+        '${AppConstants.lostFound}/$itemId/claims',
+      );
+      final json = jsonDecode(response.body);
+      if (json['success'] == true && json['data'] != null) {
+        return (json['data'] as List)
+            .map((e) => LostFoundClaim.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      debugPrint('Error getting item claims: $e');
+      return [];
+    }
+  }
+
+  /// Update item status (owner only).
+  Future<ApiResult> updateLostFoundItemStatus(
+    int itemId,
+    LostFoundStatus status,
+  ) async {
+    try {
+      final response = await _authPut(
+        '${AppConstants.lostFound}/$itemId/status',
+        body: {'status': status.name},
+      );
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCachePrefix(AppConstants.cacheLostFoundList);
+        _invalidateCache(AppConstants.cacheMyLostFoundItems);
+        _invalidateCache('${AppConstants.cacheLostFoundDetail}$itemId');
+        return ApiResult(success: true);
+      }
+      return ApiResult.failure(json['message'] ?? 'Failed to update status');
+    } catch (e) {
+      return ApiResult.failure('Error: $e');
+    }
+  }
+
+  /// Upload image for a lost/found item.
+  Future<ApiResult> uploadLostFoundImage(int itemId, File imageFile) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse(
+          '${AppConstants.baseUrl}${AppConstants.lostFound}/$itemId/images',
+        ),
+      );
+
+      final idToken = await AuthService.currentUser?.getIdToken();
+      if (idToken != null) {
+        request.headers['Authorization'] = 'Bearer $idToken';
+      }
+
+      request.files.add(
+        await http.MultipartFile.fromPath('image', imageFile.path),
+      );
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCachePrefix(AppConstants.cacheLostFoundList);
+        _invalidateCache(AppConstants.cacheMyLostFoundItems);
+        _invalidateCache('${AppConstants.cacheLostFoundDetail}$itemId');
+        return ApiResult(success: true);
+      }
+      return ApiResult.failure(json['message'] ?? 'Failed to upload image');
+    } catch (e) {
+      return ApiResult.failure('Error: $e');
     }
   }
 }

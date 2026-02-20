@@ -31,6 +31,11 @@ class AppConstants {
   static const String classroomMySubjects = '/classroom/me/subjects';
   static const String classroomAssignments = '/classroom/assignments';
 
+  // ── Lost & Found Endpoints ────────────────────────────────────────────────
+  static const String lostFound = '/lost-found';
+  static const String MyLostFoundItems = '/lost-found/my/items';
+  static const String MyLostFoundClaims = '/lost-found/my/claims';
+
   // ── Notice Endpoints ───────────────────────────────────────────────────────
   static const String notices = '/notices';
   static const String noticeStats = '/notices/stats';
@@ -100,6 +105,11 @@ class AppConstants {
   static const String cacheClubsList = 'clubs_list';
   static const String cacheClubProfile = 'clubs_profile_';
   static const String cacheClubEvents = 'clubs_events_';
+  // ── Lost & Found Cache Keys ───────────────────────────────────────────────
+  static const String cacheLostFoundList = 'lost_found_list';
+  static const String cacheMyLostFoundItems = 'lost_found_my_items';
+  static const String cacheMyLostFoundClaims = 'lost_found_my_claims';
+  static const String cacheLostFoundDetail = 'lost_found_detail_';
   // ── Image Headers ────────────────────────────────────────────────────────
   static const Map<String, String> imageHeaders = {
     'User-Agent':
