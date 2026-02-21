@@ -25,15 +25,6 @@ class NotificationService {
   /// Initialize notifications (permission request, channel setup).
   static Future<void> initialize() async {
     try {
-      final settings = await _messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-      debugPrint(
-        'User granted notification permission: ${settings.authorizationStatus}',
-      );
-
       // Initialize local notifications
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -150,6 +141,31 @@ class NotificationService {
       }
     } catch (e) {
       debugPrint('Error initializing notifications: $e');
+    }
+  }
+
+  /// Request notification permission if needed.
+  static Future<bool> ensurePermission() async {
+    try {
+      final current = await _messaging.getNotificationSettings();
+      if (current.authorizationStatus == AuthorizationStatus.authorized ||
+          current.authorizationStatus == AuthorizationStatus.provisional) {
+        return true;
+      }
+
+      final requested = await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      debugPrint(
+        'User granted notification permission: ${requested.authorizationStatus}',
+      );
+      return requested.authorizationStatus == AuthorizationStatus.authorized ||
+          requested.authorizationStatus == AuthorizationStatus.provisional;
+    } catch (e) {
+      debugPrint('Error requesting notification permission: $e');
+      return false;
     }
   }
 

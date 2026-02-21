@@ -12,6 +12,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:smart_pulchowk/features/marketplace/blocked_users_page.dart';
 import 'package:smart_pulchowk/features/marketplace/my_reports_page.dart';
 import 'package:smart_pulchowk/features/settings/help_center_page.dart';
@@ -28,6 +29,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isLoading = true;
   String _appVersion = '1.0.0';
   String _userRole = 'student';
+  bool _hasNotificationPermission = true;
 
   // Notification Preferences
   bool _eventsNotify = true;
@@ -51,17 +53,14 @@ class _SettingsPageState extends State<SettingsPage> {
     final role = await _apiService.getUserRole();
 
     setState(() {
-      _eventsNotify = hasPermission && (prefs.getBool('notify_events') ?? true);
-      _booksNotify = hasPermission && (prefs.getBool('notify_books') ?? true);
-      _noticesNotify =
-          hasPermission && (prefs.getBool('notify_notices') ?? true);
-      _announcementsNotify =
-          hasPermission && (prefs.getBool('notify_announcements') ?? true);
-      _classroomNotify =
-          hasPermission && (prefs.getBool('notify_classroom') ?? true);
-      _chatNotify = hasPermission && (prefs.getBool('notify_chat') ?? true);
-      _lostFoundNotify =
-          hasPermission && (prefs.getBool('notify_lost_found') ?? true);
+      _hasNotificationPermission = hasPermission;
+      _eventsNotify = prefs.getBool('notify_events') ?? true;
+      _booksNotify = prefs.getBool('notify_books') ?? true;
+      _noticesNotify = prefs.getBool('notify_notices') ?? true;
+      _announcementsNotify = prefs.getBool('notify_announcements') ?? true;
+      _classroomNotify = prefs.getBool('notify_classroom') ?? true;
+      _chatNotify = prefs.getBool('notify_chat') ?? true;
+      _lostFoundNotify = prefs.getBool('notify_lost_found') ?? true;
       _appVersion = info.version;
       _userRole = role;
       _isLoading = false;
@@ -69,6 +68,34 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _toggleNotification(String key, bool value) async {
+    if (value) {
+      final granted = await NotificationService.ensurePermission();
+      if (!granted) {
+        if (mounted) {
+          setState(() {
+            _hasNotificationPermission = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                'Please enable notification permission in system settings.',
+              ),
+              action: SnackBarAction(
+                label: 'Open Settings',
+                onPressed: () => openAppSettings(),
+              ),
+            ),
+          );
+        }
+        return;
+      }
+      if (mounted) {
+        setState(() {
+          _hasNotificationPermission = true;
+        });
+      }
+    }
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(key, value);
 
@@ -81,6 +108,13 @@ class _SettingsPageState extends State<SettingsPage> {
       if (key == 'notify_chat') _chatNotify = value;
       if (key == 'notify_lost_found') _lostFoundNotify = value;
     });
+
+    final hasPermission = await NotificationService.hasPermission();
+    if (mounted) {
+      setState(() {
+        _hasNotificationPermission = hasPermission;
+      });
+    }
 
     final topic = key.replaceFirst('notify_', '');
     if (value) {
@@ -432,6 +466,17 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
       child: Column(
         children: [
+          if (!_hasNotificationPermission)
+            _buildSettingsTile(
+              icon: Icons.notifications_off_rounded,
+              title: 'System notifications are off',
+              subtitle: 'Enable in device settings to receive alerts',
+              trailing: TextButton(
+                onPressed: () => openAppSettings(),
+                child: const Text('Open Settings'),
+              ),
+            ),
+          if (!_hasNotificationPermission) const _Divider(),
           _buildToggleTile(
             title: 'Upcoming Events',
             subtitle: 'Alerts for registration and starts',

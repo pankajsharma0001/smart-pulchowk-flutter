@@ -41,6 +41,14 @@ void main() async {
   }
 
   runApp(SmartPulchowkApp(themeProvider: themeProvider));
+
+  // Request notification permission after the first frame so the prompt is shown.
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    final granted = await NotificationService.ensurePermission();
+    if (granted) {
+      await NotificationService.syncSubscriptions();
+    }
+  });
 }
 
 class SmartPulchowkApp extends StatelessWidget {

@@ -126,6 +126,7 @@ class MainLayoutState extends State<MainLayout>
 
     // Silent startup check — no snackbar on initial load
     _checkUserRole(null, true);
+
   }
 
   @override
