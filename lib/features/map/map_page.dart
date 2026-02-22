@@ -81,7 +81,7 @@ class _MapPageState extends State<MapPage> {
   bool _isSatellite = false;
 
   List<Map<String, dynamic>> _allLocations = [];
-  String _selectedCategory = 'all';
+  Set<String> _selectedCategories = {'all'};
 
   final Map<String, Uint8List> _iconCache = {};
   final Set<String> _failedIcons = {};
@@ -136,16 +136,26 @@ class _MapPageState extends State<MapPage> {
   String get _currentStyle => _isSatellite ? _satelliteStyle : _mapStyle;
 
   List<Map<String, dynamic>> get _visibleLocations {
-    if (_selectedCategory == 'all') return _allLocations;
-    // Sports group: football, cricket, sports, badminton, gym
+    if (_selectedCategories.contains('all')) return _allLocations;
+
     final sportsIds = {'football', 'cricket', 'sports', 'badminton'};
-    if (_selectedCategory == 'sports') {
-      return _allLocations.where((l) => sportsIds.contains(l['icon'])).toList();
-    }
-    if (_selectedCategory == 'gym') {
-      return _allLocations.where((l) => l['icon'] == 'gym').toList();
-    }
-    return _allLocations.where((l) => l['icon'] == _selectedCategory).toList();
+
+    return _allLocations.where((l) {
+      final icon = l['icon'] as String;
+
+      // Check if location's direct icon is selected
+      if (_selectedCategories.contains(icon)) return true;
+
+      // Special handling for grouped categories
+      if (_selectedCategories.contains('sports') && sportsIds.contains(icon)) {
+        return true;
+      }
+      if (_selectedCategories.contains('gym') && icon == 'gym') {
+        return true;
+      }
+
+      return false;
+    }).toList();
   }
 
   List<Map<String, dynamic>> get _filteredSuggestions {
@@ -1051,8 +1061,26 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _onCategorySelected(String catId) {
-    if (catId == _selectedCategory) return;
-    setState(() => _selectedCategory = catId);
+    setState(() {
+      if (catId == 'all') {
+        _selectedCategories = {'all'};
+      } else {
+        // Remove 'all' if adding a specific category
+        _selectedCategories.remove('all');
+
+        if (_selectedCategories.contains(catId)) {
+          _selectedCategories.remove(catId);
+        } else {
+          _selectedCategories.add(catId);
+        }
+
+        // Default back to 'all' if everything is deselected
+        if (_selectedCategories.isEmpty) {
+          _selectedCategories = {'all'};
+        }
+      }
+    });
+
     if (_isStyleLoaded && _mapController != null) _addMarkersToMap();
   }
 
@@ -1181,74 +1209,156 @@ class _MapPageState extends State<MapPage> {
                       // Search bar
                       _GlassContainer(
                         isDark: isDark,
-                        child: TextField(
-                          controller: _searchController,
-                          focusNode: _searchFocusNode,
-                          style: Theme.of(context).textTheme.bodyLarge,
-                          onChanged: (v) => setState(() {
-                            _searchQuery = v;
-                            _showSuggestions = v.isNotEmpty;
-                          }),
-                          onTap: () => setState(
-                            () => _showSuggestions = _searchQuery.isNotEmpty,
-                          ),
-                          textInputAction: TextInputAction.search,
-                          onSubmitted: (v) {
-                            if (v.isEmpty) return;
-                            setState(() {
-                              _searchQuery = v;
-                              _showSuggestions = v.isNotEmpty;
-                            });
-                            if (_filteredSuggestions.isNotEmpty) {
-                              _flyToLocation(_filteredSuggestions.first);
-                            }
-                          },
-                          decoration: InputDecoration(
-                            hintText: 'Search labs, canteen, departments…',
-                            hintStyle: TextStyle(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant
-                                  .withValues(alpha: 0.5),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                focusNode: _searchFocusNode,
+                                style: Theme.of(context).textTheme.bodyLarge,
+                                onChanged: (v) => setState(() {
+                                  _searchQuery = v;
+                                  _showSuggestions = v.isNotEmpty;
+                                }),
+                                onTap: () => setState(
+                                  () => _showSuggestions =
+                                      _searchQuery.isNotEmpty,
+                                ),
+                                textInputAction: TextInputAction.search,
+                                onSubmitted: (v) {
+                                  if (v.isEmpty) return;
+                                  setState(() {
+                                    _searchQuery = v;
+                                    _showSuggestions = v.isNotEmpty;
+                                  });
+                                  if (_filteredSuggestions.isNotEmpty) {
+                                    _flyToLocation(_filteredSuggestions.first);
+                                  }
+                                },
+                                decoration: InputDecoration(
+                                  hintText:
+                                      'Search labs, canteen, departments…',
+                                  hintStyle: TextStyle(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant
+                                        .withValues(alpha: 0.5),
+                                  ),
+                                  prefixIcon: Icon(
+                                    Icons.search_rounded,
+                                    color: AppColors.primary,
+                                  ),
+                                  suffixIcon: _searchQuery.isNotEmpty
+                                      ? IconButton(
+                                          icon: const Icon(Icons.clear_rounded),
+                                          onPressed: () {
+                                            haptics.selectionClick();
+                                            setState(() {
+                                              _searchController.clear();
+                                              _searchQuery = '';
+                                              _showSuggestions = false;
+                                            });
+                                          },
+                                        )
+                                      : null,
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 14,
+                                  ),
+                                ),
+                              ),
                             ),
-                            prefixIcon: Icon(
-                              Icons.search_rounded,
-                              color: AppColors.primary,
+                            Container(
+                              height: 24,
+                              width: 1,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outline.withValues(alpha: 0.2),
                             ),
-                            suffixIcon: _searchQuery.isNotEmpty
-                                ? IconButton(
-                                    icon: const Icon(Icons.clear_rounded),
-                                    onPressed: () {
-                                      haptics.selectionClick();
-                                      setState(() {
-                                        _searchController.clear();
-                                        _searchQuery = '';
-                                        _showSuggestions = false;
-                                      });
-                                    },
-                                  )
-                                : null,
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14,
+                            PopupMenuButton<String>(
+                              onSelected: _onCategorySelected,
+                              tooltip: 'Filter by category',
+                              icon: Stack(
+                                children: [
+                                  Icon(
+                                    Icons.tune_rounded,
+                                    color: _selectedCategories.contains('all')
+                                        ? Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant
+                                        : AppColors.primary,
+                                  ),
+                                  if (!_selectedCategories.contains('all'))
+                                    Positioned(
+                                      right: 0,
+                                      top: 0,
+                                      child: Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: isDark
+                                                ? const Color(0xFF1E293B)
+                                                : Colors.white,
+                                            width: 1.5,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              offset: const Offset(0, 45),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              itemBuilder: (context) => kMapCategories.map((
+                                cat,
+                              ) {
+                                final isActive = _selectedCategories.contains(
+                                  cat.id,
+                                );
+                                return PopupMenuItem<String>(
+                                  value: cat.id,
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        cat.icon,
+                                        size: 18,
+                                        color: isActive
+                                            ? cat.color
+                                            : Theme.of(
+                                                context,
+                                              ).colorScheme.onSurfaceVariant,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          cat.label,
+                                          style: TextStyle(
+                                            fontWeight: isActive
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                            color: isActive ? cat.color : null,
+                                          ),
+                                        ),
+                                      ),
+                                      if (isActive)
+                                        Icon(
+                                          Icons.check_rounded,
+                                          size: 16,
+                                          color: cat.color,
+                                        ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
                             ),
-                          ),
+                          ],
                         ),
                       ),
-
-                      // Category filter bar (below search, always visible)
-                      if (!_showSuggestions) ...[
-                        const SizedBox(height: 8),
-                        _GlassContainer(
-                          isDark: isDark,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          child: CategoryFilterBar(
-                            selectedCategoryId: _selectedCategory,
-                            onCategorySelected: _onCategorySelected,
-                          ),
-                        ),
-                      ],
 
                       // Suggestions dropdown
                       if (_showSuggestions && _filteredSuggestions.isNotEmpty)
