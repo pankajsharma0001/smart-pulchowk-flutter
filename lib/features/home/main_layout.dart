@@ -19,6 +19,7 @@ import 'package:smart_pulchowk/features/profile/profile_page.dart';
 import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
+import 'package:smart_pulchowk/features/map/map.dart';
 
 // ── Placeholder pages (will be replaced as features are built) ──────────────
 class _PlaceholderPage extends StatelessWidget {
@@ -126,7 +127,6 @@ class MainLayoutState extends State<MainLayout>
 
     // Silent startup check — no snackbar on initial load
     _checkUserRole(null, true);
-
   }
 
   @override
@@ -267,7 +267,7 @@ class MainLayoutState extends State<MainLayout>
       case 0:
         return const HomePage();
       case 1:
-        return const _PlaceholderPage(title: 'Map', icon: Icons.map_rounded);
+        return const MapPage();
       case 2:
         if (_userRole == 'admin') {
           return const AdminPage();
