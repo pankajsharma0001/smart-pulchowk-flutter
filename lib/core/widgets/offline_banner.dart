@@ -14,33 +14,30 @@ class OfflineBanner extends StatelessWidget {
         final bool isOnline = snapshot.data ?? true;
 
         return AnimatedContainer(
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-          height: isOnline ? 0 : MediaQuery.of(context).padding.top + 30,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          height: isOnline ? 0 : 38,
           color: AppColors.error,
           child: isOnline
               ? const SizedBox.shrink()
-              : SafeArea(
-                  bottom: false,
-                  child: Center(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.wifi_off_rounded,
+              : Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.wifi_off_rounded,
+                        color: Colors.white,
+                        size: 14,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Text(
+                        'No Internet Connection',
+                        style: AppTextStyles.labelSmall.copyWith(
                           color: Colors.white,
-                          size: 16,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Text(
-                          'No Internet Connection',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
         );

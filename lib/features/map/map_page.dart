@@ -638,10 +638,7 @@ class _MapPageState extends State<MapPage> {
 
   Future<void> _goToCurrentLocation() async {
     if (_mapController == null || _isLocating) return;
-    if (_showMyLocation) {
-      setState(() => _showMyLocation = false);
-      return;
-    }
+
     setState(() => _isLocating = true);
     try {
       bool serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
@@ -654,6 +651,7 @@ class _MapPageState extends State<MapPage> {
         }
         return;
       }
+
       geo.LocationPermission permission =
           await geo.Geolocator.checkPermission();
       if (permission == geo.LocationPermission.denied) {
@@ -663,6 +661,7 @@ class _MapPageState extends State<MapPage> {
           return;
         }
       }
+
       if (permission == geo.LocationPermission.deniedForever) {
         if (mounted) {
           _showSnack(
@@ -672,12 +671,26 @@ class _MapPageState extends State<MapPage> {
         }
         return;
       }
+
+      // Fast snap: use last known position first if available
+      final lastPos = await geo.Geolocator.getLastKnownPosition();
+      if (lastPos != null &&
+          _isWithinCampus(LatLng(lastPos.latitude, lastPos.longitude))) {
+        await _mapController!.animateCamera(
+          CameraUpdate.newLatLngZoom(
+            LatLng(lastPos.latitude, lastPos.longitude),
+            18,
+          ),
+        );
+      }
+
       final pos = await geo.Geolocator.getCurrentPosition(
         locationSettings: const geo.LocationSettings(
           accuracy: geo.LocationAccuracy.high,
           timeLimit: Duration(seconds: 15),
         ),
       );
+
       final latLng = LatLng(pos.latitude, pos.longitude);
       if (_isWithinCampus(latLng)) {
         setState(() => _showMyLocation = true);
@@ -1658,12 +1671,10 @@ class _MapPageState extends State<MapPage> {
                         ),
                       )
                     : Icon(
-                        _showMyLocation
-                            ? Icons.location_disabled_rounded
-                            : Icons.my_location_rounded,
+                        Icons.my_location_rounded,
                         color: _showMyLocation
-                            ? AppColors.error
-                            : AppColors.primary,
+                            ? AppColors.primary
+                            : AppColors.primary.withValues(alpha: 0.7),
                       ),
               ),
             ),

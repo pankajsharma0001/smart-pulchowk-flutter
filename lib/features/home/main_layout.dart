@@ -21,6 +21,7 @@ import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:smart_pulchowk/features/map/map.dart';
 import 'package:smart_pulchowk/core/widgets/offline_banner.dart';
+import 'package:smart_pulchowk/core/services/connectivity_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN LAYOUT
@@ -362,30 +363,52 @@ class MainLayoutState extends State<MainLayout>
       },
       child: Stack(
         children: [
-          Scaffold(
-            resizeToAvoidBottomInset: false,
-            extendBody: true,
-            extendBodyBehindAppBar: true,
-            appBar: CustomAppBar(
-              isHomePage: _selectedIndex == 0,
-              currentPage: _getCurrentPage(),
-              userRole: _userRole,
-            ),
-            body: _FadeIndexedStack(
-              index: _selectedIndex,
-              children: List.generate(
-                12,
-                (i) => _TabNavigator(
-                  key: i == 2 ? ValueKey('role_$_userRole') : null,
-                  navigatorKey: _navigatorKeys[i],
-                  rootPage: _pageForIndex(i),
+          StreamBuilder<bool>(
+            stream: ConnectivityService.instance.onConnectivityChanged,
+            initialData: ConnectivityService.instance.isOnline,
+            builder: (context, snapshot) {
+              final isOnline = snapshot.data ?? true;
+              return Scaffold(
+                resizeToAvoidBottomInset: false,
+                extendBody: true,
+                extendBodyBehindAppBar: true,
+                appBar: PreferredSize(
+                  preferredSize: Size.fromHeight(60 + (isOnline ? 0 : 38)),
+                  child: Container(
+                    color: Theme.of(context).appBarTheme.backgroundColor,
+                    child: SafeArea(
+                      bottom: false,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const OfflineBanner(),
+                          CustomAppBar(
+                            isHomePage: _selectedIndex == 0,
+                            currentPage: _getCurrentPage(),
+                            userRole: _userRole,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-            bottomNavigationBar: _BottomNavBar(
-              selectedIndex: _selectedIndex,
-              onItemSelected: setSelectedIndex,
-            ),
+                body: _FadeIndexedStack(
+                  index: _selectedIndex,
+                  children: List.generate(
+                    12,
+                    (i) => _TabNavigator(
+                      key: i == 2 ? ValueKey('role_$_userRole') : null,
+                      navigatorKey: _navigatorKeys[i],
+                      rootPage: _pageForIndex(i),
+                    ),
+                  ),
+                ),
+                bottomNavigationBar: _BottomNavBar(
+                  selectedIndex: _selectedIndex,
+                  onItemSelected: setSelectedIndex,
+                ),
+              );
+            },
           ),
 
           // ── Quick Menu Overlay ──────────────────────────────────────
@@ -467,9 +490,6 @@ class MainLayoutState extends State<MainLayout>
               ),
             ),
           ),
-
-          // ── Offline Banner ──────────────────────────────────────────
-          const Positioned(top: 0, left: 0, right: 0, child: OfflineBanner()),
         ],
       ),
     );
