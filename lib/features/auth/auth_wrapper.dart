@@ -1,14 +1,16 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/core/services/auth_service.dart';
+import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/features/auth/login_page.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
+import 'package:smart_pulchowk/features/onboarding/onboarding_page.dart';
 
-/// Routes between [LoginPage] and the main app based on auth state.
+/// Routes between [LoginPage], [OnboardingPage], and the main app based on auth state.
 ///
 /// Listens to [AuthService.authStateChanges] and shows the login page
-/// when no user is signed in, or [MainLayout] when authenticated.
+/// when no user is signed in, or [MainLayout] (or [OnboardingPage]) when authenticated.
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -22,8 +24,13 @@ class AuthWrapper extends StatelessWidget {
           return const _SplashScreen();
         }
 
-        // Authenticated → show main app
+        // Authenticated
         if (snapshot.hasData && snapshot.data != null) {
+          // Check if onboarding has been seen
+          final hasSeenOnboarding = StorageService.getHasSeenOnboarding();
+          if (!hasSeenOnboarding) {
+            return const OnboardingPage();
+          }
           return MainLayout(key: MainLayout.mainLayoutKey);
         }
 

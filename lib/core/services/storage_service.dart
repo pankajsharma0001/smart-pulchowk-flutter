@@ -77,4 +77,14 @@ class StorageService {
   static Future<void> clearCache() async {
     await _cacheBox.clear();
   }
+
+  // ── Onboarding ────────────────────────────────────────────────────────────
+
+  static bool getHasSeenOnboarding() {
+    return _cacheBox.get('has_seen_onboarding', defaultValue: false) as bool;
+  }
+
+  static Future<void> setHasSeenOnboarding(bool value) async {
+    await _cacheBox.put('has_seen_onboarding', value);
+  }
 }
