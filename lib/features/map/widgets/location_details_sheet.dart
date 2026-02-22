@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
+import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
 import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 
 /// Bottom sheet that shows location details when a campus marker is tapped.
 class LocationDetailsSheet extends StatefulWidget {
   final String title;
   final String? description;
-  final dynamic images; // String URL or null
+  final dynamic images; // String, List, or stringified list
   final VoidCallback? onNavigate;
 
   const LocationDetailsSheet({
@@ -22,6 +23,38 @@ class LocationDetailsSheet extends StatefulWidget {
 }
 
 class _LocationDetailsSheetState extends State<LocationDetailsSheet> {
+  int _currentImageIndex = 0;
+  final PageController _pageController = PageController();
+
+  List<String> _parseImages() {
+    if (widget.images == null) return [];
+
+    List<String> urls = [];
+    if (widget.images is List) {
+      urls = (widget.images as List).map((e) => e.toString()).toList();
+    } else {
+      String raw = widget.images.toString().trim();
+      if (raw.startsWith('[') && raw.endsWith(']')) {
+        // Stringified list "[url1, url2]"
+        String inner = raw.substring(1, raw.length - 1);
+        urls = inner
+            .split(',')
+            .map((e) => e.trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+      } else if (raw.isNotEmpty) {
+        urls = [raw];
+      }
+    }
+    return urls;
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -115,45 +148,115 @@ class _LocationDetailsSheetState extends State<LocationDetailsSheet> {
               padding: EdgeInsets.only(
                 left: 20,
                 right: 20,
-                bottom: MediaQuery.of(context).padding.bottom + 8,
+                bottom: MediaQuery.of(context).padding.bottom + 24,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Image
+                  // Images Carousel
                   if (hasImage) ...[
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Builder(
-                        builder: (context) {
-                          String imageUrl = '';
-                          if (widget.images is List &&
-                              (widget.images as List).isNotEmpty) {
-                            imageUrl = widget.images[0].toString();
-                          } else {
-                            imageUrl = widget.images.toString();
-                          }
+                    Builder(
+                      builder: (context) {
+                        final imageUrls = _parseImages();
+                        if (imageUrls.isEmpty) return const SizedBox.shrink();
 
-                          // Clean up if it's still bracketed (e.g. stringified list "[url]")
-                          if (imageUrl.startsWith('[') &&
-                              imageUrl.endsWith(']')) {
-                            imageUrl = imageUrl
-                                .substring(1, imageUrl.length - 1)
-                                .split(',')
-                                .first
-                                .trim();
-                          }
-
-                          return SmartImage(
-                            imageUrl: imageUrl,
-                            width: double.infinity,
-                            height: 180,
-                            fit: BoxFit.cover,
-                          );
-                        },
-                      ),
+                        return Column(
+                          children: [
+                            SizedBox(
+                              height: 200,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(16),
+                                child: Stack(
+                                  children: [
+                                    PageView.builder(
+                                      controller: _pageController,
+                                      onPageChanged: (idx) {
+                                        setState(
+                                          () => _currentImageIndex = idx,
+                                        );
+                                      },
+                                      itemCount: imageUrls.length,
+                                      itemBuilder: (context, index) {
+                                        return GestureDetector(
+                                          onTap: () {
+                                            Navigator.of(
+                                              context,
+                                              rootNavigator: true,
+                                            ).push(
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    FullScreenImageViewer(
+                                                      imageUrls: imageUrls,
+                                                      initialIndex: index,
+                                                    ),
+                                              ),
+                                            );
+                                          },
+                                          child: Hero(
+                                            tag: imageUrls[index],
+                                            child: SmartImage(
+                                              imageUrl: imageUrls[index],
+                                              width: double.infinity,
+                                              height: 200,
+                                              fit: BoxFit.cover,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    if (imageUrls.length > 1)
+                                      Positioned(
+                                        bottom: 12,
+                                        left: 0,
+                                        right: 0,
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: List.generate(
+                                            imageUrls.length,
+                                            (index) => AnimatedContainer(
+                                              duration: const Duration(
+                                                milliseconds: 300,
+                                              ),
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 4,
+                                                  ),
+                                              width: _currentImageIndex == index
+                                                  ? 20
+                                                  : 8,
+                                              height: 8,
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    _currentImageIndex == index
+                                                    ? Colors.white
+                                                    : Colors.white.withValues(
+                                                        alpha: 0.5,
+                                                      ),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black
+                                                        .withValues(alpha: 0.2),
+                                                    blurRadius: 4,
+                                                    offset: const Offset(0, 2),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                        );
+                      },
                     ),
-                    const SizedBox(height: 16),
                   ],
 
                   // Description
