@@ -3,6 +3,8 @@ import 'package:smart_pulchowk/core/models/club.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/features/clubs/club_details_page.dart';
+import 'package:smart_pulchowk/core/services/favorites_provider.dart';
+import 'package:smart_pulchowk/core/services/haptic_service.dart';
 
 class ClubCard extends StatelessWidget {
   final Club club;
@@ -92,6 +94,41 @@ class ClubCard extends StatelessWidget {
                         ),
                       ),
                     ),
+
+                  // Favorite Toggle
+                  Positioned(
+                    top: AppSpacing.sm,
+                    left: AppSpacing.sm,
+                    child: ListenableBuilder(
+                      listenable: FavoritesProvider.of(context),
+                      builder: (context, _) {
+                        final favorites = FavoritesProvider.of(context);
+                        final isFavorite = favorites.isClubFavorite(club.id);
+                        return GestureDetector(
+                          onTap: () {
+                            haptics.selectionClick();
+                            favorites.toggleClubFavorite(club.id);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isFavorite
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              size: 16,
+                              color: isFavorite
+                                  ? Colors.redAccent
+                                  : Colors.white,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),

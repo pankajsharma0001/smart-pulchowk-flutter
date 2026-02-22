@@ -133,6 +133,10 @@ class AppConstants {
   static const String cacheMapLocations = 'map_locations';
   static const String cacheMapIconPrefix = 'map_icon_';
 
+  // ── Favorites Cache Keys ───────────────────────────────────────────────
+  static const String cacheFavoriteClubs = 'fav_clubs';
+  static const String cacheFavoriteEvents = 'fav_events';
+
   // ── Image Headers ────────────────────────────────────────────────────────
   static const Map<String, String> imageHeaders = {
     'User-Agent':

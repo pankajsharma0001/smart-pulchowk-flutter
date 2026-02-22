@@ -17,6 +17,7 @@ import 'package:smart_pulchowk/features/events/widgets/event_editor.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/services/calendar_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
+import 'package:smart_pulchowk/core/services/favorites_provider.dart';
 
 class EventDetailsPage extends StatefulWidget {
   final ClubEvent event;
@@ -358,6 +359,53 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                   ),
                 ),
                 actions: [
+                  ListenableBuilder(
+                    listenable: FavoritesProvider.of(context),
+                    builder: (context, _) {
+                      final favorites = FavoritesProvider.of(context);
+                      final isFavorite = favorites.isEventFavorite(
+                        widget.event.id,
+                      );
+                      return Padding(
+                        padding: const EdgeInsets.only(
+                          right: 8.0,
+                          top: 8,
+                          bottom: 8,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.1),
+                                ),
+                              ),
+                              child: IconButton(
+                                icon: Icon(
+                                  isFavorite
+                                      ? Icons.favorite_rounded
+                                      : Icons.favorite_border_rounded,
+                                  color: isFavorite
+                                      ? Colors.redAccent
+                                      : Colors.white,
+                                ),
+                                onPressed: () {
+                                  haptics.selectionClick();
+                                  favorites.toggleEventFavorite(
+                                    widget.event.id,
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                   if (_isAdmin)
                     Padding(
                       padding: const EdgeInsets.only(

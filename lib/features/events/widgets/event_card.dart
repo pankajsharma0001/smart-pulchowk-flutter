@@ -5,6 +5,8 @@ import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/features/events/event_details_page.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_status_badge.dart';
+import 'package:smart_pulchowk/core/services/favorites_provider.dart';
+import 'package:smart_pulchowk/core/services/haptic_service.dart';
 
 enum EventCardType { grid, list }
 
@@ -49,8 +51,7 @@ class EventCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   SmartImage(
-                    imageUrl:
-                        (event.bannerUrl != null && event.bannerUrl!.isNotEmpty)
+                    imageUrl: (event.bannerUrl?.isNotEmpty == true)
                         ? event.bannerUrl
                         : null,
                     errorWidget: _buildPlaceholder(context),
@@ -61,6 +62,41 @@ class EventCard extends StatelessWidget {
                     top: AppSpacing.sm,
                     left: AppSpacing.sm,
                     child: EventStatusBadge(event: event, isCompact: true),
+                  ),
+
+                  // Favorite Toggle
+                  Positioned(
+                    top: AppSpacing.sm,
+                    right: AppSpacing.sm,
+                    child: ListenableBuilder(
+                      listenable: FavoritesProvider.of(context),
+                      builder: (context, _) {
+                        final favorites = FavoritesProvider.of(context);
+                        final isFavorite = favorites.isEventFavorite(event.id);
+                        return GestureDetector(
+                          onTap: () {
+                            haptics.selectionClick();
+                            favorites.toggleEventFavorite(event.id);
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.3),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              isFavorite
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              size: 16,
+                              color: isFavorite
+                                  ? Colors.redAccent
+                                  : Colors.white,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
 
                   // Date Overlay
@@ -129,7 +165,7 @@ class EventCard extends StatelessWidget {
                     const SizedBox(height: 2),
                     if (event.club != null)
                       Text(
-                        event.club!.name,
+                        event.club?.name ?? 'Unknown Club',
                         style: AppTextStyles.caption.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w600,

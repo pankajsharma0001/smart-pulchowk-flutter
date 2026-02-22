@@ -8,6 +8,7 @@ import 'package:smart_pulchowk/core/services/analytics_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/features/auth/auth.dart';
 import 'package:smart_pulchowk/core/services/navigation_service.dart';
+import 'package:smart_pulchowk/core/services/favorites_provider.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -28,6 +29,7 @@ void main() async {
   await StorageService.init();
 
   final themeProvider = ThemeProvider();
+  final favoritesProvider = FavoritesProvider();
   haptics.init(themeProvider);
 
   // Initialize async services (non-blocking)
@@ -40,7 +42,12 @@ void main() async {
     );
   }
 
-  runApp(SmartPulchowkApp(themeProvider: themeProvider));
+  runApp(
+    SmartPulchowkApp(
+      themeProvider: themeProvider,
+      favoritesProvider: favoritesProvider,
+    ),
+  );
 
   // Request notification permission after the first frame so the prompt is shown.
   WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -53,8 +60,13 @@ void main() async {
 
 class SmartPulchowkApp extends StatelessWidget {
   final ThemeProvider themeProvider;
+  final FavoritesProvider favoritesProvider;
 
-  const SmartPulchowkApp({super.key, required this.themeProvider});
+  const SmartPulchowkApp({
+    super.key,
+    required this.themeProvider,
+    required this.favoritesProvider,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -63,16 +75,19 @@ class SmartPulchowkApp extends StatelessWidget {
       builder: (context, child) {
         return InheritedThemeProvider(
           notifier: themeProvider,
-          child: MaterialApp(
-            title: 'Smart Pulchowk',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: themeProvider.themeMode,
-            navigatorKey:
-                NavigationService.navigatorKey, // Set global navigator key
-            navigatorObservers: AnalyticsService.navigatorObservers,
-            home: const AuthWrapper(),
+          child: InheritedFavoritesProvider(
+            notifier: favoritesProvider,
+            child: MaterialApp(
+              title: 'Smart Pulchowk',
+              debugShowCheckedModeBanner: false,
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: themeProvider.themeMode,
+              navigatorKey:
+                  NavigationService.navigatorKey, // Set global navigator key
+              navigatorObservers: AnalyticsService.navigatorObservers,
+              home: const AuthWrapper(),
+            ),
           ),
         );
       },
