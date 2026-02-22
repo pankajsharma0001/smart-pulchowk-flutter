@@ -7,7 +7,6 @@ import 'package:smart_pulchowk/core/widgets/logo_card.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/features/search/search.dart';
 import 'package:smart_pulchowk/features/notifications/notifications.dart';
-import 'package:smart_pulchowk/core/theme/theme_provider.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/services/auth_service.dart';
 
@@ -114,7 +113,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const _ThemeToggleButton(),
                         _SearchButton(currentPage: currentPage),
                         _NotificationBell(
                           isActive: currentPage == AppPage.notifications,
@@ -195,35 +193,6 @@ class _BrandLogo extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _ThemeToggleButton extends StatelessWidget {
-  const _ThemeToggleButton();
-
-  @override
-  Widget build(BuildContext context) {
-    final themeProvider = ThemeProvider.of(context);
-
-    return IconButton(
-      icon: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.secondary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(AppRadius.md),
-        ),
-        child: Icon(
-          themeProvider.themeModeIcon,
-          size: 20,
-          color: AppColors.secondary,
-        ),
-      ),
-      onPressed: () {
-        haptics.selectionClick();
-        themeProvider.toggleTheme();
-      },
-      tooltip: 'Theme: ${themeProvider.themeModeLabel}',
     );
   }
 }
@@ -635,7 +604,7 @@ class _ProfileMenuItem extends StatelessWidget {
                 ),
               ),
             ),
-            ?trailing,
+            if (trailing != null) trailing!,
           ],
         ),
       ),

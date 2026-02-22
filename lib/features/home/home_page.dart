@@ -429,14 +429,23 @@ class _HomeSearchBar extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.black.withValues(alpha: 0.05),
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: (isDark ? AppColors.borderDark : AppColors.borderLight)
-                .withValues(alpha: 0.3),
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.1)
+                : AppColors.primary.withValues(alpha: 0.15),
+            width: 1.5,
           ),
+          boxShadow: isDark
+              ? null
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
         ),
         child: Row(
           children: [
@@ -448,29 +457,8 @@ class _HomeSearchBar extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Search campus, events, clubs...',
+                'Search campus, events, clubs, books...',
                 style: AppTextStyles.bodyMedium.copyWith(
-                  color: isDark ? AppColors.textMutedDark : AppColors.textMuted,
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.08)
-                    : Colors.black.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(
-                  color: (isDark ? AppColors.borderDark : AppColors.borderLight)
-                      .withValues(alpha: 0.2),
-                ),
-              ),
-              child: Text(
-                '⌘K',
-                style: AppTextStyles.labelSmall.copyWith(
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
                   color: isDark ? AppColors.textMutedDark : AppColors.textMuted,
                 ),
               ),

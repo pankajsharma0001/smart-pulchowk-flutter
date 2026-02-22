@@ -189,7 +189,7 @@ class MainLayoutState extends State<MainLayout>
         haptics.mediumImpact();
         _menuController.forward();
       } else {
-        _menuController.reverse();
+        _menuController.value = 0;
       }
     });
   }
@@ -198,7 +198,7 @@ class MainLayoutState extends State<MainLayout>
     if (_isMenuOpen) {
       setState(() {
         _isMenuOpen = false;
-        _menuController.reverse();
+        _menuController.value = 0;
       });
     }
   }
@@ -695,7 +695,7 @@ class _QuickMenu extends StatelessWidget {
                 alignment: Alignment.bottomCenter,
                 child: Padding(
                   padding: EdgeInsets.only(
-                    bottom: MediaQuery.of(context).padding.bottom + 85,
+                    bottom: MediaQuery.of(context).padding.bottom + 105,
                     left: 24,
                     right: 24,
                   ),
