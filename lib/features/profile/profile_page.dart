@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:smart_pulchowk/core/models/user.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
+import 'package:smart_pulchowk/core/models/classroom.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
@@ -28,11 +29,29 @@ class _ProfilePageState extends State<ProfilePage>
   AppUser? _user;
   SellerReputation? _reputation;
   List<BookListing> _myListings = [];
+  List<SavedBook> _savedBooks = [];
+  List<BookPurchaseRequest> _sentRequests = [];
+  List<BookPurchaseRequest> _incomingRequests = [];
+  List<MarketplaceReport> _myReports = [];
+  StudentProfile? _studentProfile;
+  List<Subject> _classroomSubjects = [];
+  bool _isStudent = false;
+
+  static const _allTabs = [
+    'My Listings',
+    'Activity',
+    'Saved',
+    'Classroom',
+    'Reviews',
+  ];
+
+  List<String> get _activeTabs =>
+      _isStudent ? _allTabs : _allTabs.where((t) => t != 'Classroom').toList();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: _activeTabs.length, vsync: this);
     _loadData();
   }
 
@@ -42,66 +61,81 @@ class _ProfilePageState extends State<ProfilePage>
     super.dispose();
   }
 
-  Future<void> _loadData() async {
-    // 1. Initial Load (Try Cache first for instant feel)
-    setState(
-      () => _isLoading = _user == null,
-    ); // Only show loading if we have NO data at all
+  Future<void> _loadData({bool forceRefresh = false}) async {
+    setState(() => _isLoading = _user == null);
 
     try {
       final results = await Future.wait([
-        _api.getCurrentUser(),
-        _api.getMyBookListings(),
+        _api.getCurrentUser(forceRefresh: forceRefresh),
+        _api.getMyBookListings(forceRefresh: forceRefresh),
+        _api.getSavedBooks(forceRefresh: forceRefresh),
+        _api.getMyPurchaseRequests(forceRefresh: forceRefresh),
+        _api.getIncomingPurchaseRequests(forceRefresh: forceRefresh),
+        _api.getStudentProfile(),
       ]);
 
-      if (mounted) {
-        setState(() {
-          _user = results[0] as AppUser?;
-          _myListings = results[1] as List<BookListing>? ?? [];
-          if (_user != null) _isLoading = false;
-        });
+      // getMyMarketplaceReports returns non-nullable List — fetch separately
+      final myReports = await _api.getMyMarketplaceReports();
 
-        if (_user != null) {
-          final rep = await _api.getSellerReputation(_user!.id);
-          if (mounted) {
-            setState(() {
-              _reputation = rep;
-              _isLoading = false;
-            });
+      if (!mounted) return;
+
+      final user = results[0] as AppUser?;
+      final studentProfile = results[5] as StudentProfile?;
+      final isStudent = studentProfile != null;
+
+      // getMyClassroomSubjects returns Map<String,dynamic>, parse manually
+      List<Subject> classroomSubjects = [];
+      if (isStudent) {
+        try {
+          final subjectsMap = await _api.getMyClassroomSubjects(
+            forceRefresh: forceRefresh,
+          );
+          if (subjectsMap['success'] == true && subjectsMap['data'] != null) {
+            final data = subjectsMap['data'] as Map<String, dynamic>?;
+            final subjectsList = data?['subjects'] as List? ?? [];
+            classroomSubjects = subjectsList
+                .map((e) => Subject.fromJson(e as Map<String, dynamic>))
+                .toList();
           }
+        } catch (e) {
+          debugPrint('Error parsing classroom subjects: $e');
         }
       }
 
-      // 2. Background Refresh (Force refresh from network)
-      final refreshResults = await Future.wait([
-        _api.getCurrentUser(forceRefresh: true),
-        _api.getMyBookListings(forceRefresh: true),
-      ]);
+      if (!mounted) return;
 
-      if (mounted) {
-        setState(() {
-          _user = refreshResults[0] as AppUser? ?? _user;
-          _myListings = refreshResults[1] as List<BookListing>? ?? _myListings;
-        });
+      final oldTabCount = _tabController.length;
+      final newTabCount = isStudent ? _allTabs.length : _allTabs.length - 1;
 
-        if (_user != null) {
-          final rep = await _api.getSellerReputation(
-            _user!.id,
-            forceRefresh: true,
-          );
-          if (mounted) {
-            setState(() {
-              _reputation = rep ?? _reputation;
-            });
-          }
+      setState(() {
+        _user = user;
+        _myListings = results[1] as List<BookListing>? ?? [];
+        _savedBooks = results[2] as List<SavedBook>? ?? [];
+        _sentRequests = results[3] as List<BookPurchaseRequest>? ?? [];
+        _incomingRequests = results[4] as List<BookPurchaseRequest>? ?? [];
+        _myReports = myReports;
+        _studentProfile = studentProfile;
+        _classroomSubjects = classroomSubjects;
+        _isStudent = isStudent;
+        _isLoading = false;
+
+        if (oldTabCount != newTabCount) {
+          _tabController.dispose();
+          _tabController = TabController(length: newTabCount, vsync: this);
         }
+      });
+
+      if (user != null) {
+        final rep = await _api.getSellerReputation(
+          user.id,
+          forceRefresh: forceRefresh,
+        );
+        if (mounted) setState(() => _reputation = rep);
       }
     } catch (e) {
       debugPrint('Error loading profile data: $e');
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -115,7 +149,7 @@ class _ProfilePageState extends State<ProfilePage>
         backgroundColor: isDark
             ? AppColors.backgroundDark
             : AppColors.backgroundLight,
-        body: _buildShimmerLoading(isDark, cs),
+        body: _buildShimmerLoading(isDark),
       );
     }
 
@@ -140,9 +174,10 @@ class _ProfilePageState extends State<ProfilePage>
       );
     }
 
+    final tabs = _activeTabs;
     final double statusBarHeight = MediaQuery.of(context).padding.top;
-    const double bottomHeight = 48.0;
     const double toolbarHeight = 60.0;
+    const double bottomHeight = 48.0;
     const double expandedHeight = 320.0;
 
     return Scaffold(
@@ -150,7 +185,7 @@ class _ProfilePageState extends State<ProfilePage>
           ? AppColors.backgroundDark
           : AppColors.backgroundLight,
       body: RefreshIndicator(
-        onRefresh: _loadData,
+        onRefresh: () => _loadData(forceRefresh: true),
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
@@ -160,7 +195,7 @@ class _ProfilePageState extends State<ProfilePage>
               toolbarHeight: toolbarHeight,
               backgroundColor: isDark ? AppColors.backgroundDark : Colors.white,
               elevation: 0,
-              leading: const SizedBox.shrink(), // Remove back button space
+              leading: const SizedBox.shrink(),
               leadingWidth: 0,
               flexibleSpace: LayoutBuilder(
                 builder: (context, constraints) {
@@ -170,7 +205,6 @@ class _ProfilePageState extends State<ProfilePage>
                                   constraints.maxHeight) /
                               (expandedHeight - toolbarHeight - bottomHeight))
                           .clamp(0.0, 1.0);
-
                   return _buildFlexibleHeader(
                     isDark,
                     cs,
@@ -192,22 +226,19 @@ class _ProfilePageState extends State<ProfilePage>
                   labelStyle: AppTextStyles.labelLarge.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
-                  tabs: const [
-                    Tab(text: 'My Listings'),
-                    Tab(text: 'Reviews'),
-                  ],
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.start,
+                  tabs: tabs.map((t) => Tab(text: t)).toList(),
                   onTap: (index) => setState(() {}),
                 ),
               ),
             ),
 
-            // Reputation Summary (Now scrolls away under the pinned appbar)
-            SliverToBoxAdapter(child: _buildReputationSummary(isDark, cs)),
+            // Reputation / stats card
+            SliverToBoxAdapter(child: _buildStatsCard(isDark, cs)),
 
-            if (_tabController.index == 0)
-              _buildListingsGrid(isDark)
-            else
-              _buildReviewsList(isDark, cs),
+            // Tab content
+            _buildTabContent(isDark, cs),
 
             const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
@@ -216,14 +247,35 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
+  Widget _buildTabContent(bool isDark, ColorScheme cs) {
+    final idx = _tabController.index;
+    final tab = _activeTabs[idx];
+
+    switch (tab) {
+      case 'My Listings':
+        return _buildListingsGrid(isDark);
+      case 'Activity':
+        return _buildActivityTab(isDark, cs);
+      case 'Saved':
+        return _buildSavedBooksGrid(isDark);
+      case 'Classroom':
+        return _buildClassroomTab(isDark, cs);
+      case 'Reviews':
+        return _buildReviewsList(isDark, cs);
+      default:
+        return _buildListingsGrid(isDark);
+    }
+  }
+
+  // ─────────────── Header ───────────────────────────────────────────────────
+
   Widget _buildFlexibleHeader(
     bool isDark,
     ColorScheme cs,
     double progress,
     double statusBarHeight,
   ) {
-    // Reuse the logic from the previous ProfileHeaderDelegate.build
-    final double avatarSize = 120 - (80 * progress); // 120 -> 40
+    final double avatarSize = 120 - (80 * progress);
     final double infoOpacity = (1 - (progress * 2.5)).clamp(0.0, 1.0);
     final double bgOpacity = (progress > 0.8)
         ? 1.0
@@ -237,7 +289,6 @@ class _ProfilePageState extends State<ProfilePage>
       child: Stack(
         fit: StackFit.expand,
         children: [
-          // Background Gradient
           Opacity(
             opacity: (1 - progress).clamp(0.0, 1.0),
             child: Container(
@@ -254,39 +305,35 @@ class _ProfilePageState extends State<ProfilePage>
             ),
           ),
 
-          // Scaling Avatar
+          // Avatar
           Positioned(
             left:
                 (screenWidth / 2 - avatarSize / 2) * (1 - progress) +
                 (20 * progress),
             top: statusBarHeight + (45 * (1 - progress)) + (10 * progress),
-            child: Stack(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 2 + (2 * (1 - progress)),
-                    ),
-                  ),
-                  child: SmartImage(
-                    imageUrl: _user!.image,
-                    width: avatarSize,
-                    height: avatarSize,
-                    shape: BoxShape.circle,
-                    errorWidget: Icon(
-                      Icons.person,
-                      size: avatarSize / 2,
-                      color: cs.primary,
-                    ),
-                  ),
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.white,
+                  width: 2 + (2 * (1 - progress)),
                 ),
-              ],
+              ),
+              child: SmartImage(
+                imageUrl: _user!.image,
+                width: avatarSize,
+                height: avatarSize,
+                shape: BoxShape.circle,
+                errorWidget: Icon(
+                  Icons.person,
+                  size: avatarSize / 2,
+                  color: cs.primary,
+                ),
+              ),
             ),
           ),
 
-          // Name and Info
+          // Expanded name + email
           if (infoOpacity > 0)
             Positioned(
               top: statusBarHeight + 120 + 55,
@@ -310,16 +357,38 @@ class _ProfilePageState extends State<ProfilePage>
                         color: Colors.grey,
                       ),
                     ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: cs.primary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: cs.primary.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        _user!.role.toUpperCase(),
+                        style: AppTextStyles.overline.copyWith(
+                          color: cs.primary,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
 
-          // Compact Title
+          // Compact collapsed title
           if (progress > 0.8)
             Positioned(
               left: 72,
-              top: statusBarHeight + 10, // Vertically centered in 60px toolbar
+              top: statusBarHeight + 10,
               child: Opacity(
                 opacity: ((progress - 0.8) / 0.2).clamp(0.0, 1.0),
                 child: Column(
@@ -346,7 +415,7 @@ class _ProfilePageState extends State<ProfilePage>
               ),
             ),
 
-          // Favorites Button
+          // Favorites button
           Positioned(
             top: statusBarHeight,
             right: 48,
@@ -359,7 +428,7 @@ class _ProfilePageState extends State<ProfilePage>
             ),
           ),
 
-          // Settings Button
+          // Settings button
           Positioned(
             top: statusBarHeight,
             right: 8,
@@ -376,16 +445,15 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildReputationSummary(bool isDark, ColorScheme cs) {
-    final rep = _reputation;
-    if (rep == null) return const SizedBox.shrink();
+  // ─────────────── Stats Card ───────────────────────────────────────────────
 
+  Widget _buildStatsCard(bool isDark, ColorScheme cs) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: (isDark ? AppColors.cardDark : Colors.white).withValues(
-          alpha: 0.8,
+          alpha: 0.9,
         ),
         borderRadius: AppRadius.lgAll,
         border: Border.all(
@@ -401,43 +469,103 @@ class _ProfilePageState extends State<ProfilePage>
       ),
       child: Column(
         children: [
+          // 4-stat row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildStatItem(
                 'Rating',
-                rep.averageRating.toStringAsFixed(1),
+                _reputation?.averageRating.toStringAsFixed(1) ?? '—',
                 Icons.star_rounded,
                 Colors.orange,
               ),
               _buildStatDivider(),
               _buildStatItem(
                 'Sold',
-                rep.soldCount.toString(),
+                _reputation?.soldCount.toString() ?? '0',
                 Icons.shopping_bag_rounded,
                 cs.primary,
               ),
               _buildStatDivider(),
               _buildStatItem(
-                'Reviews',
-                rep.totalRatings.toString(),
-                Icons.reviews_rounded,
-                Colors.green,
+                'Listings',
+                _myListings.length.toString(),
+                Icons.library_books_rounded,
+                Colors.teal,
+              ),
+              _buildStatDivider(),
+              _buildStatItem(
+                'Saved',
+                _savedBooks.length.toString(),
+                Icons.bookmark_rounded,
+                Colors.purple,
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          const Divider(height: 1, thickness: 0.5),
           const SizedBox(height: 16),
+          const Divider(height: 1, thickness: 0.5),
+          const SizedBox(height: 12),
+
+          // Member since + reports quick-access row
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey),
-              const SizedBox(width: 8),
+              const Icon(
+                Icons.calendar_today_rounded,
+                size: 13,
+                color: Colors.grey,
+              ),
+              const SizedBox(width: 6),
               Text(
                 'Member since ${DateFormat('MMMM yyyy').format(_user!.createdAt)}',
                 style: AppTextStyles.caption.copyWith(color: Colors.grey),
               ),
+              const Spacer(),
+              if (_myReports.isNotEmpty)
+                GestureDetector(
+                  onTap: () {
+                    haptics.selectionClick();
+                    // Switch to the currently visible tab by index
+                    // For now just show a snack
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          '${_myReports.length} report${_myReports.length == 1 ? '' : 's'} filed',
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: AppColors.warning.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.flag_rounded,
+                          size: 12,
+                          color: AppColors.warning,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${_myReports.length} report${_myReports.length == 1 ? '' : 's'}',
+                          style: AppTextStyles.caption.copyWith(
+                            color: AppColors.warning,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
           ),
         ],
@@ -451,46 +579,53 @@ class _ProfilePageState extends State<ProfilePage>
     IconData icon,
     Color color,
   ) {
-    return InkWell(
-      onTap: () => haptics.selectionClick(),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 22),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: AppTextStyles.labelLarge.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-              ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: AppTextStyles.labelLarge.copyWith(
+              fontWeight: FontWeight.bold,
+              fontSize: 18,
             ),
-            Text(
-              label,
-              style: AppTextStyles.overline.copyWith(
-                color: Colors.grey,
-                fontWeight: FontWeight.w600,
-              ),
+          ),
+          Text(
+            label,
+            style: AppTextStyles.overline.copyWith(
+              color: Colors.grey,
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
+  Widget _buildStatDivider() => Container(
+    height: 30,
+    width: 1,
+    color: Colors.grey.withValues(alpha: 0.2),
+  );
+
+  // ─────────────── My Listings Tab ──────────────────────────────────────────
+
   Widget _buildListingsGrid(bool isDark) {
     if (_myListings.isEmpty) {
-      return const SliverFillRemaining(
-        child: Center(child: Text('You have no active listings.')),
+      return _buildEmptySliver(
+        Icons.library_books_rounded,
+        'No listings yet',
+        'Sell your books to see them here.',
       );
     }
     return SliverPadding(
@@ -511,11 +646,295 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
+  // ─────────────── Activity Tab ─────────────────────────────────────────────
+
+  Widget _buildActivityTab(bool isDark, ColorScheme cs) {
+    final hasSent = _sentRequests.isNotEmpty;
+    final hasIncoming = _incomingRequests.isNotEmpty;
+
+    if (!hasSent && !hasIncoming) {
+      return _buildEmptySliver(
+        Icons.swap_horiz_rounded,
+        'No activity yet',
+        'Your purchase requests and incoming offers will appear here.',
+      );
+    }
+
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      sliver: SliverList(
+        delegate: SliverChildListDelegate([
+          if (hasSent) ...[
+            _buildSubheader('Sent Requests', Icons.send_rounded, cs.primary),
+            const SizedBox(height: 8),
+            ..._sentRequests.map(
+              (r) => _PurchaseRequestCard(
+                request: r,
+                isDark: isDark,
+                showBuyer: false,
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+          if (hasIncoming) ...[
+            _buildSubheader(
+              'Incoming Offers',
+              Icons.inbox_rounded,
+              Colors.green,
+            ),
+            const SizedBox(height: 8),
+            ..._incomingRequests.map(
+              (r) => _PurchaseRequestCard(
+                request: r,
+                isDark: isDark,
+                showBuyer: true,
+              ),
+            ),
+          ],
+        ]),
+      ),
+    );
+  }
+
+  // ─────────────── Saved Books Tab ──────────────────────────────────────────
+
+  Widget _buildSavedBooksGrid(bool isDark) {
+    if (_savedBooks.isEmpty) {
+      return _buildEmptySliver(
+        Icons.bookmark_border_rounded,
+        'No saved books',
+        'Bookmark books you\'re interested in and they\'ll appear here.',
+      );
+    }
+    final books = _savedBooks.where((s) => s.listing != null).toList();
+    if (books.isEmpty) {
+      return _buildEmptySliver(
+        Icons.bookmark_border_rounded,
+        'No saved books',
+        'Bookmark books you\'re interested in and they\'ll appear here.',
+      );
+    }
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 12,
+          crossAxisSpacing: 12,
+          childAspectRatio: 0.65,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) =>
+              _BookCard(book: books[index].listing!, isDark: isDark),
+          childCount: books.length,
+        ),
+      ),
+    );
+  }
+
+  // ─────────────── Classroom Tab ────────────────────────────────────────────
+
+  Widget _buildClassroomTab(bool isDark, ColorScheme cs) {
+    if (_studentProfile == null) {
+      return _buildEmptySliver(
+        Icons.school_rounded,
+        'No classroom profile',
+        'Set up your student profile in the Classroom section.',
+      );
+    }
+
+    return SliverPadding(
+      padding: const EdgeInsets.all(16),
+      sliver: SliverList(
+        delegate: SliverChildListDelegate([
+          // Student profile info card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.cardDark : Colors.white,
+              borderRadius: AppRadius.lgAll,
+              border: Border.all(
+                color: isDark
+                    ? Colors.white10
+                    : Colors.black.withValues(alpha: 0.06),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: cs.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        Icons.school_rounded,
+                        color: cs.primary,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _studentProfile!.faculty?.name ?? 'Unknown Faculty',
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            'Semester ${_studentProfile!.currentSemester}',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: cs.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'Sem ${_studentProfile!.currentSemester}',
+                        style: AppTextStyles.caption.copyWith(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (_studentProfile!.semesterEndDate != null) ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        size: 13,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Semester ends ${DateFormat('MMMM d, yyyy').format(_studentProfile!.semesterEndDate!)}',
+                        style: AppTextStyles.caption.copyWith(
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Subjects
+          if (_classroomSubjects.isNotEmpty) ...[
+            _buildSubheader('Current Subjects', Icons.book_rounded, cs.primary),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _classroomSubjects.map((subject) {
+                final hasAssignments =
+                    (subject.assignments?.isNotEmpty ?? false);
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.cardDark : Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: hasAssignments
+                          ? cs.primary.withValues(alpha: 0.4)
+                          : (isDark
+                                ? Colors.white12
+                                : Colors.black.withValues(alpha: 0.08)),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (subject.code != null) ...[
+                        Text(
+                          subject.code!,
+                          style: AppTextStyles.caption.copyWith(
+                            color: cs.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          width: 1,
+                          height: 12,
+                          color: Colors.grey.withValues(alpha: 0.3),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Text(
+                        subject.title,
+                        style: AppTextStyles.labelSmall.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (subject.isElective) ...[
+                        const SizedBox(width: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 5,
+                            vertical: 1,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'Elective',
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.orange,
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ] else
+            _buildInlineEmpty('No subjects found for this semester.'),
+        ]),
+      ),
+    );
+  }
+
+  // ─────────────── Reviews Tab ──────────────────────────────────────────────
+
   Widget _buildReviewsList(bool isDark, ColorScheme cs) {
     final reviews = _reputation?.recentRatings ?? [];
     if (reviews.isEmpty) {
-      return const SliverFillRemaining(
-        child: Center(child: Text('No reviews yet.')),
+      return _buildEmptySliver(
+        Icons.reviews_rounded,
+        'No reviews yet',
+        'Sell books and earn reviews from buyers.',
       );
     }
     return SliverPadding(
@@ -530,13 +949,72 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 
-  Widget _buildStatDivider() => Container(
-    height: 30,
-    width: 1,
-    color: Colors.grey.withValues(alpha: 0.2),
-  );
+  // ─────────────── Helpers ──────────────────────────────────────────────────
 
-  Widget _buildShimmerLoading(bool isDark, ColorScheme cs) {
+  Widget _buildSubheader(String label, IconData icon, Color color) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, size: 14, color: color),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: AppTextStyles.bodyMedium.copyWith(fontWeight: FontWeight.w800),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInlineEmpty(String message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Center(
+        child: Text(
+          message,
+          style: AppTextStyles.bodySmall.copyWith(color: Colors.grey),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptySliver(IconData icon, String title, String subtitle) {
+    return SliverFillRemaining(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 56, color: AppColors.textMuted),
+              const SizedBox(height: 16),
+              Text(
+                title,
+                style: AppTextStyles.bodyLarge.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: AppTextStyles.bodySmall.copyWith(color: Colors.grey),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerLoading(bool isDark) {
     return ShimmerWrapper(
       child: CustomScrollView(
         slivers: [
@@ -544,14 +1022,14 @@ class _ProfilePageState extends State<ProfilePage>
             child: Container(
               height: 250,
               padding: const EdgeInsets.symmetric(vertical: 40),
-              child: Column(
+              child: const Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Skeleton(height: 88, width: 88, borderRadius: 44),
-                  const SizedBox(height: 16),
-                  const Skeleton(height: 24, width: 150),
-                  const SizedBox(height: 8),
-                  const Skeleton(height: 14, width: 200),
+                  Skeleton(height: 88, width: 88, borderRadius: 44),
+                  SizedBox(height: 16),
+                  Skeleton(height: 24, width: 150),
+                  SizedBox(height: 8),
+                  Skeleton(height: 14, width: 200),
                 ],
               ),
             ),
@@ -559,7 +1037,7 @@ class _ProfilePageState extends State<ProfilePage>
           SliverToBoxAdapter(
             child: Container(
               margin: const EdgeInsets.all(16),
-              height: 80,
+              height: 120,
               decoration: BoxDecoration(
                 color: isDark ? AppColors.cardDark : Colors.white,
                 borderRadius: AppRadius.lgAll,
@@ -567,8 +1045,8 @@ class _ProfilePageState extends State<ProfilePage>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(
-                  3,
-                  (index) => const Skeleton(height: 40, width: 60),
+                  4,
+                  (index) => const Skeleton(height: 50, width: 55),
                 ),
               ),
             ),
@@ -580,8 +1058,10 @@ class _ProfilePageState extends State<ProfilePage>
               child: Row(
                 children: [
                   Skeleton(height: 30, width: 100, borderRadius: 15),
-                  const SizedBox(width: 16),
-                  Skeleton(height: 30, width: 100, borderRadius: 15),
+                  const SizedBox(width: 8),
+                  Skeleton(height: 30, width: 80, borderRadius: 15),
+                  const SizedBox(width: 8),
+                  Skeleton(height: 30, width: 60, borderRadius: 15),
                 ],
               ),
             ),
@@ -606,6 +1086,171 @@ class _ProfilePageState extends State<ProfilePage>
     );
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Private widget: Purchase Request Card
+// ═══════════════════════════════════════════════════════════════════════════
+
+class _PurchaseRequestCard extends StatelessWidget {
+  final BookPurchaseRequest request;
+  final bool isDark;
+  final bool showBuyer;
+
+  const _PurchaseRequestCard({
+    required this.request,
+    required this.isDark,
+    required this.showBuyer,
+  });
+
+  Color _statusColor(RequestStatus status) {
+    switch (status) {
+      case RequestStatus.accepted:
+        return Colors.green;
+      case RequestStatus.rejected:
+      case RequestStatus.cancelled:
+        return Colors.red;
+      case RequestStatus.pending:
+        return Colors.orange;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final listing = request.listing;
+    final statusColor = _statusColor(request.status);
+
+    return GestureDetector(
+      onTap: listing != null
+          ? () {
+              haptics.selectionClick();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => BookDetailsPage(listing: listing),
+                ),
+              );
+            }
+          : null,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.cardDark : Colors.white,
+          borderRadius: AppRadius.mdAll,
+          border: Border.all(
+            color: isDark
+                ? Colors.white10
+                : Colors.black.withValues(alpha: 0.05),
+          ),
+        ),
+        child: Row(
+          children: [
+            // Book thumbnail
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                width: 52,
+                height: 68,
+                child: listing?.primaryImageUrl != null
+                    ? SmartImage(
+                        imageUrl: listing!.primaryImageUrl!,
+                        fit: BoxFit.cover,
+                      )
+                    : Container(
+                        color: cs.primary.withValues(alpha: 0.08),
+                        child: Icon(
+                          Icons.book_rounded,
+                          color: cs.primary.withValues(alpha: 0.3),
+                          size: 28,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    listing?.title ?? 'Unknown Book',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (showBuyer && request.buyer != null)
+                    Text(
+                      'From: ${request.buyer!.name}',
+                      style: AppTextStyles.caption.copyWith(color: Colors.grey),
+                    )
+                  else if (!showBuyer && listing?.seller != null)
+                    Text(
+                      'Seller: ${listing!.seller!.name}',
+                      style: AppTextStyles.caption.copyWith(color: Colors.grey),
+                    ),
+                  if (request.message != null &&
+                      request.message!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '"${request.message}"',
+                      style: AppTextStyles.caption.copyWith(
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: statusColor.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Text(
+                    request.status.label,
+                    style: AppTextStyles.caption.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  DateFormat('MMM d').format(request.createdAt),
+                  style: AppTextStyles.caption.copyWith(
+                    color: Colors.grey,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Private widget: Review Item (unchanged)
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _ReviewItem extends StatelessWidget {
   final SellerRating rating;
@@ -661,14 +1306,7 @@ class _ReviewItem extends StatelessWidget {
           ),
           if (rating.review != null && rating.review!.isNotEmpty) ...[
             const SizedBox(height: 8),
-            Text(
-              rating.review!,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimary,
-              ),
-            ),
+            Text(rating.review!, style: AppTextStyles.bodyMedium),
           ],
           const SizedBox(height: 8),
           Row(
@@ -701,6 +1339,10 @@ class _ReviewItem extends StatelessWidget {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Private widget: Glass Tab Bar
+// ═══════════════════════════════════════════════════════════════════════════
+
 class _GlassTabBar extends StatelessWidget implements PreferredSizeWidget {
   final Widget child;
   final bool isDark;
@@ -724,6 +1366,10 @@ class _GlassTabBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(48);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Private widget: Book Card
+// ═══════════════════════════════════════════════════════════════════════════
 
 class _BookCard extends StatelessWidget {
   final BookListing book;
