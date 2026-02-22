@@ -67,6 +67,7 @@ class _AdminBlocksTabState extends State<AdminBlocksTab>
       if (result.success) {
         _fetchBlocks();
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result.error ?? 'Failed to unblock user')),
         );

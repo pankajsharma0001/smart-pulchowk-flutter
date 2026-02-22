@@ -3049,14 +3049,14 @@ class ApiService {
     }
 
     try {
-      final queryParams = {
-        if (search != null) 'search': search,
-        if (role != null) 'role': role,
-        if (limit != null) 'limit': limit.toString(),
-      };
+      final queryParams = <String, String>{};
+      if (search != null) queryParams['search'] = search;
+      if (role != null) queryParams['role'] = role;
+      if (limit != null) queryParams['limit'] = limit.toString();
+
       final response = await _authGet(
         AppConstants.adminUsers,
-        queryParams: queryParams,
+        queryParams: queryParams.isEmpty ? null : queryParams,
       );
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);

@@ -990,13 +990,8 @@ class _NavItem extends StatelessWidget {
 class _FadeIndexedStack extends StatefulWidget {
   final int index;
   final List<Widget> children;
-  final Duration duration;
 
-  const _FadeIndexedStack({
-    required this.index,
-    required this.children,
-    this.duration = const Duration(milliseconds: 250),
-  });
+  const _FadeIndexedStack({required this.index, required this.children});
 
   @override
   State<_FadeIndexedStack> createState() => _FadeIndexedStackState();
@@ -1009,7 +1004,10 @@ class _FadeIndexedStackState extends State<_FadeIndexedStack>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: widget.duration);
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+    );
     _controller.forward();
   }
 

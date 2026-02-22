@@ -436,10 +436,13 @@ class _UserAvatarState extends State<_UserAvatar> {
           child: _ProfileMenuItem(
             icon: Icons.share_outlined,
             label: 'Share App',
-            onTap: () {
+            onTap: () async {
               haptics.selectionClick();
-              Share.share(
-                'Join me on the Smart Pulchowk app! Stay connected with campus events, clubs, and announcements. Download now!\n\nhttps://smartpulchowk.com',
+              await SharePlus.instance.share(
+                ShareParams(
+                  text:
+                      'Join me on the Smart Pulchowk app! Stay connected with campus events, clubs, and announcements. Download now!\n\nhttps://smartpulchowk.com',
+                ),
               );
             },
           ),
@@ -621,7 +624,7 @@ class _ProfileMenuItem extends StatelessWidget {
                 ),
               ),
             ),
-            if (trailing != null) trailing!,
+            ?trailing,
           ],
         ),
       ),

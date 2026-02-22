@@ -60,11 +60,13 @@ class _AdminUsersTabState extends State<AdminUsersTab>
     setState(() => _busyUserId = null);
 
     if (result.success) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Role updated for ${user.name}')));
       _fetchUsers();
     } else {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result.error ?? 'Failed to update role')),
       );
@@ -82,6 +84,7 @@ class _AdminUsersTabState extends State<AdminUsersTab>
     if (result.success) {
       _fetchUsers();
     } else {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result.error ?? 'Failed to update verification'),

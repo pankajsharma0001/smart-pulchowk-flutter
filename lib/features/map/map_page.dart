@@ -199,8 +199,9 @@ class _MapPageState extends State<MapPage> {
             final feature = features[i];
             final props = feature['properties'] ?? {};
             final geometry = feature['geometry'] ?? {};
-            if (props['description'] == null && props['title'] == null)
+            if (props['description'] == null && props['title'] == null) {
               continue;
+            }
             List<double> coords;
             if (geometry['type'] == 'Point') {
               coords = List<double>.from(geometry['coordinates']);
@@ -645,11 +646,12 @@ class _MapPageState extends State<MapPage> {
     try {
       bool serviceEnabled = await geo.Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        if (mounted)
+        if (mounted) {
           _showSnack(
             'Please enable location services',
             action: ('Settings', geo.Geolocator.openLocationSettings),
           );
+        }
         return;
       }
       geo.LocationPermission permission =
@@ -662,11 +664,12 @@ class _MapPageState extends State<MapPage> {
         }
       }
       if (permission == geo.LocationPermission.deniedForever) {
-        if (mounted)
+        if (mounted) {
           _showSnack(
             'Location permission denied.',
             action: ('Settings', geo.Geolocator.openAppSettings),
           );
+        }
         return;
       }
       final pos = await geo.Geolocator.getCurrentPosition(

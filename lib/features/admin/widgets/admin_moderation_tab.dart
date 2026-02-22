@@ -93,6 +93,7 @@ class _AdminModerationTabState extends State<AdminModerationTab>
       if (result.success) {
         _fetchReports();
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(result.error ?? 'Failed to update report')),
         );
