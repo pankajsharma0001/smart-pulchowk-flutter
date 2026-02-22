@@ -60,6 +60,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         final user = snapshot.data;
 
         return Container(
+          height: 60,
           decoration: BoxDecoration(
             color: Theme.of(context).appBarTheme.backgroundColor,
             border: Border(

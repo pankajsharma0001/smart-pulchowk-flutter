@@ -629,17 +629,16 @@ class _ProfilePageState extends State<ProfilePage>
       );
     }
     return SliverPadding(
-      padding: const EdgeInsets.all(16),
-      sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.65,
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) =>
-              _BookCard(book: _myListings[index], isDark: isDark),
+          (context, index) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _HorizontalBookCard(
+              book: _myListings[index],
+              isDark: isDark,
+            ),
+          ),
           childCount: _myListings.length,
         ),
       ),
@@ -715,17 +714,16 @@ class _ProfilePageState extends State<ProfilePage>
       );
     }
     return SliverPadding(
-      padding: const EdgeInsets.all(16),
-      sliver: SliverGrid(
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 2,
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 0.65,
-        ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
-          (context, index) =>
-              _BookCard(book: books[index].listing!, isDark: isDark),
+          (context, index) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _HorizontalBookCard(
+              book: books[index].listing!,
+              isDark: isDark,
+            ),
+          ),
           childCount: books.length,
         ),
       ),
@@ -1370,76 +1368,131 @@ class _GlassTabBar extends StatelessWidget implements PreferredSizeWidget {
 // ═══════════════════════════════════════════════════════════════════════════
 // Private widget: Book Card
 // ═══════════════════════════════════════════════════════════════════════════
+// Private widget: Horizontal Book Card for Profile Page
+// ═══════════════════════════════════════════════════════════════════════════
 
-class _BookCard extends StatelessWidget {
+class _HorizontalBookCard extends StatelessWidget {
   final BookListing book;
   final bool isDark;
 
-  const _BookCard({required this.book, required this.isDark});
+  const _HorizontalBookCard({required this.book, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => BookDetailsPage(listing: book)),
       ),
       child: Container(
+        height: 110,
         decoration: BoxDecoration(
           color: isDark ? AppColors.cardDark : AppColors.cardLight,
-          borderRadius: AppRadius.lgAll,
-          border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
+          borderRadius: AppRadius.mdAll,
+          border: Border.all(
+            color: isDark
+                ? Colors.white10
+                : Colors.black.withValues(alpha: 0.05),
+          ),
+          boxShadow: isDark ? null : AppShadows.xs,
         ),
         clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Expanded(
+            // Image
+            SizedBox(
+              width: 90,
+              height: double.infinity,
               child: book.primaryImageUrl != null
                   ? SmartImage(
                       imageUrl: book.primaryImageUrl!,
                       fit: BoxFit.cover,
-                      width: double.infinity,
                     )
                   : Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: cs.primary.withValues(
-                          alpha: isDark ? 0.15 : 0.05,
-                        ),
-                      ),
+                      color: cs.primary.withValues(alpha: 0.05),
                       child: Icon(
                         Icons.library_books_rounded,
-                        size: 48,
                         color: cs.primary.withValues(alpha: 0.2),
                       ),
                     ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    book.title,
-                    style: AppTextStyles.labelSmall.copyWith(
-                      fontWeight: FontWeight.bold,
+
+            // Content
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            book.title,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Rs. ${book.price}',
+                          style: AppTextStyles.labelLarge.copyWith(
+                            color: cs.primary,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ],
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    'Rs. ${book.price}',
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
+                    const Spacer(),
+                    Row(
+                      children: [
+                        _infoBadge(
+                          book.condition.displayName,
+                          Colors.purple,
+                          isDark,
+                        ),
+                        const SizedBox(width: 8),
+                        if (book.status == BookStatus.sold)
+                          _infoBadge('Sold', Colors.red, isDark)
+                        else
+                          _infoBadge('Active', Colors.green, isDark),
+                        const Spacer(),
+                        Icon(
+                          Icons.chevron_right_rounded,
+                          color: Colors.grey.withValues(alpha: 0.5),
+                        ),
+                      ],
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _infoBadge(String label, Color color, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: AppTextStyles.overline.copyWith(
+          color: color,
+          fontSize: 8,
+          fontWeight: FontWeight.bold,
         ),
       ),
     );

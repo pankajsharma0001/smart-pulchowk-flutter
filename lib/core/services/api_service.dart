@@ -198,6 +198,10 @@ class ApiService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
         final userData = responseData['data']?['user'];
+        final role = userData?['role']?.toString();
+        if (role != null) {
+          await StorageService.writeSecure(AppConstants.userRoleKey, role);
+        }
         return userData?['id']?.toString();
       }
       return null;
@@ -234,17 +238,28 @@ class ApiService {
 
   /// Fetch the current user role from the backend.
   Future<String> getUserRole() async {
+    // 1. Try reading from persistent storage first as a fast path
+    final storedRole = await StorageService.readSecure(
+      AppConstants.userRoleKey,
+    );
+
     try {
       final response = await _authGet(AppConstants.userProfile);
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
-        final role = responseData['data']?['user']?['role'];
-        if (role != null) return role.toString();
+        final role = responseData['data']?['user']?['role']?.toString();
+        if (role != null) {
+          // 2. Persist the official role from backend
+          await StorageService.writeSecure(AppConstants.userRoleKey, role);
+          return role;
+        }
       }
     } catch (e) {
-      debugPrint('Error fetching user role: $e');
+      debugPrint('Error fetching user role from network: $e');
     }
-    return 'student'; // Fallback
+
+    // 3. Fallback to stored role or 'student'
+    return storedRole ?? 'student';
   }
 
   /// Fetch the full current user profile from the backend.

@@ -10,7 +10,6 @@ import 'package:smart_pulchowk/features/marketplace/sell_book_page.dart';
 import 'package:smart_pulchowk/features/marketplace/marketplace_activity_page.dart';
 import 'package:smart_pulchowk/features/marketplace/chat_list_page.dart';
 import 'package:smart_pulchowk/core/widgets/interactive_wrapper.dart';
-import 'package:smart_pulchowk/core/widgets/app_refresher.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BOOK MARKETPLACE PAGE
@@ -299,7 +298,7 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
               ? _buildShimmerGrid(isDark)
               : _books.isEmpty
               ? _buildEmptyState(isDark)
-              : AppRefresher(
+              : RefreshIndicator(
                   onRefresh: _onRefresh,
                   child: _buildBookGrid(isDark),
                 ),
@@ -334,6 +333,9 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
 
   Widget _buildBookGrid(bool isDark) {
     return GridView.builder(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,

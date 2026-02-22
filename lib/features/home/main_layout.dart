@@ -378,16 +378,18 @@ class MainLayoutState extends State<MainLayout>
                     color: Theme.of(context).appBarTheme.backgroundColor,
                     child: SafeArea(
                       bottom: false,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const OfflineBanner(),
-                          CustomAppBar(
-                            isHomePage: _selectedIndex == 0,
-                            currentPage: _getCurrentPage(),
-                            userRole: _userRole,
-                          ),
-                        ],
+                      child: ClipRect(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const OfflineBanner(),
+                            CustomAppBar(
+                              isHomePage: _selectedIndex == 0,
+                              currentPage: _getCurrentPage(),
+                              userRole: _userRole,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

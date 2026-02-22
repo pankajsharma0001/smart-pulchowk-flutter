@@ -6,7 +6,6 @@ import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_card.dart';
 import 'package:smart_pulchowk/features/calendar/calendar.dart';
-import 'package:smart_pulchowk/core/widgets/app_refresher.dart';
 import 'package:smart_pulchowk/core/widgets/error_view.dart';
 
 class EventsPage extends StatefulWidget {
@@ -145,7 +144,7 @@ class _EventsPageState extends State<EventsPage>
   }
 
   Widget _buildRefreshableList(List<ClubEvent> events) {
-    return AppRefresher(
+    return RefreshIndicator(
       onRefresh: () async {
         if (mounted) {
           debugPrint('EventsPage: Manual refresh. Syncing role...');
@@ -164,7 +163,9 @@ class _EventsPageState extends State<EventsPage>
     }
 
     return GridView.builder(
-      physics: const AlwaysScrollableScrollPhysics(),
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,
         AppSpacing.md,
