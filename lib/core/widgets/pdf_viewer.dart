@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:pdfx/pdfx.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/interactive_wrapper.dart';
-import 'package:http/http.dart' as http;
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 
@@ -23,6 +22,7 @@ class _CustomPdfViewerState extends State<CustomPdfViewer> {
   bool _isLoading = true;
   String? _errorMessage;
   bool _isUiVisible = true;
+  double _downloadProgress = 0.0;
 
   @override
   void initState() {
@@ -69,11 +69,28 @@ class _CustomPdfViewerState extends State<CustomPdfViewer> {
 
   Future<Uint8List> _downloadPdfBytes() async {
     try {
-      final response = await http.get(Uri.parse(widget.url));
-      if (response.statusCode == 200) {
-        return response.bodyBytes;
+      final client = HttpClient();
+      final request = await client.getUrl(Uri.parse(widget.url));
+      final response = await request.close();
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load PDF (Status: ${response.statusCode})');
       }
-      throw Exception('Failed to load PDF (Status: ${response.statusCode})');
+
+      final contentLength = response.contentLength;
+      final bytes = BytesBuilder(copy: false);
+      int downloaded = 0;
+
+      await for (final chunk in response) {
+        bytes.add(chunk);
+        downloaded += chunk.length;
+        if (contentLength > 0 && mounted) {
+          setState(() {
+            _downloadProgress = downloaded / contentLength;
+          });
+        }
+      }
+      return bytes.takeBytes();
     } catch (e) {
       if (_isTlsCertificateError(e)) {
         final fallbackBytes = await _downloadPdfBytesWithFallback();
@@ -92,8 +109,6 @@ class _CustomPdfViewerState extends State<CustomPdfViewer> {
 
   Future<Uint8List?> _downloadPdfBytesWithFallback() async {
     final uri = Uri.parse(widget.url);
-    // Accept the certificate for the same host as the PDF URL (handles
-    // self-signed / local-issuer certs on the app's own server).
     final client = HttpClient();
     client.badCertificateCallback = (cert, host, port) => host == uri.host;
     try {
@@ -101,9 +116,18 @@ class _CustomPdfViewerState extends State<CustomPdfViewer> {
       final response = await request.close();
       if (response.statusCode != HttpStatus.ok) return null;
 
+      final contentLength = response.contentLength;
       final bytes = BytesBuilder(copy: false);
+      int downloaded = 0;
+
       await for (final chunk in response) {
         bytes.add(chunk);
+        downloaded += chunk.length;
+        if (contentLength > 0 && mounted) {
+          setState(() {
+            _downloadProgress = downloaded / contentLength;
+          });
+        }
       }
       return bytes.takeBytes();
     } finally {
@@ -121,8 +145,27 @@ class _CustomPdfViewerState extends State<CustomPdfViewer> {
           children: [
             // PDF Content
             if (_isLoading)
-              const Center(
-                child: CircularProgressIndicator(color: Colors.white),
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(
+                      value: _downloadProgress > 0 ? _downloadProgress : null,
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                    if (_downloadProgress > 0) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        '${(_downloadProgress * 100).toInt()}%',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               )
             else if (_errorMessage != null)
               Center(

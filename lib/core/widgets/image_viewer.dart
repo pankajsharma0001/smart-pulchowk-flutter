@@ -22,12 +22,21 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
   late PageController _pageController;
   late int _currentIndex;
   bool _isUiVisible = true;
+  static const int _kInfiniteMultiplier = 10000;
+  late int _initialPage;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
-    _pageController = PageController(initialPage: widget.initialIndex);
+    if (widget.imageUrls.length > 1) {
+      _initialPage =
+          ((_kInfiniteMultiplier ~/ 2) * widget.imageUrls.length) +
+          widget.initialIndex;
+    } else {
+      _initialPage = widget.initialIndex;
+    }
+    _pageController = PageController(initialPage: _initialPage);
     // Hide status and navigation bars for immersive viewing
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     SystemChrome.setSystemUIOverlayStyle(
@@ -80,21 +89,25 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
             // Main Image Gallery
             PageView.builder(
               controller: _pageController,
-              itemCount: widget.imageUrls.length,
-              onPageChanged: (index) => setState(() => _currentIndex = index),
+              itemCount: widget.imageUrls.length > 1
+                  ? _kInfiniteMultiplier * widget.imageUrls.length
+                  : widget.imageUrls.length,
+              onPageChanged: (index) => setState(
+                () => _currentIndex = index % widget.imageUrls.length,
+              ),
               physics: const BouncingScrollPhysics(),
               itemBuilder: (context, index) {
+                final actualIndex = index % widget.imageUrls.length;
                 return InteractiveViewer(
                   minScale: 1.0,
                   maxScale: 4.0,
                   child: Center(
                     child: Hero(
-                      tag: widget.imageUrls[index],
+                      tag: widget.imageUrls[actualIndex],
                       child: SmartImage(
-                        imageUrl: widget.imageUrls[index],
+                        imageUrl: widget.imageUrls[actualIndex],
                         fit: BoxFit.contain,
-                        useCloudinary:
-                            false, // Don't optimize full screen images to avoid quality loss
+                        showProgress: true,
                         errorWidget: const Icon(
                           Icons.broken_image_rounded,
                           color: Colors.white54,

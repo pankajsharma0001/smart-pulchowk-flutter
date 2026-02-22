@@ -24,7 +24,24 @@ class LocationDetailsSheet extends StatefulWidget {
 
 class _LocationDetailsSheetState extends State<LocationDetailsSheet> {
   int _currentImageIndex = 0;
-  final PageController _pageController = PageController();
+  late final PageController _pageController;
+  static const int _kInfiniteMultiplier = 10000;
+
+  List<String> _imageUrls = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _imageUrls = _parseImages();
+    if (_imageUrls.length > 1) {
+      // Start at a large virtual page that matches index 0
+      final initialPage = (_kInfiniteMultiplier ~/ 2) * _imageUrls.length;
+      _pageController = PageController(initialPage: initialPage);
+      _currentImageIndex = 0;
+    } else {
+      _pageController = PageController();
+    }
+  }
 
   List<String> _parseImages() {
     if (widget.images == null) return [];
@@ -170,13 +187,19 @@ class _LocationDetailsSheetState extends State<LocationDetailsSheet> {
                                   children: [
                                     PageView.builder(
                                       controller: _pageController,
+                                      itemCount: imageUrls.length > 1
+                                          ? _kInfiniteMultiplier *
+                                                imageUrls.length
+                                          : imageUrls.length,
                                       onPageChanged: (idx) {
                                         setState(
-                                          () => _currentImageIndex = idx,
+                                          () => _currentImageIndex =
+                                              idx % imageUrls.length,
                                         );
                                       },
-                                      itemCount: imageUrls.length,
                                       itemBuilder: (context, index) {
+                                        final actualIndex =
+                                            index % imageUrls.length;
                                         return GestureDetector(
                                           onTap: () {
                                             Navigator.of(
@@ -187,18 +210,19 @@ class _LocationDetailsSheetState extends State<LocationDetailsSheet> {
                                                 builder: (_) =>
                                                     FullScreenImageViewer(
                                                       imageUrls: imageUrls,
-                                                      initialIndex: index,
+                                                      initialIndex: actualIndex,
                                                     ),
                                               ),
                                             );
                                           },
                                           child: Hero(
-                                            tag: imageUrls[index],
+                                            tag: imageUrls[actualIndex],
                                             child: SmartImage(
-                                              imageUrl: imageUrls[index],
+                                              imageUrl: imageUrls[actualIndex],
                                               width: double.infinity,
                                               height: 200,
                                               fit: BoxFit.cover,
+                                              showProgress: true,
                                             ),
                                           ),
                                         );

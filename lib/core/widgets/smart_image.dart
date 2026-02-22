@@ -17,6 +17,7 @@ class SmartImage extends StatelessWidget {
   final BoxShape shape;
   final Widget? errorWidget;
   final bool useCloudinary;
+  final bool showProgress;
 
   const SmartImage({
     super.key,
@@ -28,6 +29,7 @@ class SmartImage extends StatelessWidget {
     this.shape = BoxShape.rectangle,
     this.errorWidget,
     this.useCloudinary = true,
+    this.showProgress = false,
   });
 
   @override
@@ -84,14 +86,56 @@ class SmartImage extends StatelessWidget {
           width: width,
           height: height,
           fit: fit,
-          placeholder: (context, url) => ShimmerWrapper(
-            child: Skeleton(
-              width: width,
-              height: height,
-              borderRadius: borderRadius,
-              shape: shape,
-            ),
-          ),
+          progressIndicatorBuilder: showProgress
+              ? (context, url, progress) => Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      ShimmerWrapper(
+                        child: Skeleton(
+                          width: width,
+                          height: height,
+                          borderRadius: borderRadius,
+                          shape: shape,
+                        ),
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          CircularProgressIndicator(
+                            value: progress.progress,
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Theme.of(context).primaryColor,
+                            ),
+                          ),
+                          if (progress.progress != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              '${(progress.progress! * 100).toInt()}%',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                )
+              : null,
+          placeholder: showProgress
+              ? null
+              : (context, url) => ShimmerWrapper(
+                  child: Skeleton(
+                    width: width,
+                    height: height,
+                    borderRadius: borderRadius,
+                    shape: shape,
+                  ),
+                ),
           errorListener: (error) {
             debugPrint('SmartImage Error [$processedUrl]: $error');
           },
