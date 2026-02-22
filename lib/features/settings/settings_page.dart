@@ -24,7 +24,8 @@ class SettingsPage extends StatefulWidget {
   State<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
+class _SettingsPageState extends State<SettingsPage>
+    with WidgetsBindingObserver {
   final ApiService _apiService = ApiService();
   bool _isLoading = true;
   String _appVersion = '1.0.0';
@@ -43,7 +44,34 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadSettings();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshPermissionStatus();
+    }
+  }
+
+  Future<void> _refreshPermissionStatus() async {
+    final hasPermission = await NotificationService.hasPermission();
+    if (hasPermission != _hasNotificationPermission) {
+      setState(() {
+        _hasNotificationPermission = hasPermission;
+      });
+      if (hasPermission) {
+        // If permission was just granted, sync subscriptions
+        await NotificationService.syncSubscriptions();
+      }
+    }
   }
 
   Future<void> _loadSettings() async {
@@ -54,13 +82,15 @@ class _SettingsPageState extends State<SettingsPage> {
 
     setState(() {
       _hasNotificationPermission = hasPermission;
-      _eventsNotify = prefs.getBool('notify_events') ?? true;
-      _booksNotify = prefs.getBool('notify_books') ?? true;
-      _noticesNotify = prefs.getBool('notify_notices') ?? true;
-      _announcementsNotify = prefs.getBool('notify_announcements') ?? true;
-      _classroomNotify = prefs.getBool('notify_classroom') ?? true;
-      _chatNotify = prefs.getBool('notify_chat') ?? true;
-      _lostFoundNotify = prefs.getBool('notify_lost_found') ?? true;
+      // Default to false if permission is denied on a fresh install/load
+      _eventsNotify = prefs.getBool('notify_events') ?? hasPermission;
+      _booksNotify = prefs.getBool('notify_books') ?? hasPermission;
+      _noticesNotify = prefs.getBool('notify_notices') ?? hasPermission;
+      _announcementsNotify =
+          prefs.getBool('notify_announcements') ?? hasPermission;
+      _classroomNotify = prefs.getBool('notify_classroom') ?? hasPermission;
+      _chatNotify = prefs.getBool('notify_chat') ?? hasPermission;
+      _lostFoundNotify = prefs.getBool('notify_lost_found') ?? hasPermission;
       _appVersion = info.version;
       _userRole = role;
       _isLoading = false;
@@ -734,12 +764,14 @@ class _SettingsPageState extends State<SettingsPage> {
       title: title,
       subtitle: subtitle,
       trailing: Switch.adaptive(
-        value: value,
+        value: _hasNotificationPermission ? value : false,
         activeTrackColor: AppColors.primary,
-        onChanged: (v) {
-          haptics.selectionClick();
-          onChanged(v);
-        },
+        onChanged: _hasNotificationPermission
+            ? (v) {
+                haptics.selectionClick();
+                onChanged(v);
+              }
+            : null,
       ),
     );
   }

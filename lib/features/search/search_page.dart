@@ -199,8 +199,8 @@ class _SearchPageState extends State<SearchPage>
           20 + MediaQuery.of(context).padding.bottom,
         ),
         itemCount: 5,
-        separatorBuilder: (_, __) => const SizedBox(height: 16),
-        itemBuilder: (_, __) => const ShimmerWrapper(
+        separatorBuilder: (_, _) => const SizedBox(height: 16),
+        itemBuilder: (_, _) => const ShimmerWrapper(
           child: Skeleton(height: 80, width: double.infinity, borderRadius: 16),
         ),
       );
@@ -235,7 +235,7 @@ class _SearchPageState extends State<SearchPage>
         20 + MediaQuery.of(context).padding.bottom,
       ),
       itemCount: results.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final result = results[index];
         return _ResultCard(result: result, isDark: isDark);
