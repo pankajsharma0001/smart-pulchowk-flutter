@@ -418,16 +418,7 @@ class _UserAvatarState extends State<_UserAvatar> {
                 MainLayout.of(context)?.setSelectedIndex(10), // Settings index
           ),
         ),
-        PopupMenuItem<String>(
-          value: 'notifications',
-          child: _ProfileMenuItem(
-            icon: Icons.notifications_none_outlined,
-            label: 'Notifications',
-            trailing: const _NewBadge(count: 4),
-            onTap: () =>
-                MainLayout.of(context)?.setSelectedIndex(8), // Notices index
-          ),
-        ),
+
         PopupMenuItem<String>(
           value: 'share',
           child: _ProfileMenuItem(
@@ -586,14 +577,12 @@ class _ProfileMenuItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  final Widget? trailing;
   final bool isDestructive;
 
   const _ProfileMenuItem({
     required this.icon,
     required this.label,
     required this.onTap,
-    this.trailing,
     this.isDestructive = false,
   });
 
@@ -621,32 +610,7 @@ class _ProfileMenuItem extends StatelessWidget {
                 ),
               ),
             ),
-            ?trailing,
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NewBadge extends StatelessWidget {
-  final int count;
-
-  const _NewBadge({required this.count});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(AppRadius.full),
-      ),
-      child: Text(
-        '$count new',
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: const Color(0xFF6366F1),
-          fontWeight: FontWeight.bold,
         ),
       ),
     );

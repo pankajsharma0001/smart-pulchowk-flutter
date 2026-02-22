@@ -226,8 +226,10 @@ class _ProfilePageState extends State<ProfilePage>
                   labelStyle: AppTextStyles.labelLarge.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
-                  isScrollable: true,
-                  tabAlignment: TabAlignment.start,
+                  isScrollable: _isStudent,
+                  tabAlignment: _isStudent
+                      ? TabAlignment.start
+                      : TabAlignment.fill,
                   tabs: tabs.map((t) => Tab(text: t)).toList(),
                   onTap: (index) => setState(() {}),
                 ),
@@ -1131,6 +1133,7 @@ class _PurchaseRequestCard extends StatelessWidget {
             }
           : null,
       child: Container(
+        width: double.infinity,
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -1260,6 +1263,7 @@ class _ReviewItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1387,6 +1391,7 @@ class _HorizontalBookCard extends StatelessWidget {
         MaterialPageRoute(builder: (_) => BookDetailsPage(listing: book)),
       ),
       child: Container(
+        width: double.infinity,
         height: 110,
         decoration: BoxDecoration(
           color: isDark ? AppColors.cardDark : AppColors.cardLight,
