@@ -21,37 +21,6 @@ import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:smart_pulchowk/features/map/map.dart';
 
-// ── Placeholder pages (will be replaced as features are built) ──────────────
-class _PlaceholderPage extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  const _PlaceholderPage({required this.title, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 64, color: AppColors.textMuted),
-            const SizedBox(height: AppSpacing.lg),
-            Text(title, style: AppTextStyles.h3),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Coming soon',
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textMuted,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN LAYOUT
 // ─────────────────────────────────────────────────────────────────────────────

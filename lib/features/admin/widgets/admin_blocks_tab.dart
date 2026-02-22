@@ -128,7 +128,7 @@ class _AdminBlocksTabState extends State<AdminBlocksTab>
                     bottom: 100,
                   ),
                   itemCount: _blocks.length,
-                  separatorBuilder: (_, __) => Divider(
+                  separatorBuilder: (_, _) => Divider(
                     height: 1,
                     color: isDark
                         ? AppColors.borderDark
@@ -218,7 +218,7 @@ class ShimmerAdminBlocks extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 100),
       itemCount: 5,
-      separatorBuilder: (_, __) => Divider(
+      separatorBuilder: (_, _) => Divider(
         height: 1,
         color: isDark ? AppColors.borderDark : AppColors.borderLight,
       ),

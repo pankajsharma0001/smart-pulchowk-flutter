@@ -15,6 +15,7 @@ import 'package:smart_pulchowk/core/models/club.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:smart_pulchowk/core/models/admin.dart';
 import 'package:smart_pulchowk/core/models/user.dart';
+import 'package:smart_pulchowk/features/map/models/chatbot_response.dart';
 import 'package:smart_pulchowk/core/services/auth_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
@@ -3269,6 +3270,34 @@ class ApiService {
       );
     } catch (e) {
       return ApiResult.failure('Error: $e');
+    }
+  }
+
+  // ── ChatBot API ───────────────────────────────────────────────────────────
+
+  /// Send a query to the campus navigation chatbot.
+  Future<ChatBotResponse> chatBot(String query) async {
+    try {
+      final response = await _post(
+        AppConstants.chatbotChat,
+        body: {'query': query},
+      );
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        return ChatBotResponse.fromJson(json);
+      }
+
+      return ChatBotResponse(
+        success: false,
+        errorMessage: 'Server error: ${response.statusCode}',
+      );
+    } catch (e) {
+      debugPrint('ChatBot Error: $e');
+      return ChatBotResponse(
+        success: false,
+        errorMessage: 'Something went wrong. Please try again.',
+      );
     }
   }
 }

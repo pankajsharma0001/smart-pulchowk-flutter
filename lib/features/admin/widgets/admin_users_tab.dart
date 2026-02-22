@@ -118,7 +118,7 @@ class _AdminUsersTabState extends State<AdminUsersTab>
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedRole,
+                      initialValue: _selectedRole,
                       decoration: InputDecoration(
                         labelText: 'Filter by Role',
                         contentPadding: const EdgeInsets.symmetric(
@@ -183,7 +183,7 @@ class _AdminUsersTabState extends State<AdminUsersTab>
                     bottom: 100,
                   ),
                   itemCount: _users.length,
-                  separatorBuilder: (_, __) => Divider(
+                  separatorBuilder: (_, _) => Divider(
                     height: 1,
                     indent: 64,
                     color: isDark
@@ -375,7 +375,7 @@ class ShimmerAdminUsers extends StatelessWidget {
     return ListView.separated(
       padding: const EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 100),
       itemCount: 8,
-      separatorBuilder: (_, __) => Divider(
+      separatorBuilder: (_, _) => Divider(
         height: 1,
         indent: 64,
         color: isDark ? AppColors.borderDark : AppColors.borderLight,

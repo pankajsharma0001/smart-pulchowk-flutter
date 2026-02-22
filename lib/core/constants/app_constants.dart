@@ -60,6 +60,7 @@ class AppConstants {
   static const String adminRatings = '/admin/ratings';
   static const String adminBlocks = '/admin/blocks';
   static const String adminAnnouncements = '/admin/announcements';
+  static const String chatbotChat = '/chatbot/chat';
 
   // ── Storage Keys ──────────────────────────────────────────────────────────
   static const String dbUserIdKey = 'db_user_id';

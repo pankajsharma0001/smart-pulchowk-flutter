@@ -10,8 +10,10 @@ import 'package:http/http.dart' as http;
 import 'package:maplibre_gl/maplibre_gl.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
-import 'package:smart_pulchowk/features/map/category_filter_bar.dart';
-import 'package:smart_pulchowk/features/map/location_details_sheet.dart';
+import 'package:smart_pulchowk/features/map/widgets/category_filter_bar.dart';
+import 'package:smart_pulchowk/features/map/widgets/location_details_sheet.dart';
+import 'package:smart_pulchowk/features/map/widgets/chat_bot_widget.dart';
+import 'package:smart_pulchowk/features/map/models/chatbot_response.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon URLs (single source of truth)
@@ -215,8 +217,9 @@ class _MapPageState extends State<MapPage> {
   String _getIconForDescription(String desc) {
     final d = desc.toLowerCase();
     if (d.contains('bank') || d.contains('atm')) return 'bank';
-    if (d.contains('mess') || d.contains('canteen') || d.contains('food'))
+    if (d.contains('mess') || d.contains('canteen') || d.contains('food')) {
       return 'food';
+    }
     if (d.contains('library')) return 'library';
     if (d.contains('department')) return 'department';
     if (d.contains('mandir')) return 'temple';
@@ -232,8 +235,11 @@ class _MapPageState extends State<MapPage> {
     if (d.contains('music club')) return 'music';
     if (d.contains('center for energy')) return 'energy';
     if (d.contains('the helm')) return 'helm';
-    if (d.contains('park') || d.contains('garden') || d.contains('pi chautari'))
+    if (d.contains('park') ||
+        d.contains('garden') ||
+        d.contains('pi chautari')) {
       return 'garden';
+    }
     if (d.contains('store') || d.contains('bookshop')) return 'store';
     if (d.contains('quarter')) return 'quarter';
     if (d.contains('robotics')) return 'robotics';
@@ -243,8 +249,9 @@ class _MapPageState extends State<MapPage> {
     if (d.contains('office') ||
         d.contains('ntbns') ||
         d.contains('seds') ||
-        d.contains('cids'))
+        d.contains('cids')) {
       return 'office';
+    }
     if (d.contains('building')) return 'building';
     if (d.contains('block') || d.contains('embark')) return 'block';
     if (d.contains('cave')) return 'cave';
@@ -1026,6 +1033,30 @@ class _MapPageState extends State<MapPage> {
     if (_isStyleLoaded && _mapController != null) _addMarkersToMap();
   }
 
+  // ── ChatBot location handling ──
+  void _handleChatBotLocations(List<ChatBotLocation> locations, String action) {
+    if (locations.isEmpty) return;
+
+    final first = locations.first;
+    final targetLatLng = LatLng(first.lat, first.lng);
+
+    if (action == 'show_route') {
+      // If AI says show route, try to find the match in our markers or just route to latlng
+      final destinationMatch = _allLocations.firstWhere(
+        (l) => l['id'] == first.buildingId,
+        orElse: () => _allLocations.isNotEmpty ? _allLocations.first : {},
+      );
+      if (destinationMatch.isNotEmpty) {
+        _showStartPointPicker(destinationMatch);
+      }
+    } else {
+      // Just center on the location
+      _mapController?.animateCamera(
+        CameraUpdate.newLatLngZoom(targetLatLng, 17.5),
+      );
+    }
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -1448,7 +1479,7 @@ class _MapPageState extends State<MapPage> {
             // ── Compass button ──
             if (_cameraBearing.abs() > 1)
               Positioned(
-                bottom: bottomNavHeight + 68,
+                bottom: bottomNavHeight + 136, // Stacked (8 + 64 + 64)
                 right: 16,
                 child: _MapButton(
                   isDark: isDark,
@@ -1469,7 +1500,7 @@ class _MapPageState extends State<MapPage> {
 
             // ── My Location button ──
             Positioned(
-              bottom: bottomNavHeight + 0,
+              bottom: bottomNavHeight + 72, // Stacked (8 + 64)
               right: 16,
               child: _MapButton(
                 isDark: isDark,
@@ -1499,7 +1530,7 @@ class _MapPageState extends State<MapPage> {
 
             // ── Map/Satellite toggle ──
             Positioned(
-              bottom: bottomNavHeight + 0,
+              bottom: bottomNavHeight + 8,
               left: 16,
               child: _GlassContainer(
                 isDark: isDark,
@@ -1534,6 +1565,14 @@ class _MapPageState extends State<MapPage> {
                 ),
               ),
             ),
+
+            // ── ChatBot Assistant (Stacked last to overlay everything) ──
+            ChatBotWidget(
+              bottomOffset: bottomNavHeight,
+              onLocationsReturned: (locations, action) {
+                _handleChatBotLocations(locations, action);
+              },
+            ),
           ],
         ),
       ),
@@ -1550,7 +1589,7 @@ class _MapPageState extends State<MapPage> {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isActive
               ? AppColors.primary.withValues(alpha: isDark ? 0.2 : 0.1)
