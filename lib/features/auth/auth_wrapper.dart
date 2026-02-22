@@ -24,17 +24,18 @@ class AuthWrapper extends StatelessWidget {
           return const _SplashScreen();
         }
 
+        // Check if onboarding has been seen FIRST
+        final hasSeenOnboarding = StorageService.getHasSeenOnboarding();
+        if (!hasSeenOnboarding) {
+          return const OnboardingPage();
+        }
+
         // Authenticated
         if (snapshot.hasData && snapshot.data != null) {
-          // Check if onboarding has been seen
-          final hasSeenOnboarding = StorageService.getHasSeenOnboarding();
-          if (!hasSeenOnboarding) {
-            return const OnboardingPage();
-          }
           return MainLayout(key: MainLayout.mainLayoutKey);
         }
 
-        // Not authenticated → login
+        // Not authenticated AND has seen onboarding → login
         return const LoginPage();
       },
     );

@@ -1138,9 +1138,7 @@ ${widget.event.description ?? ''}
 Join here: $eventUrl
 ''';
 
-    await SharePlus.instance.share(
-      ShareParams(text: text, subject: 'Event: ${widget.event.title}'),
-    );
+    await SharePlus.instance.share(ShareParams(text: text));
   }
 
   Widget _buildSectionTitle(String title) {

@@ -9,6 +9,8 @@ import 'package:smart_pulchowk/features/search/search.dart';
 import 'package:smart_pulchowk/features/notifications/notifications.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/services/auth_service.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:smart_pulchowk/features/settings/help_center_page.dart';
 
 enum AppPage {
   home,
@@ -435,7 +437,10 @@ class _UserAvatarState extends State<_UserAvatar> {
             icon: Icons.share_outlined,
             label: 'Share App',
             onTap: () {
-              // Share logic placeholder
+              haptics.selectionClick();
+              Share.share(
+                'Join me on the Smart Pulchowk app! Stay connected with campus events, clubs, and announcements. Download now!\n\nhttps://smartpulchowk.com',
+              );
             },
           ),
         ),
@@ -445,7 +450,11 @@ class _UserAvatarState extends State<_UserAvatar> {
             icon: Icons.help_outline_rounded,
             label: 'Help & Support',
             onTap: () {
-              // Help logic placeholder
+              haptics.selectionClick();
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HelpCenterPage()),
+              );
             },
           ),
         ),
@@ -458,7 +467,15 @@ class _UserAvatarState extends State<_UserAvatar> {
             isDestructive: true,
             onTap: () async {
               haptics.heavyImpact();
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (context) =>
+                    const Center(child: CircularProgressIndicator()),
+              );
               await AuthService.signOut();
+              // No need to pop the dialog manually because signing out usually changes
+              // the root auth state, navigating the user entirely away to the login screen.
             },
           ),
         ),

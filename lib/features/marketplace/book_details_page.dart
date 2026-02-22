@@ -240,9 +240,7 @@ Author: ${_book.author}
 View listing: $listingUrl
 ''';
 
-    await SharePlus.instance.share(
-      ShareParams(text: text, subject: 'Book Listing: ${_book.title}'),
-    );
+    await SharePlus.instance.share(ShareParams(text: text));
   }
 
   @override

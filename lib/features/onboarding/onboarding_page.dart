@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
-import 'package:smart_pulchowk/features/home/main_layout.dart';
+import 'package:smart_pulchowk/features/auth/auth_wrapper.dart';
 
 class OnboardingPage extends StatefulWidget {
   const OnboardingPage({super.key});
@@ -64,7 +64,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            MainLayout(key: MainLayout.mainLayoutKey),
+            const AuthWrapper(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
