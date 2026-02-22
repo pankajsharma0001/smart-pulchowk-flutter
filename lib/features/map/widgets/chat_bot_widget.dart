@@ -241,13 +241,19 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final viewInsets = MediaQuery.of(context).viewInsets;
+    final isKeyboardOpen = viewInsets.bottom > 0;
+    final keyboardOffset = isKeyboardOpen ? viewInsets.bottom : 0.0;
 
     return Stack(
       children: [
         if (_isOpen)
           Positioned(
             right: 16,
-            bottom: 80 + widget.bottomOffset, // Clear FAB (88 total)
+            bottom:
+                64 +
+                widget.bottomOffset +
+                keyboardOffset, // Aligned with Location button bottom
             child: FadeTransition(
               opacity: _fadeAnimation,
               child: ScaleTransition(
@@ -260,7 +266,10 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
 
         Positioned(
           right: 16, // Back to bottom-right
-          bottom: 8 + widget.bottomOffset,
+          bottom:
+              0 +
+              widget.bottomOffset +
+              (isKeyboardOpen ? keyboardOffset : 0), // Flush with navbar
           child: _buildFab(isDark),
         ),
       ],

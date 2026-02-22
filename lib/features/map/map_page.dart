@@ -1064,7 +1064,7 @@ class _MapPageState extends State<MapPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final topPad = MediaQuery.of(context).padding.top;
     final bottomPad = MediaQuery.of(context).padding.bottom;
-    final bottomNavHeight = bottomPad + 65.0;
+    final bottomNavHeight = bottomPad + 38.0;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -1479,7 +1479,7 @@ class _MapPageState extends State<MapPage> {
             // ── Compass button ──
             if (_cameraBearing.abs() > 1)
               Positioned(
-                bottom: bottomNavHeight + 136, // Stacked (8 + 64 + 64)
+                bottom: bottomNavHeight + 128, // Stacked (64 + 64)
                 right: 16,
                 child: _MapButton(
                   isDark: isDark,
@@ -1500,7 +1500,7 @@ class _MapPageState extends State<MapPage> {
 
             // ── My Location button ──
             Positioned(
-              bottom: bottomNavHeight + 72, // Stacked (8 + 64)
+              bottom: bottomNavHeight + 64, // Stacked (64)
               right: 16,
               child: _MapButton(
                 isDark: isDark,
@@ -1530,7 +1530,7 @@ class _MapPageState extends State<MapPage> {
 
             // ── Map/Satellite toggle ──
             Positioned(
-              bottom: bottomNavHeight + 8,
+              bottom: bottomNavHeight + 0, // Flush with navbar
               left: 16,
               child: _GlassContainer(
                 isDark: isDark,
