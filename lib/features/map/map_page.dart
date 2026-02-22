@@ -188,7 +188,8 @@ class _MapPageState extends State<MapPage> {
             final feature = features[i];
             final props = feature['properties'] ?? {};
             final geometry = feature['geometry'] ?? {};
-            if (props['description'] == null) continue;
+            if (props['description'] == null && props['title'] == null)
+              continue;
             List<double> coords;
             if (geometry['type'] == 'Point') {
               coords = List<double>.from(geometry['coordinates']);
@@ -197,15 +198,18 @@ class _MapPageState extends State<MapPage> {
             } else {
               continue;
             }
+            final title = props['description'] ?? props['title'] ?? 'Unknown';
             locations.add({
-              'title': props['description'] ?? props['title'] ?? 'Unknown',
+              'title': title,
               'description': props['about'] ?? '',
               'images': props['image'],
               'coordinates': coords,
-              'icon': _getIconForDescription(props['description'] ?? ''),
+              'icon': _getIconForDescription(title),
             });
           }
           _allLocations = locations;
+          // Clear old cache before saving new data
+          await StorageService.deleteCache(AppConstants.cacheMapLocations);
           // Save to cache
           await StorageService.writeCache(
             AppConstants.cacheMapLocations,
