@@ -140,8 +140,16 @@ class _FavoritesPageState extends State<FavoritesPage>
                   child: TabBarView(
                     controller: _tabController,
                     children: [
-                      _buildClubsList(isDark),
-                      _buildEventsList(isDark),
+                      RefreshIndicator(
+                        onRefresh: _loadData,
+                        color: AppColors.primary,
+                        child: _buildClubsList(isDark),
+                      ),
+                      RefreshIndicator(
+                        onRefresh: _loadData,
+                        color: AppColors.primary,
+                        child: _buildEventsList(isDark),
+                      ),
                     ],
                   ),
                 ),
@@ -155,55 +163,42 @@ class _FavoritesPageState extends State<FavoritesPage>
 
   Widget _buildHeader(bool isDark) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+      padding: const EdgeInsets.fromLTRB(12, 16, 24, 8),
       child: Row(
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Your Favorites',
-                style: AppTextStyles.h2.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
-                ),
-              ),
-              Text(
-                'Quick access to your preferred clubs and events',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: isDark ? AppColors.textMutedDark : AppColors.textMuted,
-                ),
-              ),
-            ],
+          IconButton(
+            icon: Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+              size: 20,
+            ),
+            onPressed: () => Navigator.pop(context),
+            splashRadius: 24,
           ),
-          const Spacer(),
-          _buildRefreshButton(isDark),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your Favorites',
+                  style: AppTextStyles.h2.copyWith(
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                Text(
+                  'Quick access to your preferred clubs and events',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: isDark
+                        ? AppColors.textMutedDark
+                        : AppColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildRefreshButton(bool isDark) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.black.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.black.withValues(alpha: 0.05),
-        ),
-      ),
-      child: IconButton(
-        icon: Icon(
-          Icons.refresh_rounded,
-          color: isDark ? Colors.white70 : Colors.black87,
-          size: 20,
-        ),
-        onPressed: _loadData,
-        tooltip: 'Refresh',
       ),
     );
   }
@@ -271,6 +266,7 @@ class _FavoritesPageState extends State<FavoritesPage>
     }
 
     return GridView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
@@ -296,6 +292,7 @@ class _FavoritesPageState extends State<FavoritesPage>
     }
 
     return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
       itemCount: _favoriteEvents.length,
       itemBuilder: (context, index) {
@@ -313,6 +310,7 @@ class _FavoritesPageState extends State<FavoritesPage>
   Widget _buildShimmerList({required bool isClubsTab}) {
     if (isClubsTab) {
       return GridView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 24),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
@@ -325,6 +323,7 @@ class _FavoritesPageState extends State<FavoritesPage>
       );
     }
     return ListView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 24),
       itemCount: 5,
       itemBuilder: (context, index) => const Padding(
@@ -335,52 +334,75 @@ class _FavoritesPageState extends State<FavoritesPage>
   }
 
   Widget _buildEmptyState(String title, String subtitle) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.05),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.favorite_border_rounded,
-              size: 64,
-              color: AppColors.primary.withValues(alpha: 0.2),
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.05),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.favorite_border_rounded,
+                    size: 64,
+                    color: AppColors.primary.withValues(alpha: 0.2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(title, style: AppTextStyles.h4),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 48),
+                  child: Text(
+                    subtitle,
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 24),
-          Text(title, style: AppTextStyles.h4),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 48),
-            child: Text(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: AppColors.textMuted,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
   Widget _buildErrorState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
-          const SizedBox(height: 16),
-          Text(_error ?? 'An error occurred', style: AppTextStyles.h5),
-          const SizedBox(height: 16),
-          ElevatedButton(onPressed: _loadData, child: const Text('Retry')),
-        ],
-      ),
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.error_outline_rounded,
+                  size: 48,
+                  color: AppColors.error,
+                ),
+                const SizedBox(height: 16),
+                Text(_error ?? 'An error occurred', style: AppTextStyles.h5),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _loadData,
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -370,7 +370,7 @@ class MainLayoutState extends State<MainLayout>
               currentPage: _getCurrentPage(),
               userRole: _userRole,
             ),
-            body: IndexedStack(
+            body: _FadeIndexedStack(
               index: _selectedIndex,
               children: List.generate(
                 12,
@@ -556,22 +556,28 @@ class _BottomNavBar extends StatelessWidget {
             child: Stack(
               children: [
                 // ── Sliding Indicator Pill ──
-                AnimatedPositioned(
-                  duration: const Duration(milliseconds: 400),
-                  curve: Curves.easeOutBack,
-                  left: indicatorIndex * itemWidth + (itemWidth - 48) / 2,
-                  top: (65.0 - 52.0) / 2,
-                  child: Container(
-                    width: 48,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color:
-                          (isDark ? const Color(0xFF818CF8) : AppColors.primary)
-                              .withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(16),
+                if (selectedIndex == 0 ||
+                    selectedIndex == 1 ||
+                    selectedIndex == 3 ||
+                    selectedIndex == 4)
+                  AnimatedPositioned(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeOutBack,
+                    left: indicatorIndex * itemWidth + (itemWidth - 48) / 2,
+                    top: (65.0 - 52.0) / 2,
+                    child: Container(
+                      width: 48,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color:
+                            (isDark
+                                    ? const Color(0xFF818CF8)
+                                    : AppColors.primary)
+                                .withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                   ),
-                ),
                 // Icons Row
                 Row(
                   children: [
@@ -973,6 +979,59 @@ class _NavItem extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FADE INDEXED STACK
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _FadeIndexedStack extends StatefulWidget {
+  final int index;
+  final List<Widget> children;
+  final Duration duration;
+
+  const _FadeIndexedStack({
+    required this.index,
+    required this.children,
+    this.duration = const Duration(milliseconds: 250),
+  });
+
+  @override
+  State<_FadeIndexedStack> createState() => _FadeIndexedStackState();
+}
+
+class _FadeIndexedStackState extends State<_FadeIndexedStack>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: widget.duration);
+    _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(_FadeIndexedStack oldWidget) {
+    if (widget.index != oldWidget.index) {
+      _controller.forward(from: 0.0);
+    }
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _controller,
+      child: IndexedStack(index: widget.index, children: widget.children),
     );
   }
 }

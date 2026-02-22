@@ -68,6 +68,7 @@ class AppConstants {
   static const String fcmTokenKey = 'fcm_token';
   static const String themeKey = 'theme_mode';
   static const String hapticsKey = 'haptics_enabled';
+  static const String recentSearchKey = 'recent_searches_history';
 
   // ── Hive Boxes ────────────────────────────────────────────────────────────
   static const String apiCacheBox = 'api_cache';

@@ -15,6 +15,9 @@ import 'package:smart_pulchowk/features/marketplace/book_details_page.dart';
 import 'package:smart_pulchowk/core/widgets/pdf_viewer.dart';
 import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
 import 'package:smart_pulchowk/features/map/map_page.dart';
+import 'package:smart_pulchowk/core/services/storage_service.dart';
+import 'package:smart_pulchowk/core/constants/app_constants.dart';
+import 'package:smart_pulchowk/core/services/haptic_service.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -34,6 +37,7 @@ class _SearchPageState extends State<SearchPage>
   bool _isLoading = false;
   String? _lastQuery;
   late TabController _tabController;
+  List<String> _recentSearches = [];
 
   static const List<String> _tabs = [
     'All',
@@ -47,9 +51,11 @@ class _SearchPageState extends State<SearchPage>
   @override
   void initState() {
     super.initState();
+    haptics.selectionClick();
     _tabController = TabController(length: _tabs.length, vsync: this);
+    _loadRecentSearches();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _searchFocusNode.requestFocus();
+      if (mounted) _searchFocusNode.requestFocus();
     });
   }
 
@@ -60,6 +66,41 @@ class _SearchPageState extends State<SearchPage>
     _tabController.dispose();
     _debounce?.cancel();
     super.dispose();
+  }
+
+  void _loadRecentSearches() {
+    final history = StorageService.readCache(AppConstants.recentSearchKey);
+    if (history is List) {
+      setState(() {
+        _recentSearches = List<String>.from(history);
+      });
+    }
+  }
+
+  Future<void> _saveSearchQuery(String query) async {
+    final cleanQuery = query.trim();
+    if (cleanQuery.isEmpty) return;
+
+    final updated = List<String>.from(_recentSearches);
+    updated.remove(cleanQuery);
+    updated.insert(0, cleanQuery);
+
+    // Keep only top 10
+    if (updated.length > 10) {
+      updated.removeRange(10, updated.length);
+    }
+
+    setState(() {
+      _recentSearches = updated;
+    });
+    await StorageService.writeCache(AppConstants.recentSearchKey, updated);
+  }
+
+  Future<void> _clearRecentSearches() async {
+    setState(() {
+      _recentSearches = [];
+    });
+    await StorageService.deleteCache(AppConstants.recentSearchKey);
   }
 
   void _onSearchChanged(String query) {
@@ -92,6 +133,9 @@ class _SearchPageState extends State<SearchPage>
           _isLoading = false;
           _lastQuery = query;
         });
+        if (results.isNotEmpty) {
+          _saveSearchQuery(query);
+        }
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
@@ -210,6 +254,9 @@ class _SearchPageState extends State<SearchPage>
 
     if (results.isEmpty) {
       if (_searchController.text.isEmpty) {
+        if (_recentSearches.isNotEmpty) {
+          return _buildRecentSearchesSection(isDark);
+        }
         return _buildEmptyState(
           icon: Icons.search_rounded,
           title: 'Start Searching',
@@ -240,6 +287,79 @@ class _SearchPageState extends State<SearchPage>
         final result = results[index];
         return _ResultCard(result: result, isDark: isDark);
       },
+    );
+  }
+
+  Widget _buildRecentSearchesSection(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Recent Searches',
+                style: AppTextStyles.labelLarge.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
+              ),
+              TextButton(
+                onPressed: _clearRecentSearches,
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: AppColors.primary,
+                ),
+                child: const Text('Clear All'),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            itemCount: _recentSearches.length,
+            itemBuilder: (context, index) {
+              final query = _recentSearches[index];
+              return ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white10
+                        : Colors.black.withValues(alpha: 0.05),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.history_rounded,
+                    size: 18,
+                    color: isDark ? Colors.white60 : Colors.black54,
+                  ),
+                ),
+                title: Text(
+                  query,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                trailing: Icon(
+                  Icons.north_west_rounded,
+                  size: 16,
+                  color: isDark ? Colors.white24 : Colors.black26,
+                ),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                onTap: () {
+                  _searchController.text = query;
+                  _searchFocusNode.unfocus();
+                  _performSearch(query);
+                },
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
