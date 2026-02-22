@@ -11,6 +11,7 @@ import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/features/events/event_details_page.dart';
+import 'package:smart_pulchowk/core/widgets/app_refresher.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -71,11 +72,8 @@ class _HomeContentState extends State<_HomeContent> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: RefreshIndicator(
+      child: AppRefresher(
         onRefresh: _handleRefresh,
-        displacement: 20,
-        color: AppColors.primary,
-        backgroundColor: Theme.of(context).cardColor,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),

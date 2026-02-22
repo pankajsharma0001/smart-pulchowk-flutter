@@ -6,6 +6,8 @@ import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_card.dart';
 import 'package:smart_pulchowk/features/calendar/calendar.dart';
+import 'package:smart_pulchowk/core/widgets/app_refresher.dart';
+import 'package:smart_pulchowk/core/widgets/error_view.dart';
 
 class EventsPage extends StatefulWidget {
   const EventsPage({super.key});
@@ -143,7 +145,7 @@ class _EventsPageState extends State<EventsPage>
   }
 
   Widget _buildRefreshableList(List<ClubEvent> events) {
-    return RefreshIndicator(
+    return AppRefresher(
       onRefresh: () async {
         if (mounted) {
           debugPrint('EventsPage: Manual refresh. Syncing role...');
@@ -239,36 +241,9 @@ class _EventsPageState extends State<EventsPage>
   }
 
   Widget _buildErrorState() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
-            height: constraints.maxHeight,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.error_outline_rounded,
-                    size: 48,
-                    color: AppColors.error,
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    _error ?? 'Something went wrong',
-                    style: AppTextStyles.bodyLarge,
-                  ),
-                  TextButton(
-                    onPressed: () => _loadEvents(forceRefresh: true),
-                    child: const Text('Try Again'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+    return ErrorView(
+      message: _error ?? 'Something went wrong while fetching events.',
+      onRetry: () => _loadEvents(forceRefresh: true),
     );
   }
 }

@@ -20,6 +20,7 @@ import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:smart_pulchowk/features/map/map.dart';
+import 'package:smart_pulchowk/core/widgets/offline_banner.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN LAYOUT
@@ -466,6 +467,9 @@ class MainLayoutState extends State<MainLayout>
               ),
             ),
           ),
+
+          // ── Offline Banner ──────────────────────────────────────────
+          const Positioned(top: 0, left: 0, right: 0, child: OfflineBanner()),
         ],
       ),
     );

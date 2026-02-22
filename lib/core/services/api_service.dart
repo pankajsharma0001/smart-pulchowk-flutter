@@ -177,7 +177,8 @@ class ApiService {
     required String authStudentId,
     required String email,
     required String name,
-    required String firebaseIdToken,
+    required String
+    firebaseIdToken, // Still kept for initial sync if needed, but will use _authPost
     String? image,
     String? fcmToken,
   }) async {
@@ -199,9 +200,6 @@ class ApiService {
         final userData = responseData['data']?['user'];
         return userData?['id']?.toString();
       }
-      debugPrint(
-        'Sync failed: Status ${response.statusCode}, Body: ${response.body}',
-      );
       return null;
     } catch (e) {
       debugPrint('Error syncing user: $e');
@@ -211,12 +209,9 @@ class ApiService {
 
   /// Clear FCM token on logout.
   Future<void> clearFcmToken(String? firebaseIdToken) async {
-    if (firebaseIdToken == null) return;
     try {
-      await _post(
-        AppConstants.clearFcmToken,
-        headers: {'Authorization': 'Bearer $firebaseIdToken'},
-      );
+      // Use internal auth handling if idToken not provided
+      await _authPost(AppConstants.clearFcmToken);
     } catch (e) {
       debugPrint('Error clearing FCM token: $e');
     }
@@ -225,13 +220,12 @@ class ApiService {
   /// Update FCM token for a user.
   Future<void> updateFcmToken({
     required String fcmToken,
-    required String firebaseIdToken,
+    String? firebaseIdToken, // Optional now
   }) async {
     try {
-      await _post(
+      await _authPost(
         AppConstants.updateFcmToken,
         body: {'fcmToken': fcmToken},
-        headers: {'Authorization': 'Bearer $firebaseIdToken'},
       );
     } catch (e) {
       debugPrint('Error updating FCM token: $e');
@@ -240,16 +234,8 @@ class ApiService {
 
   /// Fetch the current user role from the backend.
   Future<String> getUserRole() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return 'guest';
-
     try {
-      final token = await currentUser.getIdToken();
-      final response = await _get(
-        AppConstants.userProfile,
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
+      final response = await _authGet(AppConstants.userProfile);
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
         final role = responseData['data']?['user']?['role'];
@@ -258,7 +244,6 @@ class ApiService {
     } catch (e) {
       debugPrint('Error fetching user role: $e');
     }
-
     return 'student'; // Fallback
   }
 
@@ -269,15 +254,7 @@ class ApiService {
       ttl: AppConstants.cacheExpiry,
       forceRefresh: forceRefresh,
       fetcher: () async {
-        final currentUser = FirebaseAuth.instance.currentUser;
-        if (currentUser == null) return null;
-
-        final token = await currentUser.getIdToken();
-        final response = await _get(
-          AppConstants.userProfile,
-          headers: {'Authorization': 'Bearer $token'},
-        );
-
+        final response = await _authGet(AppConstants.userProfile);
         if (response.statusCode == 200) {
           final Map<String, dynamic> responseData = jsonDecode(response.body);
           if (responseData['data']?['success'] == true &&
@@ -305,15 +282,7 @@ class ApiService {
   /// Get current user's student profile (for faculty-based notifications etc.)
   Future<StudentProfile?> getStudentProfile() async {
     try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) return null;
-
-      final token = await currentUser.getIdToken();
-      final response = await _get(
-        AppConstants.studentProfile,
-        headers: {'Authorization': 'Bearer $token'},
-      );
-
+      final response = await _authGet(AppConstants.studentProfile);
       if (response.statusCode == 200) {
         final Map<String, dynamic> responseData = jsonDecode(response.body);
         if (responseData['data']?['success'] == true &&
@@ -329,6 +298,104 @@ class ApiService {
     return null;
   }
 
+  /// Get auth headers with Firebase ID token attached.
+  Future<Map<String, String>> _getAuthHeaders() async {
+    final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+    if (token != null) headers['Authorization'] = 'Bearer $token';
+    return headers;
+  }
+
+  // ── Authenticated Requests (with Token Refresh) ───────────────────────────
+
+  Future<http.Response> _authGet(
+    String path, {
+    Map<String, String>? headers,
+    Map<String, String>? queryParams,
+  }) async {
+    return _retryOnUnauthorized(() async {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      final combined = headers ?? {};
+      if (token != null) combined['Authorization'] = 'Bearer $token';
+      return _get(path, headers: combined, queryParams: queryParams);
+    });
+  }
+
+  Future<http.Response> _authPost(
+    String path, {
+    dynamic body,
+    Map<String, String>? headers,
+  }) async {
+    return _retryOnUnauthorized(() async {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      final combined = headers ?? {};
+      if (token != null) combined['Authorization'] = 'Bearer $token';
+      return _post(path, body: body, headers: combined);
+    });
+  }
+
+  Future<http.Response> _authPut(
+    String path, {
+    dynamic body,
+    Map<String, String>? headers,
+  }) async {
+    return _retryOnUnauthorized(() async {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      final combined = headers ?? {};
+      if (token != null) combined['Authorization'] = 'Bearer $token';
+      return _put(path, body: body, headers: combined);
+    });
+  }
+
+  Future<http.Response> _authDelete(
+    String path, {
+    dynamic body,
+    Map<String, String>? headers,
+  }) async {
+    return _retryOnUnauthorized(() async {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      final combined = headers ?? {};
+      if (token != null) combined['Authorization'] = 'Bearer $token';
+      return _delete(path, body: body, headers: combined);
+    });
+  }
+
+  Future<http.Response> _authPatch(
+    String path, {
+    dynamic body,
+    Map<String, String>? headers,
+  }) async {
+    return _retryOnUnauthorized(() async {
+      final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+      final combined = headers ?? {};
+      if (token != null) combined['Authorization'] = 'Bearer $token';
+      return _patch(path, body: body, headers: combined);
+    });
+  }
+
+  /// Wrapper to handle 401 Unauthorized by refreshing token and retrying once.
+  Future<http.Response> _retryOnUnauthorized(
+    Future<http.Response> Function() request,
+  ) async {
+    final response = await request();
+
+    if (response.statusCode == 401) {
+      debugPrint('401 Unauthorized detected. Refreshing token...');
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Force refresh the ID token
+        await user.getIdToken(true);
+        debugPrint('Token refreshed. Retrying request...');
+        return await request();
+      }
+    }
+
+    return response;
+  }
+
   // ── Generic Request Helpers ───────────────────────────────────────────────
 
   Future<http.Response> _get(
@@ -340,7 +407,7 @@ class ApiService {
     if (queryParams != null && queryParams.isNotEmpty) {
       url = url.replace(queryParameters: queryParams);
     }
-    final combinedHeaders = await _getHeaders(headers);
+    final combinedHeaders = _getHeaders(headers);
     return await _client.get(url, headers: combinedHeaders);
   }
 
@@ -350,7 +417,7 @@ class ApiService {
     Map<String, String>? headers,
   }) async {
     final url = Uri.parse('${AppConstants.fullApiUrl}$path');
-    final combinedHeaders = await _getHeaders(headers);
+    final combinedHeaders = _getHeaders(headers);
     return await _client.post(
       url,
       headers: combinedHeaders,
@@ -364,7 +431,7 @@ class ApiService {
     Map<String, String>? headers,
   }) async {
     final url = Uri.parse('${AppConstants.fullApiUrl}$path');
-    final combinedHeaders = await _getHeaders(headers);
+    final combinedHeaders = _getHeaders(headers);
     return await _client.put(
       url,
       headers: combinedHeaders,
@@ -378,7 +445,7 @@ class ApiService {
     Map<String, String>? headers,
   }) async {
     final url = Uri.parse('${AppConstants.fullApiUrl}$path');
-    final combinedHeaders = await _getHeaders(headers);
+    final combinedHeaders = _getHeaders(headers);
     return await _client.delete(
       url,
       headers: combinedHeaders,
@@ -392,7 +459,7 @@ class ApiService {
     Map<String, String>? headers,
   }) async {
     final url = Uri.parse('${AppConstants.fullApiUrl}$path');
-    final combinedHeaders = await _getHeaders(headers);
+    final combinedHeaders = _getHeaders(headers);
     return await _client.patch(
       url,
       headers: combinedHeaders,
@@ -400,7 +467,7 @@ class ApiService {
     );
   }
 
-  Future<Map<String, String>> _getHeaders(Map<String, String>? extra) async {
+  Map<String, String> _getHeaders(Map<String, String>? extra) {
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
@@ -463,46 +530,6 @@ class ApiService {
       'googleusercontent.com',
     ];
     return socialDomains.any((domain) => url.toLowerCase().contains(domain));
-  }
-
-  /// Get auth headers with Firebase ID token attached.
-  Future<Map<String, String>> _getAuthHeaders() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) return {};
-    final token = await currentUser.getIdToken();
-    return {'Authorization': 'Bearer $token'};
-  }
-
-  /// Make an authenticated GET request.
-  Future<http.Response> _authGet(
-    String path, {
-    Map<String, String>? queryParams,
-  }) async {
-    return _get(
-      path,
-      headers: await _getAuthHeaders(),
-      queryParams: queryParams,
-    );
-  }
-
-  /// Make an authenticated POST request.
-  Future<http.Response> _authPost(String path, {dynamic body}) async {
-    return _post(path, body: body, headers: await _getAuthHeaders());
-  }
-
-  /// Make an authenticated PUT request.
-  Future<http.Response> _authPut(String path, {dynamic body}) async {
-    return _put(path, body: body, headers: await _getAuthHeaders());
-  }
-
-  /// Make an authenticated DELETE request.
-  Future<http.Response> _authDelete(String path, {dynamic body}) async {
-    return _delete(path, body: body, headers: await _getAuthHeaders());
-  }
-
-  /// Make an authenticated PATCH request.
-  Future<http.Response> _authPatch(String path, {dynamic body}) async {
-    return _patch(path, body: body, headers: await _getAuthHeaders());
   }
 
   // ── Book Marketplace ─────────────────────────────────────────────────────

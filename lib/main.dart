@@ -10,6 +10,7 @@ import 'package:smart_pulchowk/features/auth/auth.dart';
 import 'package:smart_pulchowk/core/services/navigation_service.dart';
 import 'package:smart_pulchowk/core/services/favorites_provider.dart';
 import 'package:smart_pulchowk/core/widgets/theme_change_animator.dart';
+import 'package:smart_pulchowk/core/services/connectivity_service.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -28,6 +29,7 @@ void main() async {
 
   // Initialize Core Services
   await StorageService.init();
+  await ConnectivityService.instance.initialize();
 
   final themeProvider = ThemeProvider();
   final favoritesProvider = FavoritesProvider();

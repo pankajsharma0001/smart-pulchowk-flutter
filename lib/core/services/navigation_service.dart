@@ -18,209 +18,130 @@ class NavigationService {
 
   /// Handle navigation from an in-app notification tap.
   static void handleInAppNotification(InAppNotification notification) {
-    final data = notification.data ?? {};
-    final type = notification.type;
-
-    switch (type) {
-      case NotificationType.bookListed:
-      case NotificationType.newBook:
-      case NotificationType.requestResponse:
-        final idStr = data['listingId'] ?? data['bookId'];
-        final id = int.tryParse(idStr?.toString() ?? '');
-        if (id != null) {
-          _navigateToTab(
-            3,
-            subPage: BookDetailsPage(listing: BookListing.fromId(id)),
-          );
-        } else {
-          _navigateToTab(3);
-        }
-
-      case NotificationType.purchaseRequest:
-      case NotificationType.purchaseRequestCancelled:
-      case NotificationType.purchaseRequestRemoved:
-        _navigateToTab(
-          3,
-          subPage: const MarketplaceActivityPage(initialTabIndex: 1),
-        );
-
-      case NotificationType.chatMessage:
-      case NotificationType.chatMention:
-        final conversationId = int.tryParse(
-          data['conversationId']?.toString() ?? '',
-        );
-        final senderId = data['senderId']?.toString();
-        final senderName = data['senderName']?.toString() ?? 'Chat';
-        if (conversationId != null) {
-          _navigateToTab(
-            3,
-            subPage: ChatRoomPage(
-              conversationId: conversationId,
-              recipientId: senderId ?? '',
-              recipientName: senderName,
-            ),
-          );
-        }
-
-      case NotificationType.newEvent:
-      case NotificationType.eventPublished:
-      case NotificationType.eventReminder:
-      case NotificationType.eventUpdated:
-      case NotificationType.eventRegistered:
-        final eventId = int.tryParse(data['eventId']?.toString() ?? '');
-        if (eventId != null) {
-          _navigateToTab(
-            6,
-            subPage: EventDetailsPage(event: ClubEvent.fromId(eventId)),
-          );
-        } else {
-          _navigateToTab(6);
-        }
-
-      case NotificationType.noticeCreated:
-      case NotificationType.noticeUpdated:
-      case NotificationType.noticeDeleted:
-        final attachmentUrl = data['attachmentUrl']?.toString();
-        final noticeTitle = data['noticeTitle']?.toString() ?? 'Notice';
-
-        // Always switch to notices tab first so the user is in the right context
-        _navigateToTab(8);
-
-        if (attachmentUrl != null && attachmentUrl.isNotEmpty) {
-          if (notification.isPdf) {
-            _navigateToRoot(
-              CustomPdfViewer(url: attachmentUrl, title: noticeTitle),
-            );
-          } else {
-            final urlLower = attachmentUrl.toLowerCase();
-            final isImage =
-                urlLower.contains('.jpg') ||
-                urlLower.contains('.jpeg') ||
-                urlLower.contains('.png') ||
-                urlLower.contains('.webp');
-            if (isImage) {
-              _navigateToRoot(
-                FullScreenImageViewer(imageUrls: [attachmentUrl]),
-              );
-            }
-          }
-        }
-
-      case NotificationType.lostFoundClaimReceived:
-      case NotificationType.lostFoundClaimAccepted:
-      case NotificationType.lostFoundClaimRejected:
-      case NotificationType.lostFoundPublished:
-        _navigateToTab(9);
-
-      case NotificationType.newAssignment:
-      case NotificationType.gradingUpdate:
-      case NotificationType.assignmentDeadline:
-        _navigateToTab(2); // Classroom/Admin role tab
-
-      case NotificationType.roleChanged:
-      case NotificationType.securityAlert:
-      case NotificationType.systemAnnouncement:
-      case NotificationType.sellerVerified:
-      case NotificationType.sellerRevoked:
-      case NotificationType.system:
-        break; // No specific navigation
-    }
+    _processAction(
+      type: notification.type.name,
+      data: notification.data ?? {},
+      isPdf: notification.isPdf,
+    );
   }
 
   /// Handle navigation based on push notification data payload.
   static void handleNotificationPayload(Map<String, dynamic> data) {
-    final type = data['type']?.toString();
-    debugPrint('Handling notification payload: $type');
+    debugPrint('Handling notification payload: ${data['type']}');
+    _processAction(type: data['type']?.toString() ?? '', data: data);
+  }
 
-    if (type == 'new_book' || type == 'request_response') {
-      final listingIdIdStr = data['listingId'] ?? data['bookId'];
-      if (listingIdIdStr != null) {
-        final id = int.tryParse(listingIdIdStr.toString());
-        if (id != null) {
-          _navigateToTab(
-            3, // Marketplace tab
-            subPage: BookDetailsPage(listing: BookListing.fromId(id)),
-          );
-        }
+  /// Unified internal processor for all notification types.
+  static void _processAction({
+    required String type,
+    required Map<String, dynamic> data,
+    bool? isPdf,
+  }) {
+    final t = type.toLowerCase();
+
+    // 1. Marketplace & Books
+    if (t.contains('book') || t.contains('request_response')) {
+      final idStr = data['listingId'] ?? data['bookId'];
+      final id = int.tryParse(idStr?.toString() ?? '');
+      if (id != null) {
+        _navigateToTab(
+          3, // Marketplace
+          subPage: BookDetailsPage(listing: BookListing.fromId(id)),
+        );
+      } else {
+        _navigateToTab(3);
       }
-    } else if (type == 'new_purchase_request' ||
-        type == 'purchase_request_cancelled') {
+      return;
+    }
+
+    if (t.contains('purchase_request')) {
       _navigateToTab(
-        3, // Marketplace tab
+        3,
         subPage: const MarketplaceActivityPage(initialTabIndex: 1),
       );
-    } else if (type == 'chat' || type == 'message') {
-      final conversationId = int.tryParse(
-        data['conversationId']?.toString() ?? '',
-      );
+      return;
+    }
+
+    // 2. Chat
+    if (t == 'chat' || t == 'message' || t.contains('chat_message')) {
+      final convId = int.tryParse(data['conversationId']?.toString() ?? '');
       final senderId = data['senderId']?.toString();
       final senderName = data['senderName']?.toString() ?? 'Chat';
-
-      if (conversationId != null) {
+      if (convId != null) {
         _navigateToTab(
-          3, // Marketplace tab (assuming chat is linked to marketplace activity)
+          3,
           subPage: ChatRoomPage(
-            conversationId: conversationId,
+            conversationId: convId,
             recipientId: senderId ?? '',
             recipientName: senderName,
           ),
         );
       }
-    } else if (type == 'lost_found_claim_received' ||
-        type == 'lost_found_claim_accepted' ||
-        type == 'lost_found_claim_rejected' ||
-        type == 'lost_found_published') {
-      _navigateToTab(9); // Lost & Found tab
-    } else if (type == 'notice_created' || type == 'notice_updated') {
+      return;
+    }
+
+    // 3. Events
+    if (t.contains('event')) {
+      final idStr = data['eventId'];
+      final id = int.tryParse(idStr?.toString() ?? '');
+      if (id != null) {
+        _navigateToTab(
+          6, // Events
+          subPage: EventDetailsPage(event: ClubEvent.fromId(id)),
+        );
+      } else {
+        _navigateToTab(6);
+      }
+      return;
+    }
+
+    // 4. Notices
+    if (t.contains('notice')) {
       final attachmentUrl = data['attachmentUrl']?.toString();
       final noticeTitle = data['noticeTitle']?.toString() ?? 'Notice';
-      final body = data['body']?.toString().toLowerCase() ?? '';
-      final title = data['title']?.toString().toLowerCase() ?? '';
 
-      _navigateToTab(8);
+      _navigateToTab(8); // Notices tab
 
       if (attachmentUrl != null && attachmentUrl.isNotEmpty) {
         final urlLower = attachmentUrl.toLowerCase();
+        final body = data['body']?.toString().toLowerCase() ?? '';
+        final title = data['title']?.toString().toLowerCase() ?? '';
 
-        // Robust PDF check for push payload
-        final isPdf =
-            urlLower.endsWith('.pdf') ||
-            urlLower.contains('.pdf?') ||
-            title.contains('pdf') ||
-            body.contains('pdf') ||
-            (urlLower.contains('drive.google.com') &&
-                (title.contains('notice') || body.contains('notice')));
+        final bool pdf =
+            isPdf ??
+            (urlLower.endsWith('.pdf') ||
+                urlLower.contains('.pdf?') ||
+                title.contains('pdf') ||
+                body.contains('pdf'));
 
-        final isImage =
-            urlLower.endsWith('.jpg') ||
-            urlLower.endsWith('.jpeg') ||
-            urlLower.endsWith('.png') ||
-            urlLower.endsWith('.webp');
-
-        if (isPdf) {
+        if (pdf) {
           _navigateToRoot(
             CustomPdfViewer(url: attachmentUrl, title: noticeTitle),
           );
-        } else if (isImage) {
-          _navigateToRoot(FullScreenImageViewer(imageUrls: [attachmentUrl]));
+        } else {
+          final isImg =
+              urlLower.contains('.jpg') ||
+              urlLower.contains('.jpeg') ||
+              urlLower.contains('.png') ||
+              urlLower.contains('.webp');
+          if (isImg) {
+            _navigateToRoot(FullScreenImageViewer(imageUrls: [attachmentUrl]));
+          }
         }
       }
-    } else if (type == 'new_event' || type == 'event_reminder') {
-      final eventIdStr = data['eventId'];
-      if (eventIdStr != null) {
-        final id = int.tryParse(eventIdStr.toString());
-        if (id != null) {
-          _navigateToTab(
-            6, // Events tab
-            subPage: EventDetailsPage(event: ClubEvent.fromId(id)),
-          );
-        }
-      } else {
-        _navigateToTab(6); // Events tab
-      }
-    } else if (type == 'seller_verified' || type == 'seller_revoked') {
-      // In foreground, we might want to refresh user data or just show the toast
-      // For now, no specific navigation target
+      return;
+    }
+
+    // 5. Lost & Found
+    if (t.contains('lost_found') || t.contains('lostfound')) {
+      _navigateToTab(9);
+      return;
+    }
+
+    // 6. Classroom
+    if (t.contains('assignment') || t.contains('grading')) {
+      _navigateToTab(2);
+      return;
     }
   }
 

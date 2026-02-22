@@ -10,6 +10,7 @@ import 'package:smart_pulchowk/features/marketplace/sell_book_page.dart';
 import 'package:smart_pulchowk/features/marketplace/marketplace_activity_page.dart';
 import 'package:smart_pulchowk/features/marketplace/chat_list_page.dart';
 import 'package:smart_pulchowk/core/widgets/interactive_wrapper.dart';
+import 'package:smart_pulchowk/core/widgets/app_refresher.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BOOK MARKETPLACE PAGE
@@ -298,10 +299,8 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
               ? _buildShimmerGrid(isDark)
               : _books.isEmpty
               ? _buildEmptyState(isDark)
-              : RefreshIndicator(
+              : AppRefresher(
                   onRefresh: _onRefresh,
-                  color: cs.primary,
-                  edgeOffset: 0, // Align with the top of the body
                   child: _buildBookGrid(isDark),
                 ),
         ),
