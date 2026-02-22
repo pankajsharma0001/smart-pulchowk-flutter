@@ -105,14 +105,14 @@ class _FaqTabState extends State<_FaqTab> with SingleTickerProviderStateMixin {
     _FeatureSection(
       label: 'Map',
       icon: Icons.navigation_rounded,
-      color: Color(0xFF10B981),
-      isReady: false,
+      color: const Color(0xFF10B981),
+      isReady: true,
     ),
     _FeatureSection(
       label: 'Lost & Found',
       icon: Icons.search_rounded,
-      color: Color(0xFF8B5CF6),
-      isReady: false,
+      color: const Color(0xFF8B5CF6),
+      isReady: true,
     ),
     _FeatureSection(
       label: 'Notices',
@@ -254,6 +254,12 @@ class _FaqTabState extends State<_FaqTab> with SingleTickerProviderStateMixin {
               }
               if (f.label == 'Clubs') {
                 return _ClubsFaq(isDark: widget.isDark);
+              }
+              if (f.label == 'Map') {
+                return _MapFaq(isDark: widget.isDark);
+              }
+              if (f.label == 'Lost & Found') {
+                return _LostFoundFaq(isDark: widget.isDark);
               }
               if (f.label == 'Notifications') {
                 return _NotificationsFaq(isDark: widget.isDark);
@@ -688,6 +694,134 @@ class _NotificationsFaq extends StatelessWidget {
             'Absolutely! If you mark all your unread notifications as read, the app will trigger a celebratory confetti blast to reward your productivity.',
         icon: Icons.celebration_rounded,
         color: const Color(0xFFEC4899),
+      ),
+    ];
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      itemCount: faqs.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (context, i) => _FaqCard(item: faqs[i], isDark: isDark),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MAP FAQ
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _MapFaq extends StatelessWidget {
+  final bool isDark;
+  const _MapFaq({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final faqs = [
+      _FaqItem(
+        question: 'How do I search for a building or classroom?',
+        answer:
+            'Use the search bar at the top of the map. You can type building names (e.g., "Electrical Block") or specific room IDs. The map will highlight the location and center on it.',
+        icon: Icons.search_rounded,
+        color: const Color(0xFF6366F1),
+      ),
+      _FaqItem(
+        question: 'What do the different map icons mean?',
+        answer:
+            'Icons are categorized by type: Academic blocks are blue, food centers are orange, and sports facilities use athletic icons. You can tap any icon to see the full details of that location.',
+        icon: Icons.category_rounded,
+        color: const Color(0xFF10B981),
+      ),
+      _FaqItem(
+        question: 'How do I get walking directions?',
+        answer:
+            'Tap on any location marker, then tap the "Directions" button in the bottom sheet. You can set your starting point or use your current GPS location to find the best walking path.',
+        icon: Icons.directions_walk_rounded,
+        color: const Color(0xFF0EA5E9),
+      ),
+      _FaqItem(
+        question: 'Can I see the campus in satellite view?',
+        answer:
+            'Yes. Tap the "Layers" icon on the right side of the map to toggle between the standard 2D map and high-resolution satellite imagery.',
+        icon: Icons.layers_rounded,
+        color: const Color(0xFFF59E0B),
+      ),
+      _FaqItem(
+        question: 'How do I use the AI Campus Assistant?',
+        answer:
+            'Tap the floating robot icon at the bottom right of the map. You can ask it questions like "Where is the nearest ATM?" or "How do I get to the library?". It will guide you and show locations on the map.',
+        icon: Icons.smart_toy_rounded,
+        color: AppColors.primary,
+      ),
+      _FaqItem(
+        question: 'Does the map work offline?',
+        answer:
+            'The map core is cached for performance, but searching and route calculation require an active internet connection to ensure up-to-date data.',
+        icon: Icons.wifi_off_rounded,
+        color: const Color(0xFF94A3B8),
+      ),
+    ];
+
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+      itemCount: faqs.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      itemBuilder: (context, i) => _FaqCard(item: faqs[i], isDark: isDark),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOST & FOUND FAQ
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _LostFoundFaq extends StatelessWidget {
+  final bool isDark;
+  const _LostFoundFaq({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final faqs = [
+      _FaqItem(
+        question: 'How do I report an item I found?',
+        answer:
+            'In the Lost & Found tab, tap the "+" or "Report" button. Select "I found something", provide a clear photo, description, and where you found it. Submitting helps the owner find their property.',
+        icon: Icons.add_box_rounded,
+        color: const Color(0xFF8B5CF6),
+      ),
+      _FaqItem(
+        question: 'How can I find an item I lost?',
+        answer:
+            'Use the "Lost" tab to browse items other students have found. You can use the search bar to filter by name or condition, and the category chips to narrow down the search (e.g., Electronics, IDs).',
+        icon: Icons.search_rounded,
+        color: const Color(0xFF6366F1),
+      ),
+      _FaqItem(
+        question: 'How do I claim an item?',
+        answer:
+            'When you find your lost item in the feed, tap on it to view details. Tap "Claim Item" to contact the finder. You will need to verify ownership before the item is returned to you.',
+        icon: Icons.verified_user_rounded,
+        color: const Color(0xFF10B981),
+      ),
+      _FaqItem(
+        question: 'Are my contact details kept private?',
+        answer:
+            'Yes. Your phone number is only visible to the person you are coordinating a return with. We recommend meeting in public campus locations like the library or canteen for the exchange.',
+        icon: Icons.privacy_tip_rounded,
+        color: const Color(0xFFF59E0B),
+      ),
+      _FaqItem(
+        question: 'How do I manage or delete my reports?',
+        answer:
+            'Tap the profile icon (top right) in the Lost & Found page to see "My Items". Here you can see the status of your reports and delete them once the item has been returned.',
+        icon: Icons.list_alt_rounded,
+        color: const Color(0xFF0EA5E9),
+      ),
+      _FaqItem(
+        question: 'Is there a verification process for returning items?',
+        answer:
+            'We encourage finders to ask for specific details not shown in the photos (e.g., lock screen wallpaper, specific scratches) to ensure the item is returned to the rightful owner.',
+        icon: Icons.check_circle_rounded,
+        color: const Color(0xFF10B981),
       ),
     ];
 

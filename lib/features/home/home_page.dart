@@ -26,53 +26,93 @@ class HomePage extends StatelessWidget {
 
 // ── Content ──────────────────────────────────────────────────────────────────
 
-class _HomeContent extends StatelessWidget {
+class _HomeContent extends StatefulWidget {
   const _HomeContent();
+
+  @override
+  State<_HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<_HomeContent> {
+  late Future<List<EventRegistration>> _enrollmentFuture;
+  late Future<List<ClubEvent>> _eventsFuture;
+  late Future<int> _userCountFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData(forceRefresh: false);
+  }
+
+  void _loadData({required bool forceRefresh}) {
+    final api = ApiService();
+    // Use cached fetch with optional force refresh
+    _enrollmentFuture = api.getStudentEnrollment(forceRefresh: forceRefresh);
+    _eventsFuture = api.getAllEvents(forceRefresh: forceRefresh);
+
+    // User count is never cached per user request
+    _userCountFuture = api.getActiveUserCount(forceRefresh: true);
+  }
+
+  Future<void> _handleRefresh() async {
+    if (mounted) {
+      setState(() {
+        _loadData(forceRefresh: true);
+      });
+    }
+    // Wait for all data to finish loading before hiding the indicator
+    await Future.wait([
+      _enrollmentFuture.catchError((_) => <EventRegistration>[]),
+      _eventsFuture.catchError((_) => <ClubEvent>[]),
+      _userCountFuture.catchError((_) => 0),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.only(
-          bottom: 120, // Space for bottom nav and floating button
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: AppSpacing.md),
-            // ── Search Bar (Home focused) ──
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: _HomeSearchBar(),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            // ── Explore Chips ──
-            const _ExploreChips(),
-            const SizedBox(height: AppSpacing.xl),
-            // ── Hero Section ──
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: _HeroSection(),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-            // ── Registered Events (Dynamic) ──
-            const _RegisteredEventsSection(),
-            // ── Section Divider ──
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: _SectionLabel(label: 'Quick Access'),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            // ── Quick Access Grid ──
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: _QuickGrid(),
-            ),
-            const SizedBox(height: AppSpacing.xxl),
-            // ── Next Event Card (Dynamic) ──
-            const _NextEventSection(),
-          ],
+      child: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        displacement: 20,
+        color: AppColors.primary,
+        backgroundColor: Theme.of(context).cardColor,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          padding: const EdgeInsets.only(
+            bottom: 120, // Space for bottom nav and floating button
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: AppSpacing.md),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: _HomeSearchBar(),
+              ),
+              const SizedBox(height: AppSpacing.lg),
+              const _ExploreChips(),
+              const SizedBox(height: AppSpacing.xl),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: _HeroSection(userCountFuture: _userCountFuture),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+              _RegisteredEventsSection(enrollmentFuture: _enrollmentFuture),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: _SectionLabel(label: 'Quick Access'),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                child: _QuickGrid(),
+              ),
+              const SizedBox(height: AppSpacing.xxl),
+              _NextEventSection(eventsFuture: _eventsFuture),
+            ],
+          ),
         ),
       ),
     );
@@ -82,7 +122,8 @@ class _HomeContent extends StatelessWidget {
 // ── Sections ─────────────────────────────────────────────────────────────────
 
 class _RegisteredEventsSection extends StatelessWidget {
-  const _RegisteredEventsSection();
+  final Future<List<EventRegistration>> enrollmentFuture;
+  const _RegisteredEventsSection({required this.enrollmentFuture});
 
   @override
   Widget build(BuildContext context) {
@@ -93,11 +134,15 @@ class _RegisteredEventsSection extends StatelessWidget {
         if (!authSnapshot.hasData) return const SizedBox.shrink();
 
         return FutureBuilder<List<EventRegistration>>(
-          future: apiService.getStudentEnrollment(forceRefresh: true),
+          initialData: apiService.getCachedEnrollment(),
+          future: enrollmentFuture,
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+            // Show loader only if we have NO data at all (neither cached nor fresh)
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
               return const _RegisteredEventsLoader();
             }
+
             final registrations = snapshot.data ?? [];
             if (registrations.isEmpty) return const SizedBox.shrink();
 
@@ -141,15 +186,18 @@ class _RegisteredEventsSection extends StatelessWidget {
 }
 
 class _NextEventSection extends StatelessWidget {
-  const _NextEventSection();
+  final Future<List<ClubEvent>> eventsFuture;
+  const _NextEventSection({required this.eventsFuture});
 
   @override
   Widget build(BuildContext context) {
     final apiService = ApiService();
     return FutureBuilder<List<ClubEvent>>(
-      future: apiService.getAllEvents(),
+      initialData: apiService.getCachedEvents(),
+      future: eventsFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
           return const _NextEventLoader();
         }
 
@@ -535,7 +583,8 @@ class _ExploreChips extends StatelessWidget {
 }
 
 class _HeroSection extends StatelessWidget {
-  const _HeroSection();
+  final Future<int> userCountFuture;
+  const _HeroSection({required this.userCountFuture});
 
   @override
   Widget build(BuildContext context) {
@@ -564,11 +613,12 @@ class _HeroSection extends StatelessWidget {
               const _StatusPing(),
               const SizedBox(width: 8),
               FutureBuilder<int>(
-                future: ApiService().getActiveUserCount(),
+                future: userCountFuture,
                 builder: (context, snapshot) {
                   final count = snapshot.data ?? 0;
                   final countText =
-                      snapshot.connectionState == ConnectionState.waiting
+                      snapshot.connectionState == ConnectionState.waiting &&
+                          !snapshot.hasData
                       ? '...'
                       : '$count';
 
