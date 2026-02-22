@@ -124,11 +124,33 @@ class _LocationDetailsSheetState extends State<LocationDetailsSheet> {
                   if (hasImage) ...[
                     ClipRRect(
                       borderRadius: BorderRadius.circular(16),
-                      child: SmartImage(
-                        imageUrl: widget.images.toString(),
-                        width: double.infinity,
-                        height: 180,
-                        fit: BoxFit.cover,
+                      child: Builder(
+                        builder: (context) {
+                          String imageUrl = '';
+                          if (widget.images is List &&
+                              (widget.images as List).isNotEmpty) {
+                            imageUrl = widget.images[0].toString();
+                          } else {
+                            imageUrl = widget.images.toString();
+                          }
+
+                          // Clean up if it's still bracketed (e.g. stringified list "[url]")
+                          if (imageUrl.startsWith('[') &&
+                              imageUrl.endsWith(']')) {
+                            imageUrl = imageUrl
+                                .substring(1, imageUrl.length - 1)
+                                .split(',')
+                                .first
+                                .trim();
+                          }
+
+                          return SmartImage(
+                            imageUrl: imageUrl,
+                            width: double.infinity,
+                            height: 180,
+                            fit: BoxFit.cover,
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(height: 16),

@@ -129,6 +129,10 @@ class AppConstants {
   // ── User Cache Keys ────────────────────────────────────────────────────
   static const String cacheUserProfile = 'user_profile';
 
+  // ── Map Cache Keys ───────────────────────────────────────────────────
+  static const String cacheMapLocations = 'map_locations';
+  static const String cacheMapIconPrefix = 'map_icon_';
+
   // ── Image Headers ────────────────────────────────────────────────────────
   static const Map<String, String> imageHeaders = {
     'User-Agent':

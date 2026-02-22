@@ -8,6 +8,8 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart' as geo;
 import 'package:http/http.dart' as http;
 import 'package:maplibre_gl/maplibre_gl.dart';
+import 'package:smart_pulchowk/core/constants/app_constants.dart';
+import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/features/map/widgets/category_filter_bar.dart';
@@ -167,34 +169,50 @@ class _MapPageState extends State<MapPage> {
   Future<void> _loadGeoJSON() async {
     try {
       if (_allLocations.isEmpty) {
-        final String json = await rootBundle.loadString(
-          'assets/geojson/pulchowk.json',
-        );
-        final Map<String, dynamic> geojson = jsonDecode(json);
-        final List<dynamic> features = geojson['features'] ?? [];
-        final locations = <Map<String, dynamic>>[];
-        for (int i = 1; i < features.length; i++) {
-          final feature = features[i];
-          final props = feature['properties'] ?? {};
-          final geometry = feature['geometry'] ?? {};
-          if (props['description'] == null) continue;
-          List<double> coords;
-          if (geometry['type'] == 'Point') {
-            coords = List<double>.from(geometry['coordinates']);
-          } else if (geometry['type'] == 'Polygon') {
-            coords = _getPolygonCentroid(geometry['coordinates'][0]);
-          } else {
-            continue;
-          }
-          locations.add({
-            'title': props['description'] ?? props['title'] ?? 'Unknown',
-            'description': props['about'] ?? '',
-            'images': props['image'],
-            'coordinates': coords,
-            'icon': _getIconForDescription(props['description'] ?? ''),
-          });
+        // Try reading from cache first
+        final cached = StorageService.readCache(AppConstants.cacheMapLocations);
+        if (cached != null && cached is List) {
+          _allLocations = List<Map<String, dynamic>>.from(
+            cached.map((e) => Map<String, dynamic>.from(e as Map)),
+          );
         }
-        if (mounted) setState(() => _allLocations = locations);
+
+        if (_allLocations.isEmpty) {
+          final String json = await rootBundle.loadString(
+            'assets/geojson/pulchowk.json',
+          );
+          final Map<String, dynamic> geojson = jsonDecode(json);
+          final List<dynamic> features = geojson['features'] ?? [];
+          final locations = <Map<String, dynamic>>[];
+          for (int i = 1; i < features.length; i++) {
+            final feature = features[i];
+            final props = feature['properties'] ?? {};
+            final geometry = feature['geometry'] ?? {};
+            if (props['description'] == null) continue;
+            List<double> coords;
+            if (geometry['type'] == 'Point') {
+              coords = List<double>.from(geometry['coordinates']);
+            } else if (geometry['type'] == 'Polygon') {
+              coords = _getPolygonCentroid(geometry['coordinates'][0]);
+            } else {
+              continue;
+            }
+            locations.add({
+              'title': props['description'] ?? props['title'] ?? 'Unknown',
+              'description': props['about'] ?? '',
+              'images': props['image'],
+              'coordinates': coords,
+              'icon': _getIconForDescription(props['description'] ?? ''),
+            });
+          }
+          _allLocations = locations;
+          // Save to cache
+          await StorageService.writeCache(
+            AppConstants.cacheMapLocations,
+            _allLocations,
+          );
+        }
+        if (mounted) setState(() {});
       }
       if (_mapController != null && _isStyleLoaded) {
         await _addCampusMask();
@@ -787,8 +805,9 @@ class _MapPageState extends State<MapPage> {
         return;
       }
       geo.LocationPermission perm = await geo.Geolocator.checkPermission();
-      if (perm == geo.LocationPermission.denied)
+      if (perm == geo.LocationPermission.denied) {
         perm = await geo.Geolocator.requestPermission();
+      }
       if (perm == geo.LocationPermission.denied ||
           perm == geo.LocationPermission.deniedForever) {
         setState(() => _isNavigating = false);
@@ -1096,8 +1115,9 @@ class _MapPageState extends State<MapPage> {
                 if (_mapController != null) {
                   final bearing =
                       _mapController!.cameraPosition?.bearing ?? 0.0;
-                  if (bearing != _cameraBearing)
+                  if (bearing != _cameraBearing) {
                     setState(() => _cameraBearing = bearing);
+                  }
                 }
               },
               cameraTargetBounds: CameraTargetBounds(_campusBounds),
@@ -1175,8 +1195,9 @@ class _MapPageState extends State<MapPage> {
                               _searchQuery = v;
                               _showSuggestions = v.isNotEmpty;
                             });
-                            if (_filteredSuggestions.isNotEmpty)
+                            if (_filteredSuggestions.isNotEmpty) {
                               _flyToLocation(_filteredSuggestions.first);
+                            }
                           },
                           decoration: InputDecoration(
                             hintText: 'Search labs, canteen, departments…',

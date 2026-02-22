@@ -297,7 +297,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: const Color(0xFF667EEA).withOpacity(0.5),
+                        color: const Color(0xFF667EEA).withValues(alpha: 0.5),
                         width: 2,
                       ),
                     ),
@@ -321,7 +321,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF667EEA).withOpacity(0.4),
+                      color: const Color(0xFF667EEA).withValues(alpha: 0.4),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -369,12 +369,12 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: (isDark ? Colors.white : Colors.black).withOpacity(0.1),
+          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
@@ -436,14 +436,18 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
             Icon(
               Icons.explore_outlined,
               size: 48,
-              color: (isDark ? Colors.white : Colors.black).withOpacity(0.2),
+              color: (isDark ? Colors.white : Colors.black).withValues(
+                alpha: 0.2,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
               'Ask me anything about Pulchowk!',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: (isDark ? Colors.white : Colors.black).withOpacity(0.5),
+                color: (isDark ? Colors.white : Colors.black).withValues(
+                  alpha: 0.5,
+                ),
                 fontSize: 14,
               ),
             ),
@@ -485,7 +489,9 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
           color: isDark ? Colors.white70 : Colors.black87,
         ),
       ),
-      backgroundColor: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+      backgroundColor: (isDark ? Colors.white : Colors.black).withValues(
+        alpha: 0.05,
+      ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
@@ -504,10 +510,10 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
           color: isUser
               ? const Color(0xFF667EEA)
               : isError
-              ? Colors.red.withOpacity(0.1)
+              ? Colors.red.withValues(alpha: 0.1)
               : (isDark
-                    ? Colors.white.withOpacity(0.1)
-                    : Colors.black.withOpacity(0.05)),
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : Colors.black.withValues(alpha: 0.05)),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -542,7 +548,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
           child: CircularProgressIndicator(
             strokeWidth: 2,
             valueColor: AlwaysStoppedAnimation<Color>(
-              (isDark ? Colors.white : Colors.black).withOpacity(0.3),
+              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.3),
             ),
           ),
         ),
@@ -556,7 +562,9 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
-            color: (isDark ? Colors.white : Colors.black).withOpacity(0.05),
+            color: (isDark ? Colors.white : Colors.black).withValues(
+              alpha: 0.05,
+            ),
           ),
         ),
       ),
@@ -574,8 +582,8 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
               decoration: InputDecoration(
                 hintText: 'Type your question...',
                 hintStyle: TextStyle(
-                  color: (isDark ? Colors.white : Colors.black).withOpacity(
-                    0.4,
+                  color: (isDark ? Colors.white : Colors.black).withValues(
+                    alpha: 0.4,
                   ),
                   fontSize: 14,
                 ),
