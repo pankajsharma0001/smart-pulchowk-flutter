@@ -6,6 +6,7 @@ import 'package:smart_pulchowk/core/services/auth_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
+import 'package:smart_pulchowk/core/widgets/theme_change_animator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path_provider/path_provider.dart';
@@ -444,16 +445,19 @@ class _SettingsPageState extends State<SettingsPage>
                   _ThemeOption(
                     icon: Icons.light_mode_rounded,
                     isSelected: themeProvider.themeMode == ThemeMode.light,
+                    targetMode: ThemeMode.light,
                     onTap: () => themeProvider.setThemeMode(ThemeMode.light),
                   ),
                   _ThemeOption(
                     icon: Icons.dark_mode_rounded,
                     isSelected: themeProvider.themeMode == ThemeMode.dark,
+                    targetMode: ThemeMode.dark,
                     onTap: () => themeProvider.setThemeMode(ThemeMode.dark),
                   ),
                   _ThemeOption(
                     icon: Icons.settings_brightness_rounded,
                     isSelected: themeProvider.themeMode == ThemeMode.system,
+                    targetMode: ThemeMode.system,
                     onTap: () => themeProvider.setThemeMode(ThemeMode.system),
                   ),
                 ],
@@ -833,19 +837,25 @@ class _SettingsPageState extends State<SettingsPage>
 class _ThemeOption extends StatelessWidget {
   final IconData icon;
   final bool isSelected;
+  final ThemeMode targetMode;
   final VoidCallback onTap;
 
   const _ThemeOption({
     required this.icon,
     required this.isSelected,
+    required this.targetMode,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
+      onTapUp: (details) async {
+        if (isSelected) return;
         haptics.selectionClick();
+        final globalPos = details.globalPosition;
+        // Take a snapshot first, then change the theme
+        await themeAnimatorKey.currentState?.triggerAnimation(globalPos);
         onTap();
       },
       child: Container(

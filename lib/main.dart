@@ -9,6 +9,7 @@ import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/features/auth/auth.dart';
 import 'package:smart_pulchowk/core/services/navigation_service.dart';
 import 'package:smart_pulchowk/core/services/favorites_provider.dart';
+import 'package:smart_pulchowk/core/widgets/theme_change_animator.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -70,27 +71,30 @@ class SmartPulchowkApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListenableBuilder(
-      listenable: themeProvider,
-      builder: (context, child) {
-        return InheritedThemeProvider(
-          notifier: themeProvider,
-          child: InheritedFavoritesProvider(
-            notifier: favoritesProvider,
-            child: MaterialApp(
-              title: 'Smart Pulchowk',
-              debugShowCheckedModeBanner: false,
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              themeMode: themeProvider.themeMode,
-              navigatorKey:
-                  NavigationService.navigatorKey, // Set global navigator key
-              navigatorObservers: AnalyticsService.navigatorObservers,
-              home: const AuthWrapper(),
+    return ThemeChangeAnimator(
+      key: themeAnimatorKey,
+      child: ListenableBuilder(
+        listenable: themeProvider,
+        builder: (context, child) {
+          return InheritedThemeProvider(
+            notifier: themeProvider,
+            child: InheritedFavoritesProvider(
+              notifier: favoritesProvider,
+              child: MaterialApp(
+                title: 'Smart Pulchowk',
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.lightTheme,
+                darkTheme: AppTheme.darkTheme,
+                themeMode: themeProvider.themeMode,
+                navigatorKey:
+                    NavigationService.navigatorKey, // Set global navigator key
+                navigatorObservers: AnalyticsService.navigatorObservers,
+                home: const AuthWrapper(),
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
