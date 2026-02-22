@@ -241,9 +241,24 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final viewInsets = MediaQuery.of(context).viewInsets;
+    final mediaQuery = MediaQuery.of(context);
+    final viewInsets = mediaQuery.viewInsets;
+    final viewPadding = mediaQuery.padding;
     final isKeyboardOpen = viewInsets.bottom > 0;
+    final screenHeight = mediaQuery.size.height;
+
+    // Calculate the actual available bottom offset
     final keyboardOffset = isKeyboardOpen ? viewInsets.bottom : 0.0;
+
+    // Calculate available vertical space for the chat panel
+    // Screen Height - Keyboard - Top Padding (Status bar) - FAB height/margins
+    final availableHeight =
+        screenHeight -
+        keyboardOffset -
+        viewPadding.top -
+        viewPadding.bottom -
+        100;
+    final panelHeight = min(480.0, availableHeight);
 
     return Stack(
       children: [
@@ -251,25 +266,23 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
           Positioned(
             right: 16,
             bottom:
-                64 +
-                widget.bottomOffset +
-                keyboardOffset, // Aligned with Location button bottom
+                (isKeyboardOpen ? 72 : 64) +
+                max(keyboardOffset, widget.bottomOffset),
             child: FadeTransition(
               opacity: _fadeAnimation,
               child: ScaleTransition(
                 scale: _scaleAnimation,
                 alignment: Alignment.bottomRight,
-                child: _buildChatPanel(isDark),
+                child: _buildChatPanel(isDark, panelHeight),
               ),
             ),
           ),
 
         Positioned(
-          right: 16, // Back to bottom-right
+          right: 16,
           bottom:
-              0 +
-              widget.bottomOffset +
-              (isKeyboardOpen ? keyboardOffset : 0), // Flush with navbar
+              (isKeyboardOpen ? 8 : 0) +
+              max(keyboardOffset, widget.bottomOffset),
           child: _buildFab(isDark),
         ),
       ],
@@ -361,10 +374,10 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
     );
   }
 
-  Widget _buildChatPanel(bool isDark) {
+  Widget _buildChatPanel(bool isDark, double height) {
     return Container(
       width: 340,
-      height: 480,
+      height: height,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(24),
@@ -430,37 +443,41 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
   Widget _buildMessagesList(bool isDark) {
     if (_messages.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.explore_outlined,
-              size: 48,
-              color: (isDark ? Colors.white : Colors.black).withValues(
-                alpha: 0.2,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Ask me anything about Pulchowk!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.explore_outlined,
+                size: 48,
                 color: (isDark ? Colors.white : Colors.black).withValues(
-                  alpha: 0.5,
+                  alpha: 0.2,
                 ),
-                fontSize: 14,
               ),
-            ),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              alignment: WrapAlignment.center,
-              children: _currentSuggestions
-                  .map((s) => _buildSuggestionChip(s, isDark))
-                  .toList(),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Text(
+                'Ask me anything about Pulchowk!',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: (isDark ? Colors.white : Colors.black).withValues(
+                    alpha: 0.5,
+                  ),
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                alignment: WrapAlignment.center,
+                children: _currentSuggestions
+                    .map((s) => _buildSuggestionChip(s, isDark))
+                    .toList(),
+              ),
+            ],
+          ),
         ),
       );
     }
