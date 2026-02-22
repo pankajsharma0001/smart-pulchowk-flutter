@@ -69,7 +69,8 @@ const Map<String, String> _kIconUrls = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 class MapPage extends StatefulWidget {
-  const MapPage({super.key});
+  final List<double>? initialLocation; // [lng, lat]
+  const MapPage({super.key, this.initialLocation});
 
   @override
   State<MapPage> createState() => _MapPageState();
@@ -1372,6 +1373,7 @@ class _MapPageState extends State<MapPage> {
                                     MediaQuery.of(context).size.height * 0.4,
                               ),
                               child: SingleChildScrollView(
+                                padding: const EdgeInsets.only(bottom: 12),
                                 child: Column(
                                   mainAxisSize: MainAxisSize.min,
                                   children: _filteredSuggestions.map((loc) {
