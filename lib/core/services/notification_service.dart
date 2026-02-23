@@ -57,6 +57,22 @@ class NotificationService {
         },
       );
 
+      // Create high importance channel for Android
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        final androidPlugin = _localNotifications
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+        await androidPlugin?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            'high_importance_channel',
+            'High Importance Notifications',
+            description: 'This channel is used for important notifications.',
+            importance: Importance.max,
+          ),
+        );
+      }
+
       // 1. Listen to background notification clicks (App in background)
       FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
         debugPrint('Notification clicked from background: ${message.data}');

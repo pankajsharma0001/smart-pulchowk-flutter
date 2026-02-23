@@ -741,6 +741,30 @@ class _SettingsPageState extends State<SettingsPage>
       onTap: () async {
         haptics.heavyImpact();
 
+        // Confirmation dialog first
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Sign Out?'),
+            content: const Text('Are you sure you want to sign out?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFEF4444),
+                ),
+                child: const Text('Sign Out'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed != true || !context.mounted) return;
+
         showDialog(
           context: context,
           barrierDismissible: false,

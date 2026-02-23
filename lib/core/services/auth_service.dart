@@ -12,7 +12,8 @@ class AuthService {
   AuthService._();
 
   static bool get _isFirebaseReady => Firebase.apps.isNotEmpty;
-  static FirebaseAuth? get _auth => _isFirebaseReady ? FirebaseAuth.instance : null;
+  static FirebaseAuth? get _auth =>
+      _isFirebaseReady ? FirebaseAuth.instance : null;
   static final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   static User? get currentUser => _auth?.currentUser;
@@ -50,6 +51,7 @@ class AuthService {
           firebaseIdToken: idToken ?? '',
           image: user.photoURL,
           fcmToken: fcmToken,
+          platform: kIsWeb ? 'web' : 'mobile',
         );
 
         if (dbUserId != null) {
@@ -77,7 +79,10 @@ class AuthService {
       if (auth == null) return;
 
       final apiService = ApiService();
-      final idToken = await auth.currentUser?.getIdToken();
+      final idToken = await auth.currentUser
+          ?.getIdToken()
+          .timeout(const Duration(seconds: 3))
+          .catchError((_) => null as String?);
 
       // Parallel cleanup
       await Future.wait([
@@ -87,12 +92,21 @@ class AuthService {
             .catchError((_) => null),
         StorageService.deleteSecure(AppConstants.dbUserIdKey),
         StorageService.deleteSecure(AppConstants.userRoleKey),
-        NotificationService.unsubscribeFromAllTopics().catchError((_) => null),
+        NotificationService.unsubscribeFromAllTopics()
+            .timeout(const Duration(seconds: 3))
+            .catchError((_) => null),
         ApiService.clearCache(),
       ]);
 
-      await _googleSignIn.signOut();
-      await auth.signOut();
+      // Both can hang on some Android devices — hard timeouts applied
+      await _googleSignIn
+          .signOut()
+          .timeout(const Duration(seconds: 5))
+          .catchError((_) => null);
+      await auth
+          .signOut()
+          .timeout(const Duration(seconds: 5))
+          .catchError((_) {});
     } catch (e) {
       debugPrint('Error during sign-out: $e');
     }

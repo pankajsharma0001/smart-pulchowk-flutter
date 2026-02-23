@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
@@ -1138,7 +1141,27 @@ ${widget.event.description ?? ''}
 Join here: $eventUrl
 ''';
 
-    await SharePlus.instance.share(ShareParams(text: text));
+    if (widget.event.bannerUrl == null || widget.event.bannerUrl!.isEmpty) {
+      await SharePlus.instance.share(ShareParams(text: text));
+      return;
+    }
+
+    try {
+      // Download the banner to share it
+      final response = await http.get(Uri.parse(widget.event.bannerUrl!));
+      final bytes = response.bodyBytes;
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/share_event_${widget.event.id}.png');
+      await file.writeAsBytes(bytes);
+
+      await SharePlus.instance.share(
+        ShareParams(text: text, files: [XFile(file.path)]),
+      );
+    } catch (e) {
+      debugPrint('Error sharing event with image: $e');
+      // Fallback to text only
+      await SharePlus.instance.share(ShareParams(text: text));
+    }
   }
 
   Widget _buildSectionTitle(String title) {

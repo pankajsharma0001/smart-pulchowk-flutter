@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
@@ -249,7 +252,28 @@ Author: ${_book.author}
 View listing: $listingUrl
 ''';
 
-    await SharePlus.instance.share(ShareParams(text: text));
+    if (_book.images == null || _book.images!.isEmpty) {
+      await SharePlus.instance.share(ShareParams(text: text));
+      return;
+    }
+
+    try {
+      // Download the first image to share it
+      final imageUrl = _book.images!.first.imageUrl;
+      final response = await http.get(Uri.parse(imageUrl));
+      final bytes = response.bodyBytes;
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/share_book_${_book.id}.png');
+      await file.writeAsBytes(bytes);
+
+      await SharePlus.instance.share(
+        ShareParams(text: text, files: [XFile(file.path)]),
+      );
+    } catch (e) {
+      debugPrint('Error sharing listing with image: $e');
+      // Fallback to text only
+      await SharePlus.instance.share(ShareParams(text: text));
+    }
   }
 
   @override

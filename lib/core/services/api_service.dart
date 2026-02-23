@@ -181,6 +181,7 @@ class ApiService {
     firebaseIdToken, // Still kept for initial sync if needed, but will use _authPost
     String? image,
     String? fcmToken,
+    String? platform,
   }) async {
     try {
       final response = await _post(
@@ -191,6 +192,7 @@ class ApiService {
           'name': name,
           'image': image,
           'fcmToken': fcmToken,
+          'platform': platform,
         },
         headers: {'Authorization': 'Bearer $firebaseIdToken'},
       );

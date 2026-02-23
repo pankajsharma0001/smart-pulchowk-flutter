@@ -442,10 +442,12 @@ class _UserAvatarState extends State<_UserAvatar> {
             label: 'Help & Support',
             onTap: () {
               haptics.selectionClick();
-              Navigator.push(
+              // Close the popup first, then navigate via the settings tab navigator
+              // to ensure the page inherits correct theme context
+              if (context.mounted) Navigator.pop(context);
+              MainLayout.of(
                 context,
-                MaterialPageRoute(builder: (context) => const HelpCenterPage()),
-              );
+              )?.navigateToTab(10, subPage: const HelpCenterPage());
             },
           ),
         ),
@@ -458,6 +460,33 @@ class _UserAvatarState extends State<_UserAvatar> {
             isDestructive: true,
             onTap: () async {
               haptics.heavyImpact();
+
+              // Close the popup menu first before showing dialog
+              if (context.mounted) Navigator.pop(context);
+
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Sign Out?'),
+                  content: const Text('Are you sure you want to sign out?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx, true),
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFFEF4444),
+                      ),
+                      child: const Text('Sign Out'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirmed != true || !context.mounted) return;
+
               showDialog(
                 context: context,
                 barrierDismissible: false,
@@ -472,8 +501,8 @@ class _UserAvatarState extends State<_UserAvatar> {
                 ),
               );
               await AuthService.signOut();
-              // No need to pop the dialog manually because signing out usually changes
-              // the root auth state, navigating the user entirely away to the login screen.
+              // No need to pop the dialog manually because signing out changes
+              // the root auth state, navigating the user away to the login screen.
             },
           ),
         ),

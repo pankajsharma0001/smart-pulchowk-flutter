@@ -46,12 +46,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
     _scrollController.addListener(_onScroll);
 
     // Listen for incoming notifications to refresh the list automatically
-    _refreshSubscription = NotificationService.refreshStream.listen((_) {
+    _refreshSubscription = NotificationService.refreshStream.listen((_) async {
       if (mounted) {
         debugPrint(
-          'NotificationsPage: Foreground notification received. Refreshing...',
+          'NotificationsPage: Foreground notification received. Refreshing in 1s...',
         );
-        _loadNotifications(silent: true);
+        // Small delay to ensure backend has finished processing/creating the in-app record
+        await Future.delayed(const Duration(seconds: 1));
+        if (mounted) _loadNotifications(silent: true);
       }
     });
   }

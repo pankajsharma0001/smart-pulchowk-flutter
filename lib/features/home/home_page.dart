@@ -56,6 +56,9 @@ class _HomeContentState extends State<_HomeContent> {
   }
 
   Future<void> _handleRefresh() async {
+    // Sync user role from backend on pull-to-refresh
+    MainLayout.of(context)?.refreshUserRole();
+
     if (mounted) {
       setState(() {
         _loadData(forceRefresh: true);
