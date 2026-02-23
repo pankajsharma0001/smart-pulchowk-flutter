@@ -30,6 +30,7 @@ class _ClassroomPageState extends State<ClassroomPage>
   List<Assignment> _todoAssignments = [];
   List<Assignment> _doneAssignments = [];
   bool _isLoading = true;
+  bool _isSwitchingAccount = false;
   String? _errorMessage;
 
   @override
@@ -613,9 +614,11 @@ class _ClassroomPageState extends State<ClassroomPage>
             if (isStudentWithPersonalEmail) ...[
               const SizedBox(height: AppSpacing.xl),
               ElevatedButton.icon(
-                onPressed: () => AuthService.signOut(),
+                onPressed: _isSwitchingAccount ? null : _handleSwitchAccount,
                 icon: const Icon(Icons.logout_rounded),
-                label: const Text('Switch Account'),
+                label: Text(
+                  _isSwitchingAccount ? 'Switching...' : 'Switch Account',
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
@@ -630,6 +633,45 @@ class _ClassroomPageState extends State<ClassroomPage>
         ),
       ),
     );
+  }
+
+  Future<void> _handleSwitchAccount() async {
+    if (_isSwitchingAccount || !mounted) return;
+
+    setState(() => _isSwitchingAccount = true);
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 16),
+            Text('Switching account...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      await AuthService.signOut();
+    } catch (e) {
+      debugPrint('Error while switching account: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Unable to switch account right now.')),
+        );
+      }
+    } finally {
+      if (rootNavigator.mounted && rootNavigator.canPop()) {
+        rootNavigator.pop();
+      }
+      if (mounted) {
+        setState(() => _isSwitchingAccount = false);
+      }
+    }
   }
 
   Widget _buildShimmerBody() {

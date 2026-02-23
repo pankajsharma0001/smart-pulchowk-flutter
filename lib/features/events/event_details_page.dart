@@ -1,9 +1,6 @@
 import 'dart:async';
-import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
@@ -1124,44 +1121,32 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
     );
   }
 
-  Future<void> _shareEvent() async {
+  String _buildShareEventText() {
     final baseUrl = AppConstants.baseUrl;
     final eventUrl = '$baseUrl/events/${widget.event.id}';
     final dateFormat = DateFormat('EEEE, MMMM d, yyyy h:mm a');
 
-    final String text =
-        '''
-Check out this event: ${widget.event.title}
-
-📅 Date: ${dateFormat.format(widget.event.eventStartTime)}
-📍 Venue: ${widget.event.venue ?? 'To be announced'}
-
-${widget.event.description ?? ''}
-
-Join here: $eventUrl
-''';
-
-    if (widget.event.bannerUrl == null || widget.event.bannerUrl!.isEmpty) {
-      await SharePlus.instance.share(ShareParams(text: text));
-      return;
+    final description = (widget.event.description ?? '').trim();
+    final textParts = <String>[
+      'Check out this event: ${widget.event.title}',
+      '',
+      'Date: ${dateFormat.format(widget.event.eventStartTime)}',
+      'Venue: ${widget.event.venue ?? 'To be announced'}',
+    ];
+    if (description.isNotEmpty) {
+      textParts
+        ..add('')
+        ..add(description);
     }
+    textParts
+      ..add('')
+      ..add('Join here: $eventUrl');
+    return textParts.join('\n').trim();
+  }
 
-    try {
-      // Download the banner to share it
-      final response = await http.get(Uri.parse(widget.event.bannerUrl!));
-      final bytes = response.bodyBytes;
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/share_event_${widget.event.id}.png');
-      await file.writeAsBytes(bytes);
-
-      await SharePlus.instance.share(
-        ShareParams(text: text, files: [XFile(file.path)]),
-      );
-    } catch (e) {
-      debugPrint('Error sharing event with image: $e');
-      // Fallback to text only
-      await SharePlus.instance.share(ShareParams(text: text));
-    }
+  Future<void> _shareEvent() async {
+    final text = _buildShareEventText();
+    await SharePlus.instance.share(ShareParams(text: text));
   }
 
   Widget _buildSectionTitle(String title) {
@@ -1489,3 +1474,4 @@ class _CountdownTimerState extends State<_CountdownTimer> {
     );
   }
 }
+

@@ -1,9 +1,6 @@
-import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
-import 'package:path_provider/path_provider.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
@@ -239,41 +236,22 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     }
   }
 
-  Future<void> _shareListing() async {
+  String _buildShareListingText() {
     final listingUrl = '${AppConstants.baseUrl}/books/${_book.id}';
-    final text =
-        '''
-Check out this book listing: ${_book.title}
+    return <String>[
+      'Check out this book listing: ${_book.title}',
+      '',
+      'Price: Rs. ${_book.price}',
+      'Condition: ${_book.condition.displayName}',
+      'Author: ${_book.author}',
+      '',
+      'View listing: $listingUrl',
+    ].join('\n').trim();
+  }
 
-Price: Rs. ${_book.price}
-Condition: ${_book.condition.displayName}
-Author: ${_book.author}
-
-View listing: $listingUrl
-''';
-
-    if (_book.images == null || _book.images!.isEmpty) {
-      await SharePlus.instance.share(ShareParams(text: text));
-      return;
-    }
-
-    try {
-      // Download the first image to share it
-      final imageUrl = _book.images!.first.imageUrl;
-      final response = await http.get(Uri.parse(imageUrl));
-      final bytes = response.bodyBytes;
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/share_book_${_book.id}.png');
-      await file.writeAsBytes(bytes);
-
-      await SharePlus.instance.share(
-        ShareParams(text: text, files: [XFile(file.path)]),
-      );
-    } catch (e) {
-      debugPrint('Error sharing listing with image: $e');
-      // Fallback to text only
-      await SharePlus.instance.share(ShareParams(text: text));
-    }
+  Future<void> _shareListing() async {
+    final text = _buildShareListingText();
+    await SharePlus.instance.share(ShareParams(text: text));
   }
 
   @override
@@ -966,72 +944,69 @@ View listing: $listingUrl
                 ? 'book_image_${_book.id}'
                 : images[i].imageUrl;
 
-            final content = Stack(
-              fit: StackFit.expand,
-              children: [
-                // Blurred Background
-                SmartImage(
-                  imageUrl: images[i].imageUrl,
-                  fit: BoxFit.cover,
-                  width: double.infinity,
-                  height: double.infinity,
-                  useCloudinary: false,
-                  errorWidget: const SizedBox.shrink(),
-                ),
-                ClipRect(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                    child: Container(
-                      color: (isDark ? Colors.black : Colors.white).withValues(
-                        alpha: 0.2,
-                      ),
-                    ),
-                  ),
-                ),
-                // Main Image
-                GestureDetector(
-                  onTap: () async {
-                    final resultIndex =
-                        await Navigator.of(
-                          context,
-                          rootNavigator: true,
-                        ).push<int>(
-                          MaterialPageRoute(
-                            builder: (_) => FullScreenImageViewer(
-                              imageUrls: images
-                                  .map((it) => it.imageUrl)
-                                  .toList(),
-                              initialIndex: i,
-                              heroTagBuilder: (index) {
-                                return index == 0
-                                    ? 'book_image_${_book.id}'
-                                    : images[index].imageUrl;
-                              },
-                            ),
-                          ),
-                        );
-
-                    if (resultIndex != null && mounted) {
-                      _pageController.jumpToPage(resultIndex);
-                    }
-                  },
-                  child: SmartImage(
+            return ClipRect(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Blurred Background
+                  SmartImage(
                     imageUrl: images[i].imageUrl,
                     fit: BoxFit.cover,
                     width: double.infinity,
                     height: double.infinity,
-                    errorWidget: Container(
-                      color: isDark
-                          ? AppColors.surfaceContainerDark
-                          : AppColors.surfaceContainerLight,
-                      child: const Icon(Icons.broken_image_rounded, size: 48),
+                    useCloudinary: false,
+                    errorWidget: const SizedBox.shrink(),
+                  ),
+                  ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                      child: Container(
+                        color: (isDark ? Colors.black : Colors.white)
+                            .withValues(alpha: 0.2),
+                      ),
                     ),
                   ),
-                ),
-              ],
-            );
+                  // Main Image
+                  GestureDetector(
+                    onTap: () async {
+                      final resultIndex =
+                          await Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).push<int>(
+                            MaterialPageRoute(
+                              builder: (_) => FullScreenImageViewer(
+                                imageUrls: images
+                                    .map((it) => it.imageUrl)
+                                    .toList(),
+                                initialIndex: i,
+                              ),
+                            ),
+                          );
 
-            return Hero(tag: tag, child: content);
+                      if (resultIndex != null && mounted) {
+                        _pageController.jumpToPage(resultIndex);
+                      }
+                    },
+                    child: Hero(
+                      tag: tag,
+                      child: SmartImage(
+                        imageUrl: images[i].imageUrl,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorWidget: Container(
+                          color: isDark
+                              ? AppColors.surfaceContainerDark
+                              : AppColors.surfaceContainerLight,
+                          child: const Icon(Icons.broken_image_rounded, size: 48),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
           },
         ),
 

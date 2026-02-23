@@ -104,19 +104,14 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
                   minScale: 1.0,
                   maxScale: 4.0,
                   child: Center(
-                    child: Hero(
-                      tag:
-                          widget.heroTagBuilder?.call(actualIndex) ??
-                          widget.imageUrls[actualIndex],
-                      child: SmartImage(
-                        imageUrl: widget.imageUrls[actualIndex],
-                        fit: BoxFit.contain,
-                        showProgress: true,
-                        errorWidget: const Icon(
-                          Icons.broken_image_rounded,
-                          color: Colors.white54,
-                          size: 64,
-                        ),
+                    child: SmartImage(
+                      imageUrl: widget.imageUrls[actualIndex],
+                      fit: BoxFit.contain,
+                      showProgress: true,
+                      errorWidget: const Icon(
+                        Icons.broken_image_rounded,
+                        color: Colors.white54,
+                        size: 64,
                       ),
                     ),
                   ),

@@ -437,11 +437,8 @@ class _UserAvatarState extends State<_UserAvatar> {
             label: 'Share App',
             onTap: () async {
               haptics.selectionClick();
-              await SharePlus.instance.share(
-                ShareParams(
-                  text:
-                      'Join me on the Smart Pulchowk app! Stay connected with campus events, clubs, and announcements. Download now!\n\nhttps://smartpulchowk.com',
-                ),
+              await Share.share(
+                'Join me on the Smart Pulchowk app! Stay connected with campus events, clubs, and announcements. Download now!\n\nhttps://smartpulchowk.com',
               );
             },
           ),
