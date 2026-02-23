@@ -924,13 +924,11 @@ class _ThemeOption extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapUp: (details) async {
+      onTapUp: (details) {
         if (isSelected) return;
         haptics.selectionClick();
         final globalPos = details.globalPosition;
-        // Take a snapshot first, then change the theme
-        await themeAnimatorKey.currentState?.triggerAnimation(globalPos);
-        onTap();
+        themeAnimatorKey.currentState?.changeTheme(onTap, globalPos);
       },
       child: Container(
         padding: const EdgeInsets.all(8),
