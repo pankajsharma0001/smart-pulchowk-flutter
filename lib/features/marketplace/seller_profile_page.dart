@@ -12,12 +12,14 @@ class SellerProfilePage extends StatefulWidget {
   final String sellerId;
   final String? sellerName;
   final String? sellerImage;
+  final bool isVerified;
 
   const SellerProfilePage({
     super.key,
     required this.sellerId,
     this.sellerName,
     this.sellerImage,
+    this.isVerified = false,
   });
 
   @override
@@ -184,24 +186,26 @@ class _SellerProfilePageState extends State<SellerProfilePage>
                   ),
                 ),
                 const SizedBox(height: 2),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.verified_rounded,
-                      size: 14,
-                      color: Colors.blue,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Verified Seller',
-                      style: AppTextStyles.caption.copyWith(
+                if (widget.isVerified) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.verified_rounded,
+                        size: 14,
                         color: Colors.blue,
-                        fontWeight: FontWeight.bold,
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Verified Seller',
+                        style: AppTextStyles.caption.copyWith(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ],

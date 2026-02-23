@@ -140,8 +140,15 @@ class BookSeller {
   final String name;
   final String? email;
   final String? image;
+  final bool isVerifiedSeller;
 
-  BookSeller({required this.id, required this.name, this.email, this.image});
+  BookSeller({
+    required this.id,
+    required this.name,
+    this.email,
+    this.image,
+    this.isVerifiedSeller = false,
+  });
 
   factory BookSeller.fromJson(Map<String, dynamic> json) {
     return BookSeller(
@@ -149,6 +156,8 @@ class BookSeller {
       name: (json['name'] ?? json['full_name'])?.toString() ?? 'Unknown User',
       email: json['email']?.toString(),
       image: json['image']?.toString(),
+      isVerifiedSeller:
+          json['isVerifiedSeller'] == true || json['verified'] == true,
     );
   }
 }

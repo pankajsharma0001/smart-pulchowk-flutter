@@ -17,6 +17,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:smart_pulchowk/features/marketplace/blocked_users_page.dart';
 import 'package:smart_pulchowk/features/marketplace/my_reports_page.dart';
 import 'package:smart_pulchowk/features/settings/help_center_page.dart';
+import 'package:smart_pulchowk/core/models/user.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -32,6 +33,7 @@ class _SettingsPageState extends State<SettingsPage>
   String _appVersion = '1.0.0';
   String _userRole = 'student';
   bool _hasNotificationPermission = true;
+  AppUser? _user;
 
   // Notification Preferences
   bool _eventsNotify = true;
@@ -96,6 +98,17 @@ class _SettingsPageState extends State<SettingsPage>
       _userRole = role;
       _isLoading = false;
     });
+
+    try {
+      final user = await _apiService.getCurrentUser();
+      if (mounted) {
+        setState(() {
+          _user = user;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading full user in settings: $e');
+    }
   }
 
   Future<void> _toggleNotification(String key, bool value) async {
@@ -371,6 +384,14 @@ class _SettingsPageState extends State<SettingsPage>
                         fontWeight: FontWeight.w900,
                       ),
                     ),
+                    if (_user?.isVerifiedSeller == true) ...[
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.verified_rounded,
+                        color: Colors.blue,
+                        size: 16,
+                      ),
+                    ],
                     const SizedBox(width: AppSpacing.xs),
                     Container(
                       padding: const EdgeInsets.symmetric(

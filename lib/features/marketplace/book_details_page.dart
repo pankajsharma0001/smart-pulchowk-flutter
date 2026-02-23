@@ -661,6 +661,7 @@ View listing: $listingUrl
             sellerId: seller.id,
             sellerName: seller.name,
             sellerImage: seller.image,
+            isVerified: seller.isVerifiedSeller,
           ),
         ),
       );
@@ -718,16 +719,17 @@ View listing: $listingUrl
                             ),
                           ),
                           const SizedBox(width: 6),
-                          const Icon(
-                            Icons.verified_rounded,
-                            color: Colors.blue,
-                            size: 18,
-                          ),
+                          if (seller.isVerifiedSeller)
+                            const Icon(
+                              Icons.verified_rounded,
+                              color: Colors.blue,
+                              size: 18,
+                            ),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Verified Seller • Active Member',
+                        '${seller.isVerifiedSeller ? "Verified Seller • " : ""}Active Member',
                         style: AppTextStyles.caption.copyWith(
                           color: isDark
                               ? AppColors.textMutedDark

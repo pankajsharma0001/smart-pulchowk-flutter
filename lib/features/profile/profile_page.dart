@@ -345,13 +345,26 @@ class _ProfilePageState extends State<ProfilePage>
                 opacity: infoOpacity,
                 child: Column(
                   children: [
-                    Text(
-                      _user!.name,
-                      style: AppTextStyles.h4.copyWith(
-                        color: isDark ? Colors.white : Colors.black,
-                        fontWeight: FontWeight.w900,
-                      ),
-                      textAlign: TextAlign.center,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          _user!.name,
+                          style: AppTextStyles.h4.copyWith(
+                            color: isDark ? Colors.white : Colors.black,
+                            fontWeight: FontWeight.w900,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (_user!.isVerifiedSeller) ...[
+                          const SizedBox(width: 8),
+                          const Icon(
+                            Icons.verified_rounded,
+                            color: Colors.blue,
+                            size: 20,
+                          ),
+                        ],
+                      ],
                     ),
                     Text(
                       _user!.email,
@@ -397,12 +410,24 @@ class _ProfilePageState extends State<ProfilePage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      _user!.name,
-                      style: AppTextStyles.bodyLarge.copyWith(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          _user!.name,
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                          ),
+                        ),
+                        if (_user!.isVerifiedSeller) ...[
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.verified_rounded,
+                            color: Colors.blue,
+                            size: 14,
+                          ),
+                        ],
+                      ],
                     ),
                     Text(
                       _user!.role.toUpperCase(),
