@@ -9,7 +9,7 @@ import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/features/marketplace/book_details_page.dart';
-import 'package:smart_pulchowk/features/settings/settings_page.dart';
+import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/features/favorites/favorites_page.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'dart:ui' as ui;
@@ -461,10 +461,10 @@ class _ProfilePageState extends State<ProfilePage>
             right: 8,
             child: IconButton(
               icon: const Icon(Icons.settings_outlined),
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsPage()),
-              ),
+              onPressed: () {
+                haptics.selectionClick();
+                MainLayout.of(context)?.setSelectedIndex(10);
+              },
             ),
           ),
         ],

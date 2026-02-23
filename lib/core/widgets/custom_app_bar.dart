@@ -88,7 +88,14 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
                       Icons.arrow_back_ios_new_rounded,
                       size: 20,
                     ),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () {
+                      if (Navigator.of(context).canPop()) {
+                        Navigator.of(context).pop();
+                      } else {
+                        // At root of tab, check if we can go back in tab history
+                        MainLayout.of(context)?.goBack();
+                      }
+                    },
                   ),
                 if (title != null)
                   Expanded(
@@ -414,8 +421,12 @@ class _UserAvatarState extends State<_UserAvatar> {
           child: _ProfileMenuItem(
             icon: Icons.settings_outlined,
             label: 'Settings',
-            onTap: () =>
-                MainLayout.of(context)?.setSelectedIndex(10), // Settings index
+            onTap: () {
+              haptics.selectionClick();
+              // Settings is the root of tab 10, so just switch to tab 10.
+              // Our enhanced _FadeIndexedStack will handle the animation.
+              MainLayout.of(context)?.setSelectedIndex(10);
+            },
           ),
         ),
 
@@ -442,9 +453,8 @@ class _UserAvatarState extends State<_UserAvatar> {
             label: 'Help & Support',
             onTap: () {
               haptics.selectionClick();
-              // Close the popup first, then navigate via the settings tab navigator
-              // to ensure the page inherits correct theme context
-              if (context.mounted) Navigator.pop(context);
+              // Note: _ProfileMenuItem already pops the menu.
+              // We just need to trigger the navigation.
               MainLayout.of(
                 context,
               )?.navigateToTab(10, subPage: const HelpCenterPage());
@@ -461,9 +471,7 @@ class _UserAvatarState extends State<_UserAvatar> {
             onTap: () async {
               haptics.heavyImpact();
 
-              // Close the popup menu first before showing dialog
-              if (context.mounted) Navigator.pop(context);
-
+              // Confirm sign out
               final confirmed = await showDialog<bool>(
                 context: context,
                 builder: (ctx) => AlertDialog(
@@ -487,10 +495,11 @@ class _UserAvatarState extends State<_UserAvatar> {
 
               if (confirmed != true || !context.mounted) return;
 
+              // Show non-dismissible loading dialog
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (context) => const AlertDialog(
+                builder: (ctx) => const AlertDialog(
                   content: Row(
                     children: [
                       CircularProgressIndicator(),
@@ -500,9 +509,15 @@ class _UserAvatarState extends State<_UserAvatar> {
                   ),
                 ),
               );
-              await AuthService.signOut();
-              // No need to pop the dialog manually because signing out changes
-              // the root auth state, navigating the user away to the login screen.
+
+              try {
+                await AuthService.signOut();
+              } finally {
+                // Dimiss loading dialog if still visible/mounted
+                if (context.mounted) {
+                  Navigator.of(context, rootNavigator: true).pop();
+                }
+              }
             },
           ),
         ),

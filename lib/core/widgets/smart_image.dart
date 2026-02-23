@@ -87,19 +87,19 @@ class SmartImage extends StatelessWidget {
           height: height,
           fit: fit,
           progressIndicatorBuilder: showProgress
-              ? (context, url, progress) => Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      ShimmerWrapper(
-                        child: Skeleton(
-                          width: width,
-                          height: height,
-                          borderRadius: borderRadius,
-                          shape: shape,
-                        ),
+              ? (context, url, progress) => Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    ShimmerWrapper(
+                      child: Skeleton(
+                        width: width,
+                        height: height,
+                        borderRadius: borderRadius,
+                        shape: shape,
                       ),
-                      Column(
+                    ),
+                    Center(
+                      child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           CircularProgressIndicator(
@@ -122,8 +122,8 @@ class SmartImage extends StatelessWidget {
                           ],
                         ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 )
               : null,
           placeholder: showProgress

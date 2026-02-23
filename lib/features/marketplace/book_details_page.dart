@@ -1011,7 +1011,7 @@ View listing: $listingUrl
                   tag: i == 0 ? 'book_image_${_book.id}' : images[i].imageUrl,
                   child: SmartImage(
                     imageUrl: images[i].imageUrl,
-                    fit: BoxFit.contain,
+                    fit: BoxFit.cover,
                     width: double.infinity,
                     height: double.infinity,
                     errorWidget: Container(

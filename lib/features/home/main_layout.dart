@@ -46,6 +46,8 @@ class MainLayout extends StatefulWidget {
 class MainLayoutState extends State<MainLayout>
     with WidgetsBindingObserver, SingleTickerProviderStateMixin {
   late int _selectedIndex;
+  final List<int> _tabHistory = [0];
+  bool _isBackNavigation = false;
   String _userRole = 'student';
   final ApiService _apiService = ApiService();
 
@@ -213,9 +215,31 @@ class MainLayoutState extends State<MainLayout>
       _navigatorKeys[index].currentState?.popUntil((route) => route.isFirst);
     } else {
       setState(() {
+        _isBackNavigation = false;
         _selectedIndex = index;
         tabIndexNotifier.value = index;
+        // Keep history manageable
+        if (_tabHistory.isEmpty || _tabHistory.last != index) {
+          _tabHistory.add(index);
+          if (_tabHistory.length > 10) _tabHistory.removeAt(1);
+        }
       });
+    }
+  }
+
+  /// Pops the current tab from history and returns to the previous tab.
+  void goBack() {
+    if (_tabHistory.length > 1) {
+      _tabHistory.removeLast();
+      final prevIndex = _tabHistory.last;
+      setState(() {
+        _isBackNavigation = true;
+        _selectedIndex = prevIndex;
+        tabIndexNotifier.value = prevIndex;
+      });
+    } else {
+      // If no history, default to Home
+      setSelectedIndex(0);
     }
   }
 
@@ -226,7 +250,25 @@ class MainLayoutState extends State<MainLayout>
       // Short delay to allow IndexedStack to switch if needed
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _navigatorKeys[index].currentState?.push(
-          MaterialPageRoute(builder: (_) => subPage),
+          PageRouteBuilder(
+            pageBuilder: (_, animation, secondaryAnimation) => subPage,
+            transitionsBuilder: (_, animation, secondaryAnimation, child) {
+              final offsetTween = Tween<Offset>(
+                begin: const Offset(0, 0.04),
+                end: Offset.zero,
+              ).chain(CurveTween(curve: Curves.easeOutCubic));
+
+              return FadeTransition(
+                opacity: animation,
+                child: SlideTransition(
+                  position: animation.drive(offsetTween),
+                  child: child,
+                ),
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 260),
+            reverseTransitionDuration: const Duration(milliseconds: 220),
+          ),
         );
       });
     }
@@ -396,6 +438,7 @@ class MainLayoutState extends State<MainLayout>
                 ),
                 body: _FadeIndexedStack(
                   index: _selectedIndex,
+                  isBackNavigation: _isBackNavigation,
                   children: List.generate(
                     12,
                     (i) => _TabNavigator(
@@ -1015,9 +1058,14 @@ class _NavItem extends StatelessWidget {
 
 class _FadeIndexedStack extends StatefulWidget {
   final int index;
+  final bool isBackNavigation;
   final List<Widget> children;
 
-  const _FadeIndexedStack({required this.index, required this.children});
+  const _FadeIndexedStack({
+    required this.index,
+    required this.children,
+    this.isBackNavigation = false,
+  });
 
   @override
   State<_FadeIndexedStack> createState() => _FadeIndexedStackState();
@@ -1026,13 +1074,16 @@ class _FadeIndexedStack extends StatefulWidget {
 class _FadeIndexedStackState extends State<_FadeIndexedStack>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  late int _currentIndex;
+  int? _previousIndex;
 
   @override
   void initState() {
     super.initState();
+    _currentIndex = widget.index;
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 250),
+      duration: const Duration(milliseconds: 260),
     );
     _controller.forward();
   }
@@ -1040,6 +1091,10 @@ class _FadeIndexedStackState extends State<_FadeIndexedStack>
   @override
   void didUpdateWidget(_FadeIndexedStack oldWidget) {
     if (widget.index != oldWidget.index) {
+      setState(() {
+        _previousIndex = oldWidget.index;
+        _currentIndex = widget.index;
+      });
       _controller.forward(from: 0.0);
     }
     super.didUpdateWidget(oldWidget);
@@ -1053,9 +1108,40 @@ class _FadeIndexedStackState extends State<_FadeIndexedStack>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _controller,
-      child: IndexedStack(index: widget.index, children: widget.children),
+    final offsetBegin = widget.isBackNavigation
+        ? const Offset(0, -0.04)
+        : const Offset(0, 0.04);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: List.generate(widget.children.length, (i) {
+        final bool isCurrent = i == _currentIndex;
+        final bool isPrevious = i == _previousIndex && !_controller.isCompleted;
+
+        if (isCurrent) {
+          return FadeTransition(
+            opacity: _controller,
+            child: SlideTransition(
+              position: _controller.drive(
+                Tween<Offset>(
+                  begin: offsetBegin,
+                  end: Offset.zero,
+                ).chain(CurveTween(curve: Curves.easeOutCubic)),
+              ),
+              child: widget.children[i],
+            ),
+          );
+        } else if (isPrevious) {
+          // Keep previous child visible underneath during transition
+          return widget.children[i];
+        } else {
+          // Keep all other tabs alive but offstage to preserve state
+          return Offstage(
+            offstage: true,
+            child: TickerMode(enabled: false, child: widget.children[i]),
+          );
+        }
+      }),
     );
   }
 }

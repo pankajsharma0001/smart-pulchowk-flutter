@@ -7,6 +7,8 @@ import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/widgets/theme_change_animator.dart';
+import 'package:smart_pulchowk/core/services/storage_service.dart';
+import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:path_provider/path_provider.dart';
@@ -29,7 +31,6 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage>
     with WidgetsBindingObserver {
   final ApiService _apiService = ApiService();
-  bool _isLoading = true;
   String _appVersion = '1.0.0';
   String _userRole = 'student';
   bool _hasNotificationPermission = true;
@@ -78,26 +79,37 @@ class _SettingsPageState extends State<SettingsPage>
   }
 
   Future<void> _loadSettings() async {
+    // 1. Load role from cache immediately if available
+    final dynamic cachedRole = StorageService.readCache(
+      AppConstants.userRoleKey,
+    );
+    if (cachedRole is String && mounted) {
+      setState(() {
+        _userRole = cachedRole;
+      });
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final info = await PackageInfo.fromPlatform();
     final hasPermission = await NotificationService.hasPermission();
     final role = await _apiService.getUserRole();
 
-    setState(() {
-      _hasNotificationPermission = hasPermission;
-      // Default to false if permission is denied on a fresh install/load
-      _eventsNotify = prefs.getBool('notify_events') ?? hasPermission;
-      _booksNotify = prefs.getBool('notify_books') ?? hasPermission;
-      _noticesNotify = prefs.getBool('notify_notices') ?? hasPermission;
-      _announcementsNotify =
-          prefs.getBool('notify_announcements') ?? hasPermission;
-      _classroomNotify = prefs.getBool('notify_classroom') ?? hasPermission;
-      _chatNotify = prefs.getBool('notify_chat') ?? hasPermission;
-      _lostFoundNotify = prefs.getBool('notify_lost_found') ?? hasPermission;
-      _appVersion = info.version;
-      _userRole = role;
-      _isLoading = false;
-    });
+    if (mounted) {
+      setState(() {
+        _hasNotificationPermission = hasPermission;
+        // Default to false if permission is denied on a fresh install/load
+        _eventsNotify = prefs.getBool('notify_events') ?? hasPermission;
+        _booksNotify = prefs.getBool('notify_books') ?? hasPermission;
+        _noticesNotify = prefs.getBool('notify_notices') ?? hasPermission;
+        _announcementsNotify =
+            prefs.getBool('notify_announcements') ?? hasPermission;
+        _classroomNotify = prefs.getBool('notify_classroom') ?? hasPermission;
+        _chatNotify = prefs.getBool('notify_chat') ?? hasPermission;
+        _lostFoundNotify = prefs.getBool('notify_lost_found') ?? hasPermission;
+        _appVersion = info.version;
+        _userRole = role;
+      });
+    }
 
     try {
       final user = await _apiService.getCurrentUser();
@@ -263,10 +275,6 @@ class _SettingsPageState extends State<SettingsPage>
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
     final user = AuthService.currentUser;
 
     return Scaffold(
@@ -779,10 +787,12 @@ class _SettingsPageState extends State<SettingsPage>
           ),
         );
 
-        await AuthService.signOut();
-
-        if (context.mounted) {
-          Navigator.of(context).pop();
+        try {
+          await AuthService.signOut();
+        } finally {
+          if (context.mounted) {
+            Navigator.of(context, rootNavigator: true).pop();
+          }
         }
       },
       borderRadius: BorderRadius.circular(AppRadius.lg),
