@@ -143,6 +143,15 @@ class NavigationService {
       _navigateToTab(2);
       return;
     }
+
+    // 7. Security & Role Updates
+    if (t.contains('security') ||
+        t.contains('role') ||
+        t == 'system' ||
+        t.contains('seller')) {
+      _navigateToTab(10); // Settings
+      return;
+    }
   }
 
   static void _navigateToTab(int index, {Widget? subPage}) {

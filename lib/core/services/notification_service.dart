@@ -22,6 +22,12 @@ class NotificationService {
   static Stream<Map<String, dynamic>> get chatStream =>
       _chatStreamController.stream;
 
+  static final StreamController<void> _refreshStreamController =
+      StreamController<void>.broadcast();
+
+  /// Stream to signal when notification lists should refresh
+  static Stream<void> get refreshStream => _refreshStreamController.stream;
+
   /// Initialize notifications (permission request, channel setup).
   static Future<void> initialize() async {
     try {
@@ -118,6 +124,9 @@ class NotificationService {
         if (type == 'chat_message' || type == 'chat_mention') {
           _chatStreamController.add(message.data);
         }
+
+        // Trigger a global refresh for notification lists
+        _refreshStreamController.add(null);
       });
 
       // Listen to token refresh

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:confetti/confetti.dart';
@@ -11,6 +12,7 @@ import 'package:smart_pulchowk/core/models/notification.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/core/widgets/staggered_scale_fade.dart';
 import 'package:smart_pulchowk/core/widgets/empty_state.dart';
+import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:intl/intl.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -24,6 +26,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   final ApiService _api = ApiService();
   final ScrollController _scrollController = ScrollController();
   late ConfettiController _confettiController;
+  StreamSubscription<void>? _refreshSubscription;
 
   bool _isLoading = true;
   bool _isLoadingMore = false;
@@ -41,10 +44,21 @@ class _NotificationsPageState extends State<NotificationsPage> {
     );
     _loadNotifications();
     _scrollController.addListener(_onScroll);
+
+    // Listen for incoming notifications to refresh the list automatically
+    _refreshSubscription = NotificationService.refreshStream.listen((_) {
+      if (mounted) {
+        debugPrint(
+          'NotificationsPage: Foreground notification received. Refreshing...',
+        );
+        _loadNotifications(silent: true);
+      }
+    });
   }
 
   @override
   void dispose() {
+    _refreshSubscription?.cancel();
     _scrollController.dispose();
     _confettiController.dispose();
     super.dispose();
