@@ -484,10 +484,10 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                   ],
                   background: GestureDetector(
                     onTap: _showFullScreenImage,
-                    child: widget.event.bannerUrl != null
-                        ? Hero(
-                            tag: widget.event.bannerUrl!,
-                            child: Stack(
+                    child: Hero(
+                      tag: widget.event.bannerUrl ?? 'event_${widget.event.id}',
+                      child: widget.event.bannerUrl != null
+                          ? Stack(
                               children: [
                                 // Blurred Background
                                 Positioned.fill(
@@ -531,20 +531,20 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                   ),
                                 ),
                               ],
-                            ),
-                          )
-                        : Container(
-                            decoration: BoxDecoration(
-                              gradient: AppColors.primaryGradient,
-                            ),
-                            child: const Center(
-                              child: Icon(
-                                Icons.event_rounded,
-                                size: 64,
-                                color: Colors.white24,
+                            )
+                          : Container(
+                              decoration: BoxDecoration(
+                                gradient: AppColors.primaryGradient,
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.event_rounded,
+                                  size: 64,
+                                  color: Colors.white24,
+                                ),
                               ),
                             ),
-                          ),
+                    ),
                   ),
                 ),
               ),

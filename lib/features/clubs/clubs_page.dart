@@ -290,6 +290,7 @@ class _ClubsPageState extends State<ClubsPage>
       subtitle: _searchController.text.isNotEmpty
           ? 'Try a different search term or check the spelling.'
           : 'Clubs will appear here once they are added.',
+      icon: Icons.groups_rounded,
     );
   }
 

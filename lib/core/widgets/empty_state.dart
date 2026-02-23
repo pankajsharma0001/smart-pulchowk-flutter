@@ -6,6 +6,7 @@ class EmptyState extends StatelessWidget {
   final String subtitle;
   final String imagePath;
   final double imageSize;
+  final IconData? icon;
 
   const EmptyState({
     super.key,
@@ -13,6 +14,7 @@ class EmptyState extends StatelessWidget {
     required this.subtitle,
     this.imagePath = 'assets/images/empty_search.png',
     this.imageSize = 200,
+    this.icon,
   });
 
   @override
@@ -25,27 +27,37 @@ class EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(
-              imagePath,
-              width: imageSize,
-              height: imageSize,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                // Fallback icon if image fails to load
-                return Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.search_off_rounded,
-                    size: 64,
-                    color: AppColors.primary,
-                  ),
-                );
-              },
-            ),
+            if (icon != null)
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 64, color: AppColors.primary),
+              )
+            else
+              Image.asset(
+                imagePath,
+                width: imageSize,
+                height: imageSize,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  // Fallback icon if image fails to load
+                  return Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.search_off_rounded,
+                      size: 64,
+                      color: AppColors.primary,
+                    ),
+                  );
+                },
+              ),
             const SizedBox(height: 24),
             Text(
               title,

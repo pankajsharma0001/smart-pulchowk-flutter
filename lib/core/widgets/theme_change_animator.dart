@@ -64,21 +64,21 @@ class ThemeChangeAnimatorState extends State<ThemeChangeAnimator>
       final bool isCurrentlyDark =
           Theme.of(_repaintKey.currentContext!).brightness == Brightness.dark;
 
+      final double pixelRatio = View.of(context).devicePixelRatio;
+
       if (isCurrentlyDark) {
         toggle();
         await Future.delayed(const Duration(milliseconds: 50));
-        final image = await boundary.toImage(
-          pixelRatio: View.of(context).devicePixelRatio,
-        );
+        if (!mounted) return;
+        final image = await boundary.toImage(pixelRatio: pixelRatio);
         setState(() {
           _snapshot = image;
           _origin = offset;
           _isDarkToLight = true;
         });
       } else {
-        final image = await boundary.toImage(
-          pixelRatio: View.of(context).devicePixelRatio,
-        );
+        final image = await boundary.toImage(pixelRatio: pixelRatio);
+        if (!mounted) return;
         setState(() {
           _snapshot = image;
           _origin = offset;

@@ -773,6 +773,8 @@ class _SettingsPageState extends State<SettingsPage>
 
         if (confirmed != true || !context.mounted) return;
 
+        final navigator = Navigator.of(context, rootNavigator: true);
+
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -790,9 +792,7 @@ class _SettingsPageState extends State<SettingsPage>
         try {
           await AuthService.signOut();
         } finally {
-          if (context.mounted) {
-            Navigator.of(context, rootNavigator: true).pop();
-          }
+          navigator.pop();
         }
       },
       borderRadius: BorderRadius.circular(AppRadius.lg),

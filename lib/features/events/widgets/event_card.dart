@@ -50,11 +50,14 @@ class EventCard extends StatelessWidget {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  SmartImage(
-                    imageUrl: (event.bannerUrl?.isNotEmpty == true)
-                        ? event.bannerUrl
-                        : null,
-                    errorWidget: _buildPlaceholder(context),
+                  Hero(
+                    tag: event.bannerUrl ?? 'event_${event.id}',
+                    child: SmartImage(
+                      imageUrl: (event.bannerUrl?.isNotEmpty == true)
+                          ? event.bannerUrl
+                          : null,
+                      errorWidget: _buildPlaceholder(context),
+                    ),
                   ),
 
                   // Status Badge

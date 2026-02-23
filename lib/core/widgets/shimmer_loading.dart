@@ -59,6 +59,157 @@ class ShimmerWrapper extends StatelessWidget {
   }
 }
 
+/// Premium shimmer card that mirrors the BookCard layout.
+class ShimmerBookCard extends StatelessWidget {
+  const ShimmerBookCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E1E2E) : Colors.white;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ShimmerWrapper(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Image area
+            Expanded(flex: 5, child: Skeleton(borderRadius: 0)),
+            // Content area
+            Expanded(
+              flex: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Skeleton(height: 14, width: 120, borderRadius: 6),
+                    const SizedBox(height: 6),
+                    Skeleton(height: 10, width: 80, borderRadius: 5),
+                    const Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Skeleton(height: 16, width: 60, borderRadius: 6),
+                        Skeleton(height: 12, width: 40, borderRadius: 4),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Premium shimmer card that mirrors the EventCard grid layout.
+class ShimmerEventCard extends StatelessWidget {
+  const ShimmerEventCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E1E2E) : Colors.white;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ShimmerWrapper(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Banner area
+            Expanded(flex: 11, child: Skeleton(borderRadius: 0)),
+            // Content area
+            Expanded(
+              flex: 9,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Skeleton(height: 14, borderRadius: 6),
+                    const SizedBox(height: 4),
+                    Skeleton(height: 10, width: 100, borderRadius: 5),
+                    const Spacer(),
+                    Skeleton(height: 10, width: 80, borderRadius: 5),
+                    const SizedBox(height: 4),
+                    Skeleton(height: 10, width: 120, borderRadius: 5),
+                    const SizedBox(height: 4),
+                    Skeleton(height: 10, width: 60, borderRadius: 5),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Premium shimmer card that mirrors the LostFoundCard layout.
+class ShimmerLostFoundCard extends StatelessWidget {
+  const ShimmerLostFoundCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF1E1E2E) : Colors.white;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ShimmerWrapper(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Image area
+            Expanded(flex: 3, child: Skeleton(borderRadius: 0)),
+            // Content area
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Skeleton(height: 14, width: 100, borderRadius: 6),
+                    const SizedBox(height: 6),
+                    Skeleton(height: 10, borderRadius: 5),
+                    const Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Skeleton(height: 12, width: 50, borderRadius: 4),
+                        Skeleton(height: 12, width: 70, borderRadius: 4),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Premium shimmer card that mirrors the ClubCard layout.
 class ShimmerClubCard extends StatelessWidget {
   const ShimmerClubCard({super.key});

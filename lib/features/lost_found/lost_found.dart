@@ -358,7 +358,7 @@ class _LostFoundPageState extends State<LostFoundPage>
       ),
       itemCount: 6,
       itemBuilder: (context, index) =>
-          const ShimmerClubCard(), // Reusing ShimmerClubCard as it matches the grid layout
+          const ShimmerLostFoundCard(), // Using the specialized ShimmerLostFoundCard
     );
   }
 
@@ -368,6 +368,7 @@ class _LostFoundPageState extends State<LostFoundPage>
       subtitle: _searchQuery.isNotEmpty
           ? 'Try a different search term or check the spelling.'
           : 'Reported items will appear here.',
+      icon: Icons.search_off_rounded,
     );
   }
 

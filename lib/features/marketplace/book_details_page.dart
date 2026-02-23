@@ -960,55 +960,61 @@ View listing: $listingUrl
           controller: _pageController,
           itemCount: images.length,
           onPageChanged: (i) => setState(() => _currentImageIndex = i),
-          itemBuilder: (_, i) => Stack(
-            fit: StackFit.expand,
-            children: [
-              // Blurred Background
-              SmartImage(
-                imageUrl: images[i].imageUrl,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                height: double.infinity,
-                useCloudinary: false,
-                errorWidget: const SizedBox.shrink(),
-              ),
-              ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                  child: Container(
-                    color: (isDark ? Colors.black : Colors.white).withValues(
-                      alpha: 0.2,
+          itemBuilder: (_, i) {
+            final isPrimary = i == 0;
+            final tag = isPrimary
+                ? 'book_image_${_book.id}'
+                : images[i].imageUrl;
+
+            final content = Stack(
+              fit: StackFit.expand,
+              children: [
+                // Blurred Background
+                SmartImage(
+                  imageUrl: images[i].imageUrl,
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  useCloudinary: false,
+                  errorWidget: const SizedBox.shrink(),
+                ),
+                ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                    child: Container(
+                      color: (isDark ? Colors.black : Colors.white).withValues(
+                        alpha: 0.2,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              // Main Image
-              GestureDetector(
-                onTap: () async {
-                  final resultIndex =
-                      await Navigator.of(
-                        context,
-                        rootNavigator: true,
-                      ).push<int>(
-                        MaterialPageRoute(
-                          builder: (_) => FullScreenImageViewer(
-                            imageUrls: images.map((it) => it.imageUrl).toList(),
-                            initialIndex: i,
-                            heroTagBuilder: (index) {
-                              return index == 0
-                                  ? 'book_image_${_book.id}'
-                                  : images[index].imageUrl;
-                            },
+                // Main Image
+                GestureDetector(
+                  onTap: () async {
+                    final resultIndex =
+                        await Navigator.of(
+                          context,
+                          rootNavigator: true,
+                        ).push<int>(
+                          MaterialPageRoute(
+                            builder: (_) => FullScreenImageViewer(
+                              imageUrls: images
+                                  .map((it) => it.imageUrl)
+                                  .toList(),
+                              initialIndex: i,
+                              heroTagBuilder: (index) {
+                                return index == 0
+                                    ? 'book_image_${_book.id}'
+                                    : images[index].imageUrl;
+                              },
+                            ),
                           ),
-                        ),
-                      );
+                        );
 
-                  if (resultIndex != null && mounted) {
-                    _pageController.jumpToPage(resultIndex);
-                  }
-                },
-                child: Hero(
-                  tag: i == 0 ? 'book_image_${_book.id}' : images[i].imageUrl,
+                    if (resultIndex != null && mounted) {
+                      _pageController.jumpToPage(resultIndex);
+                    }
+                  },
                   child: SmartImage(
                     imageUrl: images[i].imageUrl,
                     fit: BoxFit.cover,
@@ -1022,9 +1028,11 @@ View listing: $listingUrl
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            );
+
+            return Hero(tag: tag, child: content);
+          },
         ),
 
         // Bottom gradient fade into content card

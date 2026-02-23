@@ -11,6 +11,7 @@ import 'package:smart_pulchowk/features/marketplace/marketplace_activity_page.da
 import 'package:smart_pulchowk/features/marketplace/chat_list_page.dart';
 import 'package:smart_pulchowk/core/widgets/interactive_wrapper.dart';
 import 'package:smart_pulchowk/core/widgets/empty_state.dart';
+import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BOOK MARKETPLACE PAGE
@@ -347,7 +348,7 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
       itemCount: _books.length + (_isLoadingMore ? 2 : 0),
       itemBuilder: (context, index) {
         if (index >= _books.length) {
-          return _ShimmerCard(isDark: isDark);
+          return const ShimmerBookCard();
         }
         return _BookCard(
           book: _books[index],
@@ -372,6 +373,7 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
       title: 'No books found',
       subtitle:
           'Try adjusting your filters or search terms.\nOr be the first to sell a book!',
+      icon: Icons.menu_book_rounded,
     );
   }
 
@@ -386,7 +388,7 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
         childAspectRatio: 0.62,
       ),
       itemCount: 6,
-      itemBuilder: (_, _) => _ShimmerCard(isDark: isDark),
+      itemBuilder: (_, _) => const ShimmerBookCard(),
     );
   }
 }
@@ -889,147 +891,6 @@ class _BookCard extends StatelessWidget {
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SHIMMER / LOADING CARD
-// ─────────────────────────────────────────────────────────────────────────────
-
-class _ShimmerCard extends StatefulWidget {
-  final bool isDark;
-  const _ShimmerCard({required this.isDark});
-
-  @override
-  State<_ShimmerCard> createState() => _ShimmerCardState();
-}
-
-class _ShimmerCardState extends State<_ShimmerCard>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        final shimmerColor = widget.isDark
-            ? AppColors.surfaceContainerHighDark
-            : AppColors.surfaceContainerHighLight;
-        final baseColor = widget.isDark
-            ? AppColors.surfaceContainerDark
-            : AppColors.surfaceContainerLight;
-
-        return Container(
-          decoration: BoxDecoration(
-            color: baseColor,
-            borderRadius: AppRadius.lgAll,
-            border: Border.all(
-              color: widget.isDark
-                  ? AppColors.borderDark.withValues(alpha: 0.2)
-                  : AppColors.borderLight.withValues(alpha: 0.4),
-            ),
-          ),
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 5,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Color.lerp(
-                      baseColor,
-                      shimmerColor,
-                      (0.5 + 0.5 * (_controller.value * 2 - 1).abs()),
-                    ),
-                  ),
-                  child: Center(
-                    child: Icon(
-                      Icons.auto_stories_rounded,
-                      size: 30,
-                      color: shimmerColor.withValues(alpha: 0.3),
-                    ),
-                  ),
-                ),
-              ),
-              Expanded(
-                flex: 3,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        height: 14,
-                        width: double.infinity,
-                        decoration: BoxDecoration(
-                          color: Color.lerp(
-                            baseColor,
-                            shimmerColor,
-                            (0.3 + 0.5 * (_controller.value * 2 - 1).abs()),
-                          ),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        height: 12,
-                        width: 80,
-                        decoration: BoxDecoration(
-                          color: Color.lerp(
-                            baseColor,
-                            shimmerColor,
-                            (0.2 + 0.5 * (_controller.value * 2 - 1).abs()),
-                          ),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ),
-                      const Spacer(),
-                      Row(
-                        children: [
-                          Container(
-                            height: 18,
-                            width: 18,
-                            decoration: BoxDecoration(
-                              color: shimmerColor.withValues(alpha: 0.4),
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            height: 10,
-                            width: 50,
-                            decoration: BoxDecoration(
-                              color: shimmerColor.withValues(alpha: 0.3),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-}
 // ─────────────────────────────────────────────────────────────────────────────
 // FILTER BOTTOM SHEET
 // ─────────────────────────────────────────────────────────────────────────────

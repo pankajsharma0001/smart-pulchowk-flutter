@@ -565,25 +565,28 @@ class _BookCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: book.primaryImageUrl != null
-                  ? SmartImage(
-                      imageUrl: book.primaryImageUrl!,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                    )
-                  : Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: cs.primary.withValues(
-                          alpha: isDark ? 0.15 : 0.05,
+              child: Hero(
+                tag: 'book_image_${book.id}',
+                child: book.primaryImageUrl != null
+                    ? SmartImage(
+                        imageUrl: book.primaryImageUrl!,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      )
+                    : Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(
+                            alpha: isDark ? 0.15 : 0.05,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.library_books_rounded,
+                          size: 48,
+                          color: cs.primary.withValues(alpha: 0.2),
                         ),
                       ),
-                      child: Icon(
-                        Icons.library_books_rounded,
-                        size: 48,
-                        color: cs.primary.withValues(alpha: 0.2),
-                      ),
-                    ),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(8),

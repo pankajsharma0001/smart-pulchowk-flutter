@@ -203,9 +203,7 @@ class _EventsPageState extends State<EventsPage>
       ),
       itemCount: 6,
       itemBuilder: (context, index) {
-        return const ShimmerWrapper(
-          child: Skeleton(borderRadius: AppRadius.lg),
-        );
+        return const ShimmerEventCard();
       },
     );
   }
@@ -214,6 +212,7 @@ class _EventsPageState extends State<EventsPage>
     return const EmptyState(
       title: 'No events found',
       subtitle: 'Check back later for exciting campus events!',
+      icon: Icons.event_busy_rounded,
     );
   }
 

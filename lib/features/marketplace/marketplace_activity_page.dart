@@ -675,31 +675,36 @@ class _InquiryCard extends StatelessWidget {
               },
               child: Row(
                 children: [
-                  ClipRRect(
-                    borderRadius: AppRadius.smAll,
-                    child: SizedBox(
-                      width: 48,
-                      height: 64,
-                      child: book?.primaryImageUrl != null
-                          ? SmartImage(
-                              imageUrl: book!.primaryImageUrl!,
-                              fit: BoxFit.cover,
-                            )
-                          : Container(
-                              color: (isDark ? cs.primary : cs.primaryContainer)
-                                  .withValues(alpha: 0.1),
-                              child: Center(
-                                child: Icon(
-                                  Icons.menu_book_rounded,
-                                  color:
-                                      (isDark
-                                              ? cs.primary
-                                              : cs.primaryContainer)
-                                          .withValues(alpha: 0.5),
-                                  size: 24,
+                  Hero(
+                    tag:
+                        'book_image_${book?.id ?? "unknown_inquiry_${request.id}"}',
+                    child: ClipRRect(
+                      borderRadius: AppRadius.smAll,
+                      child: SizedBox(
+                        width: 48,
+                        height: 64,
+                        child: book?.primaryImageUrl != null
+                            ? SmartImage(
+                                imageUrl: book!.primaryImageUrl!,
+                                fit: BoxFit.cover,
+                              )
+                            : Container(
+                                color:
+                                    (isDark ? cs.primary : cs.primaryContainer)
+                                        .withValues(alpha: 0.1),
+                                child: Center(
+                                  child: Icon(
+                                    Icons.menu_book_rounded,
+                                    color:
+                                        (isDark
+                                                ? cs.primary
+                                                : cs.primaryContainer)
+                                            .withValues(alpha: 0.5),
+                                    size: 24,
+                                  ),
                                 ),
                               ),
-                            ),
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1491,35 +1496,40 @@ class _ListingCard extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: AppRadius.mdAll,
-              child: SizedBox(
-                width: 72,
-                height: 96,
-                child: imageUrl != null
-                    ? SmartImage(imageUrl: imageUrl, fit: BoxFit.cover)
-                    : Container(
-                        color:
-                            (isDark
-                                    ? Theme.of(context).colorScheme.primary
-                                    : Theme.of(
-                                        context,
-                                      ).colorScheme.primaryContainer)
-                                .withValues(alpha: 0.1),
-                        child: Center(
-                          child: Icon(
-                            Icons.menu_book_rounded,
-                            color:
-                                (isDark
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Theme.of(
-                                            context,
-                                          ).colorScheme.primaryContainer)
-                                    .withValues(alpha: 0.5),
-                            size: 32,
+            Hero(
+              tag: 'book_image_${book.id}',
+              child: ClipRRect(
+                borderRadius: AppRadius.mdAll,
+                child: SizedBox(
+                  width: 72,
+                  height: 96,
+                  child: imageUrl != null
+                      ? SmartImage(imageUrl: imageUrl, fit: BoxFit.cover)
+                      : Container(
+                          color:
+                              (isDark
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(
+                                          context,
+                                        ).colorScheme.primaryContainer)
+                                  .withValues(alpha: 0.1),
+                          child: Center(
+                            child: Icon(
+                              Icons.menu_book_rounded,
+                              color:
+                                  (isDark
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.primary
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.primaryContainer)
+                                      .withValues(alpha: 0.5),
+                              size: 32,
+                            ),
                           ),
                         ),
-                      ),
+                ),
               ),
             ),
             const SizedBox(width: 14),
@@ -1674,13 +1684,16 @@ class _SavedBookCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: book.primaryImageUrl != null
-                  ? SmartImage(
-                      imageUrl: book.primaryImageUrl!,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                    )
-                  : Container(color: Colors.grey[300]),
+              child: Hero(
+                tag: 'book_image_${book.id}',
+                child: book.primaryImageUrl != null
+                    ? SmartImage(
+                        imageUrl: book.primaryImageUrl!,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      )
+                    : Container(color: Colors.grey[300]),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.all(8),
@@ -1818,73 +1831,77 @@ class _RequestCard extends StatelessWidget {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: AppRadius.smAll,
-                              child: SizedBox(
-                                width: 56,
-                                height: 72,
-                                child: book?.primaryImageUrl != null
-                                    ? SmartImage(
-                                        imageUrl: book!.primaryImageUrl!,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Container(
-                                        color:
-                                            (isDark
-                                                    ? Theme.of(
-                                                        context,
-                                                      ).colorScheme.primary
-                                                    : Theme.of(context)
-                                                          .colorScheme
-                                                          .primaryContainer)
-                                                .withValues(alpha: 0.1),
-                                        child: Center(
-                                          child: Icon(
-                                            Icons.menu_book_rounded,
-                                            color:
-                                                (isDark
-                                                        ? Theme.of(
-                                                            context,
-                                                          ).colorScheme.primary
-                                                        : Theme.of(context)
-                                                              .colorScheme
-                                                              .primaryContainer)
-                                                    .withValues(alpha: 0.5),
-                                            size: 28,
+                        Hero(
+                          tag:
+                              'book_image_${book?.id ?? "unknown_${request.id}"}',
+                          child: Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: AppRadius.smAll,
+                                child: SizedBox(
+                                  width: 56,
+                                  height: 72,
+                                  child: book?.primaryImageUrl != null
+                                      ? SmartImage(
+                                          imageUrl: book!.primaryImageUrl!,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : Container(
+                                          color:
+                                              (isDark
+                                                      ? Theme.of(
+                                                          context,
+                                                        ).colorScheme.primary
+                                                      : Theme.of(context)
+                                                            .colorScheme
+                                                            .primaryContainer)
+                                                  .withValues(alpha: 0.1),
+                                          child: Center(
+                                            child: Icon(
+                                              Icons.menu_book_rounded,
+                                              color:
+                                                  (isDark
+                                                          ? Theme.of(context)
+                                                                .colorScheme
+                                                                .primary
+                                                          : Theme.of(context)
+                                                                .colorScheme
+                                                                .primaryContainer)
+                                                      .withValues(alpha: 0.5),
+                                              size: 28,
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                ),
                               ),
-                            ),
-                            if (book?.status == BookStatus.sold)
-                              Positioned(
-                                bottom: 4,
-                                left: 4,
-                                right: 4,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black54,
-                                    borderRadius: BorderRadius.circular(
-                                      AppRadius.xs,
+                              if (book?.status == BookStatus.sold)
+                                Positioned(
+                                  bottom: 4,
+                                  left: 4,
+                                  right: 4,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 2,
                                     ),
-                                  ),
-                                  child: const Text(
-                                    'SOLD',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.bold,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black54,
+                                      borderRadius: BorderRadius.circular(
+                                        AppRadius.xs,
+                                      ),
+                                    ),
+                                    child: const Text(
+                                      'SOLD',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                         const SizedBox(width: 14),
                         Expanded(
