@@ -461,8 +461,15 @@ class _UserAvatarState extends State<_UserAvatar> {
               showDialog(
                 context: context,
                 barrierDismissible: false,
-                builder: (context) =>
-                    const Center(child: CircularProgressIndicator()),
+                builder: (context) => const AlertDialog(
+                  content: Row(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(width: 16),
+                      Text('Signing out...'),
+                    ],
+                  ),
+                ),
               );
               await AuthService.signOut();
               // No need to pop the dialog manually because signing out usually changes

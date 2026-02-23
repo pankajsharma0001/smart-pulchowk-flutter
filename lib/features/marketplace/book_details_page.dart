@@ -38,11 +38,14 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
   bool _isLoadingRequest = true;
   bool _didChange = false;
   int _currentImageIndex = 0;
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
     _book = widget.listing;
+    _currentImageIndex = 0;
+    _pageController = PageController(initialPage: 0);
     _isSaved = _book.isSaved; // Initialize immediately from passed listing
 
     // ── Synchronous cache check to avoid loading flicker ─────────────────────
@@ -107,6 +110,12 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
       setState(() => _isSaved = wasSaved);
       _showSnackBar(result['message'] ?? 'Failed to update');
     }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   Future<void> _sendPurchaseRequest() async {
@@ -924,6 +933,7 @@ View listing: $listingUrl
     return Stack(
       children: [
         PageView.builder(
+          controller: _pageController,
           itemCount: images.length,
           onPageChanged: (i) => setState(() => _currentImageIndex = i),
           itemBuilder: (_, i) => Stack(
@@ -950,15 +960,28 @@ View listing: $listingUrl
               ),
               // Main Image
               GestureDetector(
-                onTap: () {
-                  Navigator.of(context, rootNavigator: true).push(
-                    MaterialPageRoute(
-                      builder: (_) => FullScreenImageViewer(
-                        imageUrls: images.map((it) => it.imageUrl).toList(),
-                        initialIndex: i,
-                      ),
-                    ),
-                  );
+                onTap: () async {
+                  final resultIndex =
+                      await Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).push<int>(
+                        MaterialPageRoute(
+                          builder: (_) => FullScreenImageViewer(
+                            imageUrls: images.map((it) => it.imageUrl).toList(),
+                            initialIndex: i,
+                            heroTagBuilder: (index) {
+                              return index == 0
+                                  ? 'book_image_${_book.id}'
+                                  : images[index].imageUrl;
+                            },
+                          ),
+                        ),
+                      );
+
+                  if (resultIndex != null && mounted) {
+                    _pageController.jumpToPage(resultIndex);
+                  }
                 },
                 child: Hero(
                   tag: i == 0 ? 'book_image_${_book.id}' : images[i].imageUrl,

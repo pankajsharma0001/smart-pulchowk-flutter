@@ -444,101 +444,118 @@ class _SearchFilterBar extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: ListenableBuilder(
-              listenable: focusNode,
-              builder: (context, child) {
-                final hasFocus = focusNode.hasFocus;
-                return AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.surfaceContainerDark
-                        : AppColors.surfaceContainerLight,
-                    borderRadius: AppRadius.fullAll,
-                    border: Border.all(
-                      color: hasFocus
-                          ? cs.primary
-                          : isDark
-                          ? AppColors.borderDark.withValues(alpha: 0.3)
-                          : AppColors.borderLight.withValues(alpha: 0.5),
-                      width: hasFocus ? 1.5 : 1,
-                    ),
-                    boxShadow: hasFocus
-                        ? [
-                            BoxShadow(
-                              color: cs.primary.withValues(alpha: 0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ]
-                        : null,
-                  ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListenableBuilder(
+        listenable: focusNode,
+        builder: (context, child) {
+          final hasFocus = focusNode.hasFocus;
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.06)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: hasFocus
+                    ? cs.primary
+                    : isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : cs.primary.withValues(alpha: 0.15),
+                width: hasFocus ? 1.5 : 1,
+              ),
+              boxShadow: hasFocus
+                  ? [
+                      BoxShadow(
+                        color: cs.primary.withValues(alpha: 0.1),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search_rounded,
+                  size: 22,
+                  color: hasFocus
+                      ? cs.primary
+                      : isDark
+                      ? AppColors.textMutedDark
+                      : AppColors.textMuted,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
                   child: TextField(
                     controller: searchController,
                     focusNode: focusNode,
                     onSubmitted: onSearch,
                     cursorColor: cs.primary,
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: isDark
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                    ),
                     decoration: InputDecoration(
                       filled: false,
                       hintText: 'Search books, authors...',
                       hintStyle: AppTextStyles.bodyMedium.copyWith(
                         color: isDark
                             ? AppColors.textMutedDark
-                            : AppColors.textMuted.withValues(alpha: 0.7),
-                      ),
-                      prefixIcon: Icon(
-                        Icons.search_rounded,
-                        size: 20,
-                        color: hasFocus
-                            ? cs.primary
-                            : isDark
-                            ? AppColors.textMutedDark
-                            : AppColors.textMuted,
-                      ),
-                      suffixIcon: ListenableBuilder(
-                        listenable: searchController,
-                        builder: (context, _) {
-                          if (searchController.text.isEmpty) {
-                            return const SizedBox.shrink();
-                          }
-                          return IconButton(
-                            icon: const Icon(Icons.close_rounded, size: 18),
-                            onPressed: () {
-                              searchController.clear();
-                              onSearch('');
-                            },
-                          );
-                        },
+                            : AppColors.textMuted.withValues(alpha: 0.6),
                       ),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
                       focusedBorder: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 13,
-                      ),
-                    ),
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: isDark
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
                     ),
                   ),
-                );
-              },
+                ),
+                ListenableBuilder(
+                  listenable: searchController,
+                  builder: (context, _) {
+                    if (searchController.text.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 20),
+                      onPressed: () {
+                        searchController.clear();
+                        onSearch('');
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    );
+                  },
+                ),
+                const SizedBox(width: 4),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: VerticalDivider(
+                    width: 1,
+                    thickness: 1,
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.08),
+                  ),
+                ),
+                _FilterToggleButton(
+                  onTap: onFilterTap,
+                  isDark: isDark,
+                  hasActiveFilters: hasActiveFilters,
+                ),
+              ],
             ),
-          ),
-          const SizedBox(width: 8),
-          _FilterToggleButton(
-            onTap: onFilterTap,
-            isDark: isDark,
-            hasActiveFilters: hasActiveFilters,
-          ),
-        ],
+          );
+        },
       ),
     );
   }
@@ -559,43 +576,38 @@ class _FilterToggleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return InteractiveWrapper(
       onTap: onTap,
-      borderRadius: AppRadius.fullAll,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.surfaceContainerDark
-              : AppColors.surfaceContainerLight,
-          shape: BoxShape.circle,
-          border: Border.all(
-            color: isDark
-                ? AppColors.borderDark.withValues(alpha: 0.3)
-                : AppColors.borderLight.withValues(alpha: 0.5),
-          ),
-        ),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.all(8),
         child: Stack(
-          clipBehavior: Clip.none,
+          alignment: Alignment.topRight,
           children: [
             Icon(
               Icons.tune_rounded,
-              size: 20,
-              color: isDark
+              size: 22,
+              color: hasActiveFilters
+                  ? cs.primary
+                  : isDark
                   ? AppColors.textSecondaryDark
                   : AppColors.textSecondary,
             ),
             if (hasActiveFilters)
               Positioned(
-                right: -2,
-                top: -2,
+                right: -1,
+                top: -1,
                 child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
+                  width: 9,
+                  height: 9,
+                  decoration: BoxDecoration(
                     color: AppColors.error,
                     shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isDark ? const Color(0xFF1F2937) : Colors.white,
+                      width: 1.5,
+                    ),
                   ),
                 ),
               ),

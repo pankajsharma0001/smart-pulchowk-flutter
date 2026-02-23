@@ -7,11 +7,13 @@ import 'dart:ui';
 class FullScreenImageViewer extends StatefulWidget {
   final List<String> imageUrls;
   final int initialIndex;
+  final String Function(int index)? heroTagBuilder;
 
   const FullScreenImageViewer({
     super.key,
     required this.imageUrls,
     this.initialIndex = 0,
+    this.heroTagBuilder,
   });
 
   @override
@@ -103,7 +105,9 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
                   maxScale: 4.0,
                   child: Center(
                     child: Hero(
-                      tag: widget.imageUrls[actualIndex],
+                      tag:
+                          widget.heroTagBuilder?.call(actualIndex) ??
+                          widget.imageUrls[actualIndex],
                       child: SmartImage(
                         imageUrl: widget.imageUrls[actualIndex],
                         fit: BoxFit.contain,
@@ -130,7 +134,7 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     InteractiveWrapper(
-                      onTap: () => Navigator.pop(context),
+                      onTap: () => Navigator.pop(context, _currentIndex),
                       borderRadius: BorderRadius.circular(20),
                       child: Container(
                         padding: const EdgeInsets.all(8),

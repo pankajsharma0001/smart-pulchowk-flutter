@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smart_pulchowk/core/services/auth_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/models/classroom.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
@@ -115,6 +117,13 @@ class _ClassroomPageState extends State<ClassroomPage>
     // Other non-student roles get a restricted message
     if (widget.userRole != 'student') {
       return _buildRoleRestrictedView();
+    }
+
+    // Check for campus email if student
+    final user = FirebaseAuth.instance.currentUser;
+    final isCampusEmail = user?.email?.endsWith('@pcampus.edu.np') ?? false;
+    if (!isCampusEmail) {
+      return _buildRoleRestrictedView(isStudentWithPersonalEmail: true);
     }
 
     if (_isLoading) return _buildShimmerBody();
@@ -550,13 +559,20 @@ class _ClassroomPageState extends State<ClassroomPage>
     );
   }
 
-  Widget _buildRoleRestrictedView() {
+  Widget _buildRoleRestrictedView({bool isStudentWithPersonalEmail = false}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final roleLabel = widget.userRole == 'teacher'
         ? 'Teacher'
         : widget.userRole == 'notice_manager'
         ? 'Notice Manager'
         : widget.userRole;
+
+    final title = isStudentWithPersonalEmail
+        ? 'Campus Email Required'
+        : 'Students Only';
+    final message = isStudentWithPersonalEmail
+        ? 'To access the Classroom features, you must sign in with your college issued email address (@pcampus.edu.np).'
+        : 'The Classroom feature is available for students only. Your current role ($roleLabel) does not have access to assignments and subjects.';
 
     return Center(
       child: Padding(
@@ -573,25 +589,43 @@ class _ClassroomPageState extends State<ClassroomPage>
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.school_rounded,
+                isStudentWithPersonalEmail
+                    ? Icons.alternate_email_rounded
+                    : Icons.school_rounded,
                 size: 56,
                 color: AppColors.primary.withValues(alpha: 0.4),
               ),
             ),
             const SizedBox(height: AppSpacing.xl),
             Text(
-              'Students Only',
+              title,
               style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'The Classroom feature is available for students only. Your current role ($roleLabel) does not have access to assignments and subjects.',
+              message,
               textAlign: TextAlign.center,
               style: AppTextStyles.bodyMedium.copyWith(
                 color: Colors.grey,
                 height: 1.5,
               ),
             ),
+            if (isStudentWithPersonalEmail) ...[
+              const SizedBox(height: AppSpacing.xl),
+              ElevatedButton.icon(
+                onPressed: () => AuthService.signOut(),
+                icon: const Icon(Icons.logout_rounded),
+                label: const Text('Switch Account'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

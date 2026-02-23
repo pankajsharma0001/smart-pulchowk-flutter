@@ -8,11 +8,13 @@ class StorageService {
 
   static const _secureStorage = FlutterSecureStorage();
   static late Box _cacheBox;
+  static late Box _settingsBox;
 
   /// Initialize Hive and open common boxes.
   static Future<void> init() async {
     await Hive.initFlutter();
     _cacheBox = await Hive.openBox(AppConstants.apiCacheBox);
+    _settingsBox = await Hive.openBox('settings_box');
   }
 
   // ── Secure Storage ────────────────────────────────────────────────────────
@@ -81,10 +83,10 @@ class StorageService {
   // ── Onboarding ────────────────────────────────────────────────────────────
 
   static bool getHasSeenOnboarding() {
-    return _cacheBox.get('has_seen_onboarding', defaultValue: false) as bool;
+    return _settingsBox.get('has_seen_onboarding', defaultValue: false) as bool;
   }
 
   static Future<void> setHasSeenOnboarding(bool value) async {
-    await _cacheBox.put('has_seen_onboarding', value);
+    await _settingsBox.put('has_seen_onboarding', value);
   }
 }

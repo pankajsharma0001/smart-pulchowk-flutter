@@ -740,7 +740,26 @@ class _SettingsPageState extends State<SettingsPage>
     return InkWell(
       onTap: () async {
         haptics.heavyImpact();
+
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+            content: Row(
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(width: 16),
+                Text('Signing out...'),
+              ],
+            ),
+          ),
+        );
+
         await AuthService.signOut();
+
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
       },
       borderRadius: BorderRadius.circular(AppRadius.lg),
       child: Container(
