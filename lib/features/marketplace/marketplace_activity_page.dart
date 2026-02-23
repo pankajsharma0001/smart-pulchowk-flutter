@@ -12,6 +12,7 @@ import 'package:smart_pulchowk/features/marketplace/chat_room_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/core/widgets/interactive_wrapper.dart';
+import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MARKETPLACE ACTIVITY PAGE — Unified Dashboard
@@ -298,48 +299,7 @@ Widget _buildEmptyState(
   String title,
   String sub,
 ) {
-  return Center(
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: (isDark ? AppColors.primaryLight : AppColors.primary)
-                  .withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: 48,
-              color: isDark ? AppColors.primaryLight : AppColors.primary,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            title,
-            style: AppTextStyles.h4.copyWith(
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            sub,
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: isDark
-                  ? AppColors.textSecondaryDark
-                  : AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    ),
-  );
+  return EmptyState(title: title, subtitle: sub);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

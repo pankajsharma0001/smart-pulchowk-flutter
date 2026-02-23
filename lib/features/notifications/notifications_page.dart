@@ -10,6 +10,7 @@ import 'package:smart_pulchowk/core/services/navigation_service.dart';
 import 'package:smart_pulchowk/core/models/notification.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/core/widgets/staggered_scale_fade.dart';
+import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 import 'package:intl/intl.dart';
 
 class NotificationsPage extends StatefulWidget {
@@ -317,31 +318,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   Widget _buildEmptyState(ColorScheme cs) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.notifications_none_rounded,
-            size: 64,
-            color: cs.onSurface.withValues(alpha: 0.25),
-          ),
-          const SizedBox(height: AppSpacing.lg),
-          Text(
-            'All caught up!',
-            style: AppTextStyles.h4.copyWith(
-              color: cs.onSurface.withValues(alpha: 0.5),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'No new notifications at the moment.',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: cs.onSurface.withValues(alpha: 0.4),
-            ),
-          ),
-        ],
-      ),
+    return const EmptyState(
+      title: 'All caught up!',
+      subtitle: 'No new notifications at the moment.',
     );
   }
 

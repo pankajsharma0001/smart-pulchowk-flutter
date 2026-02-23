@@ -18,6 +18,7 @@ import 'package:smart_pulchowk/features/map/map_page.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
+import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
@@ -257,20 +258,16 @@ class _SearchPageState extends State<SearchPage>
         if (_recentSearches.isNotEmpty) {
           return _buildRecentSearchesSection(isDark);
         }
-        return _buildEmptyState(
-          icon: Icons.search_rounded,
+        return const EmptyState(
           title: 'Start Searching',
           subtitle:
               'Search for notices, events, books, and more across Pulchowk Campus.',
-          isDark: isDark,
         );
       }
-      return _buildEmptyState(
-        icon: Icons.sentiment_dissatisfied_rounded,
+      return EmptyState(
         title: 'No results found',
         subtitle:
             'We couldn\'t find anything matching "${_searchController.text}".',
-        isDark: isDark,
       );
     }
 
@@ -360,48 +357,6 @@ class _SearchPageState extends State<SearchPage>
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildEmptyState({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool isDark,
-  }) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 40),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, size: 48, color: AppColors.primary),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              style: AppTextStyles.h4.copyWith(
-                color: isDark ? Colors.white : Colors.black,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              subtitle,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: isDark ? Colors.white60 : Colors.black54,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

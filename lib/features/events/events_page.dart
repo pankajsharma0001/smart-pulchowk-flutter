@@ -7,6 +7,7 @@ import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_card.dart';
 import 'package:smart_pulchowk/features/calendar/calendar.dart';
 import 'package:smart_pulchowk/core/widgets/error_view.dart';
+import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 
 class EventsPage extends StatefulWidget {
   const EventsPage({super.key});
@@ -210,34 +211,9 @@ class _EventsPageState extends State<EventsPage>
   }
 
   Widget _buildEmptyState() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
-            height: constraints.maxHeight,
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.event_busy_rounded,
-                    size: 64,
-                    color: AppColors.textMuted.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  Text(
-                    'No events found',
-                    style: AppTextStyles.h4.copyWith(
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+    return const EmptyState(
+      title: 'No events found',
+      subtitle: 'Check back later for exciting campus events!',
     );
   }
 

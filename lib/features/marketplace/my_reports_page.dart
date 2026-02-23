@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
+import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 
 class MyReportsPage extends StatefulWidget {
   const MyReportsPage({super.key});
@@ -169,28 +170,9 @@ class _MyReportsPageState extends State<MyReportsPage> {
   }
 
   Widget _buildEmptyState(bool isDark) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.report_outlined,
-            size: 64,
-            color: (isDark ? Colors.white : Colors.black).withValues(
-              alpha: 0.1,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No reports found',
-            style: AppTextStyles.h4.copyWith(
-              color: (isDark ? Colors.white : Colors.black).withValues(
-                alpha: 0.3,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return const EmptyState(
+      title: 'No reports found',
+      subtitle: 'Your marketplace reports will appear here',
     );
   }
 }

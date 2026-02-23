@@ -5,6 +5,7 @@ import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/features/clubs/widgets/club_card.dart';
 import 'package:smart_pulchowk/features/clubs/widgets/club_editor.dart';
+import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 
 class ClubsPage extends StatefulWidget {
   const ClubsPage({super.key});
@@ -282,24 +283,13 @@ class _ClubsPageState extends State<ClubsPage>
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.group_off_rounded,
-            size: 64,
-            color: AppColors.textMuted.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            _searchController.text.isNotEmpty
-                ? 'No clubs match your search'
-                : 'No clubs found',
-            style: AppTextStyles.h4.copyWith(color: AppColors.textMuted),
-          ),
-        ],
-      ),
+    return EmptyState(
+      title: _searchController.text.isNotEmpty
+          ? 'No clubs match your search'
+          : 'No clubs found',
+      subtitle: _searchController.text.isNotEmpty
+          ? 'Try a different search term or check the spelling.'
+          : 'Clubs will appear here once they are added.',
     );
   }
 

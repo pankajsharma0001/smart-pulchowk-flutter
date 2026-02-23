@@ -4,6 +4,7 @@ import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/smart_image.dart';
+import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 
 class BlockedUsersPage extends StatefulWidget {
   const BlockedUsersPage({super.key});
@@ -142,37 +143,9 @@ class _BlockedUsersPageState extends State<BlockedUsersPage> {
   }
 
   Widget _buildEmptyState(bool isDark) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.block_rounded,
-            size: 64,
-            color: (isDark ? Colors.white : Colors.black).withValues(
-              alpha: 0.1,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No blocked users',
-            style: AppTextStyles.h4.copyWith(
-              color: (isDark ? Colors.white : Colors.black).withValues(
-                alpha: 0.3,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Users you block will appear here',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: (isDark ? Colors.white : Colors.black).withValues(
-                alpha: 0.3,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return const EmptyState(
+      title: 'No blocked users',
+      subtitle: 'Users you block will appear here',
     );
   }
 }

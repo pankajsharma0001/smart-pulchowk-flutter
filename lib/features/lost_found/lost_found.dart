@@ -8,6 +8,7 @@ import 'package:smart_pulchowk/features/lost_found/widgets/lost_found_card.dart'
 import 'package:smart_pulchowk/features/lost_found/lost_found_details_page.dart';
 import 'package:smart_pulchowk/features/lost_found/report_lost_found_page.dart';
 import 'package:smart_pulchowk/features/lost_found/my_lost_found_page.dart';
+import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 
 class LostFoundPage extends StatefulWidget {
   const LostFoundPage({super.key});
@@ -362,42 +363,11 @@ class _LostFoundPageState extends State<LostFoundPage>
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search_off_rounded,
-            size: 64,
-            color: AppColors.textMuted.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Text(
-            'No items found',
-            style: AppTextStyles.h4.copyWith(color: AppColors.textMuted),
-          ),
-          const SizedBox(height: AppSpacing.xs),
-          Text(
-            'Try changing your filters or browse all items',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: AppColors.textMuted,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xl),
-          TextButton.icon(
-            onPressed: () {
-              setState(() {
-                _selectedCategory = null;
-                _searchQuery = '';
-                _searchController.clear();
-              });
-              _loadItems();
-            },
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Reset Filters'),
-          ),
-        ],
-      ),
+    return EmptyState(
+      title: 'No items found',
+      subtitle: _searchQuery.isNotEmpty
+          ? 'Try a different search term or check the spelling.'
+          : 'Reported items will appear here.',
     );
   }
 

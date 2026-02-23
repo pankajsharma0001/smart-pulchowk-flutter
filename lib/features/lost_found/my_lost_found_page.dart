@@ -5,6 +5,7 @@ import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/features/lost_found/widgets/lost_found_card.dart';
 import 'package:smart_pulchowk/features/lost_found/lost_found_details_page.dart';
 import 'package:smart_pulchowk/core/widgets/smart_image.dart';
+import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 
 class MyLostFoundPage extends StatefulWidget {
   const MyLostFoundPage({super.key});
@@ -345,29 +346,7 @@ class _MyLostFoundPageState extends State<MyLostFoundPage>
   }
 
   Widget _buildEmptyState(String title, String message) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppSpacing.xl),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.inventory_2_rounded,
-              size: 64,
-              color: AppColors.textMuted.withValues(alpha: 0.2),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(title, style: AppTextStyles.h5),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodySmall,
-            ),
-          ],
-        ),
-      ),
-    );
+    return EmptyState(title: title, subtitle: message);
   }
 
   Widget _buildErrorState() {

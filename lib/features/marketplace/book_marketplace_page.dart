@@ -10,6 +10,7 @@ import 'package:smart_pulchowk/features/marketplace/sell_book_page.dart';
 import 'package:smart_pulchowk/features/marketplace/marketplace_activity_page.dart';
 import 'package:smart_pulchowk/features/marketplace/chat_list_page.dart';
 import 'package:smart_pulchowk/core/widgets/interactive_wrapper.dart';
+import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BOOK MARKETPLACE PAGE
@@ -367,49 +368,10 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
   }
 
   Widget _buildEmptyState(bool isDark) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: isDark
-                    ? AppColors.surfaceContainerDark
-                    : AppColors.surfaceContainerLight,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.menu_book_rounded,
-                size: 48,
-                color: isDark ? AppColors.textMutedDark : AppColors.textMuted,
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'No books found',
-              style: AppTextStyles.h4.copyWith(
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Try adjusting your filters or search terms.\n'
-              'Or be the first to sell a book!',
-              textAlign: TextAlign.center,
-              style: AppTextStyles.bodyMedium.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return const EmptyState(
+      title: 'No books found',
+      subtitle:
+          'Try adjusting your filters or search terms.\nOr be the first to sell a book!',
     );
   }
 

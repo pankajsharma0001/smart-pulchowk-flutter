@@ -9,6 +9,7 @@ import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
+import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 
 class ChatListPage extends StatefulWidget {
   const ChatListPage({super.key});
@@ -382,37 +383,9 @@ class _ChatListPageState extends State<ChatListPage> {
   }
 
   Widget _buildEmptyState(bool isDark) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.chat_bubble_outline_rounded,
-            size: 64,
-            color: (isDark ? Colors.white : Colors.black).withValues(
-              alpha: 0.2,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No conversations yet',
-            style: AppTextStyles.h5.copyWith(
-              color: (isDark ? Colors.white : Colors.black).withValues(
-                alpha: 0.5,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Start chatting with sellers or buyers!',
-            style: AppTextStyles.bodyMedium.copyWith(
-              color: (isDark ? Colors.white : Colors.black).withValues(
-                alpha: 0.4,
-              ),
-            ),
-          ),
-        ],
-      ),
+    return const EmptyState(
+      title: 'No conversations yet',
+      subtitle: 'Start chatting with sellers or buyers!',
     );
   }
 }

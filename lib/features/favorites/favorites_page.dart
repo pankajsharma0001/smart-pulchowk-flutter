@@ -7,6 +7,7 @@ import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/features/clubs/widgets/club_card.dart';
 import 'package:smart_pulchowk/features/events/widgets/event_card.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
+import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 
 class FavoritesPage extends StatefulWidget {
   const FavoritesPage({super.key});
@@ -333,46 +334,7 @@ class _FavoritesPageState extends State<FavoritesPage>
   }
 
   Widget _buildEmptyState(String title, String subtitle) {
-    return CustomScrollView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      slivers: [
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.05),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.favorite_border_rounded,
-                    size: 64,
-                    color: AppColors.primary.withValues(alpha: 0.2),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(title, style: AppTextStyles.h4),
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 48),
-                  child: Text(
-                    subtitle,
-                    textAlign: TextAlign.center,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
+    return EmptyState(title: title, subtitle: subtitle);
   }
 
   Widget _buildErrorState() {

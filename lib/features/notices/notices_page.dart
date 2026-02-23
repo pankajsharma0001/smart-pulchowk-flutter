@@ -9,6 +9,7 @@ import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/core/widgets/staggered_scale_fade.dart';
 import 'package:smart_pulchowk/core/widgets/pdf_viewer.dart';
 import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
+import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 import 'package:smart_pulchowk/features/notices/notice_editor.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -463,35 +464,9 @@ class _NoticesPageState extends State<NoticesPage> {
 
   Widget _buildContent(bool isDark) {
     if (_notices.isEmpty) {
-      return ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        children: [
-          SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.notifications_off_rounded,
-                  size: 64,
-                  color: AppColors.textMuted.withValues(alpha: 0.4),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(
-                  'No notices found',
-                  style: AppTextStyles.h4.copyWith(color: AppColors.textMuted),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  'Try changing your filters or refresh.',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+      return const EmptyState(
+        title: 'No notices found',
+        subtitle: 'Try changing your filters or refresh.',
       );
     }
 
