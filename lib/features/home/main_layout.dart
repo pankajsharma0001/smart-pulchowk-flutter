@@ -1081,10 +1081,17 @@ class _FadeIndexedStackState extends State<_FadeIndexedStack>
   void initState() {
     super.initState();
     _currentIndex = widget.index;
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 260),
-    );
+    _controller =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 260),
+        )..addStatusListener((status) {
+          if (status == AnimationStatus.completed) {
+            setState(() {
+              _previousIndex = null;
+            });
+          }
+        });
     _controller.forward();
   }
 
