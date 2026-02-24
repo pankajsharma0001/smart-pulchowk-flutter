@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
+import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/features/auth/auth_wrapper.dart';
@@ -140,10 +141,17 @@ class _OnboardingPageState extends State<OnboardingPage> {
                           color: AppColors.primary.withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.school_rounded,
-                          color: AppColors.primary,
-                          size: 24,
+                        child: Image.asset(
+                          AppConstants.logoPath,
+                          width: 24,
+                          height: 24,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                                Icons.school_rounded,
+                                color: AppColors.primary,
+                                size: 24,
+                              ),
                         ),
                       ),
                       TextButton(

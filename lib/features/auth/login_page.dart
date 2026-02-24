@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:smart_pulchowk/core/services/auth_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
+import 'package:smart_pulchowk/core/constants/app_constants.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -199,7 +200,7 @@ class _LoginPageState extends State<LoginPage>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // App icon
+          // App logo
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
@@ -207,10 +208,16 @@ class _LoginPageState extends State<LoginPage>
               borderRadius: BorderRadius.circular(AppRadius.lg),
               boxShadow: AppShadows.glow(AppColors.primary),
             ),
-            child: const Icon(
-              Icons.auto_awesome_rounded,
-              size: 42,
-              color: Colors.white,
+            child: Image.asset(
+              AppConstants.logoPath,
+              height: 54,
+              width: 54,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => const Icon(
+                Icons.auto_awesome_rounded,
+                size: 42,
+                color: Colors.white,
+              ),
             ),
           ),
           const SizedBox(height: AppSpacing.lg),

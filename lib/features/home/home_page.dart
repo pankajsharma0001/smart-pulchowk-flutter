@@ -8,6 +8,9 @@ import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/features/search/search.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
+import 'package:smart_pulchowk/core/models/club.dart';
+import 'package:smart_pulchowk/core/models/notice.dart';
+import 'package:smart_pulchowk/core/models/lost_found.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/features/events/event_details_page.dart';
@@ -38,6 +41,9 @@ class _HomeContentState extends State<_HomeContent> {
   late Future<List<EventRegistration>> _enrollmentFuture;
   late Future<List<ClubEvent>> _eventsFuture;
   late Future<int> _userCountFuture;
+  late Future<List<Club>> _clubsFuture;
+  late Future<NoticeStats?> _noticeStatsFuture;
+  late Future<List<LostFoundItem>> _lostFoundFuture;
 
   @override
   void initState() {
@@ -50,6 +56,9 @@ class _HomeContentState extends State<_HomeContent> {
     // Use cached fetch with optional force refresh
     _enrollmentFuture = api.getStudentEnrollment(forceRefresh: forceRefresh);
     _eventsFuture = api.getAllEvents(forceRefresh: forceRefresh);
+    _clubsFuture = api.getClubs(forceRefresh: forceRefresh);
+    _noticeStatsFuture = api.getNoticeStats(forceRefresh: forceRefresh);
+    _lostFoundFuture = api.getLostFoundItems(forceRefresh: forceRefresh);
 
     // User count is never cached per user request
     _userCountFuture = api.getActiveUserCount(forceRefresh: true);
@@ -68,6 +77,9 @@ class _HomeContentState extends State<_HomeContent> {
     await Future.wait([
       _enrollmentFuture.catchError((_) => <EventRegistration>[]),
       _eventsFuture.catchError((_) => <ClubEvent>[]),
+      _clubsFuture.catchError((_) => <Club>[]),
+      _noticeStatsFuture.catchError((_) => null),
+      _lostFoundFuture.catchError((_) => <LostFoundItem>[]),
       _userCountFuture.catchError((_) => 0),
     ]);
   }
@@ -93,7 +105,12 @@ class _HomeContentState extends State<_HomeContent> {
                 child: _HomeSearchBar(),
               ),
               const SizedBox(height: AppSpacing.lg),
-              const _ExploreChips(),
+              _ExploreChips(
+                clubsFuture: _clubsFuture,
+                eventsFuture: _eventsFuture,
+                noticeStatsFuture: _noticeStatsFuture,
+                lostFoundFuture: _lostFoundFuture,
+              ),
               const SizedBox(height: AppSpacing.xl),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
@@ -101,7 +118,7 @@ class _HomeContentState extends State<_HomeContent> {
               ),
               const SizedBox(height: AppSpacing.xxl),
               _RegisteredEventsSection(enrollmentFuture: _enrollmentFuture),
-              const SizedBox(height: AppSpacing.xxl),
+              const SizedBox(height: AppSpacing.lg),
               _NextEventSection(eventsFuture: _eventsFuture),
             ],
           ),
@@ -463,16 +480,47 @@ class _HomeSearchBar extends StatelessWidget {
 }
 
 class _ExploreChips extends StatelessWidget {
-  const _ExploreChips();
+  final Future<List<Club>> clubsFuture;
+  final Future<List<ClubEvent>> eventsFuture;
+  final Future<NoticeStats?> noticeStatsFuture;
+  final Future<List<LostFoundItem>> lostFoundFuture;
+
+  const _ExploreChips({
+    required this.clubsFuture,
+    required this.eventsFuture,
+    required this.noticeStatsFuture,
+    required this.lostFoundFuture,
+  });
 
   @override
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> chips = [
       {'label': 'All', 'icon': '✨', 'active': true},
-      {'label': 'Campus Clubs', 'icon': '👥', 'count': '34'},
-      {'label': 'Events', 'icon': '📅', 'count': '8'},
-      {'label': 'IOE Notices', 'icon': '📢', 'count': '3'},
-      {'label': 'Lost & Found', 'icon': '🔍'},
+      {
+        'label': 'Campus Clubs',
+        'icon': '👥',
+        'future': clubsFuture,
+        'countExtractor': (data) => (data as List).length.toString(),
+      },
+      {
+        'label': 'Events',
+        'icon': '📅',
+        'future': eventsFuture,
+        'countExtractor': (data) => (data as List).length.toString(),
+      },
+      {
+        'label': 'IOE Notices',
+        'icon': '📢',
+        'future': noticeStatsFuture,
+        'countExtractor': (data) =>
+            (data as NoticeStats?)?.total.toString() ?? '0',
+      },
+      {
+        'label': 'Lost & Found',
+        'icon': '🔍',
+        'future': lostFoundFuture,
+        'countExtractor': (data) => (data as List).length.toString(),
+      },
     ];
 
     return SingleChildScrollView(
@@ -483,6 +531,7 @@ class _ExploreChips extends StatelessWidget {
         children: chips.map((chip) {
           final bool isActive = chip['active'] ?? false;
           final isDark = Theme.of(context).brightness == Brightness.dark;
+          final Future? future = chip['future'];
 
           return Padding(
             padding: const EdgeInsets.only(right: 10),
@@ -497,23 +546,20 @@ class _ExploreChips extends StatelessWidget {
                   horizontal: 14,
                   vertical: 8,
                 ),
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.1)
-                      : isDark
-                      ? AppColors.surfaceDark.withValues(alpha: 0.6)
-                      : Colors.white.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(99),
-                  border: Border.all(
-                    color: isActive
-                        ? AppColors.primary.withValues(alpha: 0.3)
-                        : (isDark
-                                  ? AppColors.borderDark
-                                  : AppColors.borderLight)
-                              .withValues(alpha: 0.5),
-                  ),
-                ),
+                decoration: isActive
+                    ? BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(99),
+                        boxShadow: AppShadows.glow(
+                          AppColors.primary,
+                          intensity: 0.2,
+                        ),
+                      )
+                    : isDark
+                    ? AppDecorations.glassDark(opacity: 0.05, borderRadius: 99)
+                    : AppDecorations.glass(opacity: 0.03, borderRadius: 99),
                 child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(chip['icon'], style: const TextStyle(fontSize: 14)),
                     const SizedBox(width: 8),
@@ -521,42 +567,82 @@ class _ExploreChips extends StatelessWidget {
                       chip['label'],
                       style: AppTextStyles.labelMedium.copyWith(
                         color: isActive
-                            ? AppColors.primary
-                            : isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondary,
+                            ? Colors.white
+                            : (isDark ? Colors.white : Colors.black87),
                         fontWeight: isActive
-                            ? FontWeight.bold
+                            ? FontWeight.w800
                             : FontWeight.w600,
                       ),
                     ),
-                    if (chip['count'] != null) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 1,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Text(
-                          chip['count'],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                    if (future != null)
+                      FutureBuilder(
+                        future: future,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return _buildSmallLoader(isActive, isDark);
+                          }
+                          final count = chip['countExtractor'](snapshot.data);
+                          if (count == '0' || count == null)
+                            return const SizedBox.shrink();
+
+                          return _buildCountBadge(count, isActive, isDark);
+                        },
                       ),
-                    ],
                   ],
                 ),
               ),
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildSmallLoader(bool isActive, bool isDark) {
+    return Container(
+      width: 12,
+      height: 12,
+      margin: const EdgeInsets.only(left: 6),
+      child: CircularProgressIndicator(
+        strokeWidth: 2,
+        valueColor: AlwaysStoppedAnimation<Color>(
+          isActive
+              ? Colors.white70
+              : (isDark ? Colors.white30 : Colors.black26),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCountBadge(String count, bool isActive, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(left: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+      decoration: BoxDecoration(
+        color: isActive
+            ? Colors.white.withValues(alpha: 0.25)
+            : (isDark
+                  ? AppColors.primary.withValues(alpha: 0.15)
+                  : AppColors.primary.withValues(alpha: 0.1)),
+        borderRadius: BorderRadius.circular(6),
+        border: isActive
+            ? null
+            : Border.all(
+                color: AppColors.primary.withValues(alpha: 0.2),
+                width: 0.5,
+              ),
+      ),
+      child: Text(
+        count,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w900,
+          color: isActive
+              ? Colors.white
+              : (isDark ? AppColors.primaryLight : AppColors.primary),
+          letterSpacing: -0.2,
+        ),
       ),
     );
   }
