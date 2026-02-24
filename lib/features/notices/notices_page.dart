@@ -51,6 +51,11 @@ class _NoticesPageState extends State<NoticesPage> {
       'value': 'exam_centers',
       'icon': Icons.location_on_rounded,
     },
+    {
+      'label': 'Routines',
+      'value': 'exam_routines',
+      'icon': Icons.calendar_today_rounded,
+    },
     {'label': 'General', 'value': 'general', 'icon': Icons.info_rounded},
   ];
 
@@ -382,6 +387,9 @@ class _NoticesPageState extends State<NoticesPage> {
                 } else if (cat['value'] == 'exam_centers' &&
                     _stats!.examCenters > 0) {
                   countSuffix = ' (${_stats!.examCenters})';
+                } else if (cat['value'] == 'exam_routines' &&
+                    _stats!.examRoutines > 0) {
+                  countSuffix = ' (${_stats!.examRoutines})';
                 } else if (cat['value'] == 'general' && _stats!.general > 0) {
                   countSuffix = ' (${_stats!.general})';
                 }
@@ -557,7 +565,7 @@ class _NoticeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final date = DateFormat.yMMMMd().format(notice.createdAt);
+    final date = DateFormat.yMMMMd().format(notice.displayDate);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),

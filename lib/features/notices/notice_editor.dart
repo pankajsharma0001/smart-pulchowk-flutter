@@ -33,6 +33,7 @@ class _NoticeEditorState extends State<NoticeEditor> {
     'results',
     'application_forms',
     'exam_centers',
+    'exam_routines',
     'general',
   ];
   final List<String> _levels = ['be', 'msc', 'Entrance'];

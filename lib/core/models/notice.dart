@@ -70,6 +70,8 @@ class Notice {
         return Icons.description_rounded;
       case 'exam_centers':
         return Icons.location_on_rounded;
+      case 'exam_routines':
+        return Icons.calendar_today_rounded;
       default:
         return Icons.info_rounded;
     }
@@ -83,6 +85,8 @@ class Notice {
         return const Color(0xFF6366F1); // Indigo
       case 'exam_centers':
         return const Color(0xFFF59E0B); // Amber
+      case 'exam_routines':
+        return const Color(0xFF14B8A6); // Teal
       default:
         return const Color(0xFF8B5CF6); // Violet
     }
@@ -96,9 +100,22 @@ class Notice {
         return 'Forms';
       case 'exam_centers':
         return 'Centers';
+      case 'exam_routines':
+        return 'Routines';
       default:
         return 'General';
     }
+  }
+
+  /// Returns the effective date for display, matching backend sort logic:
+  /// uses publishedDate if it parses as a valid date, otherwise createdAt.
+  DateTime get displayDate {
+    final raw = publishedDate?.trim();
+    if (raw != null && raw.isNotEmpty) {
+      final parsed = DateTime.tryParse(raw);
+      if (parsed != null) return parsed;
+    }
+    return createdAt;
   }
 
   bool get isNew {
@@ -132,6 +149,7 @@ class NoticeStats {
   final int results;
   final int applicationForms;
   final int examCenters;
+  final int examRoutines;
   final int general;
 
   NoticeStats({
@@ -144,6 +162,7 @@ class NoticeStats {
     required this.results,
     required this.applicationForms,
     required this.examCenters,
+    required this.examRoutines,
     required this.general,
   });
 
@@ -158,6 +177,7 @@ class NoticeStats {
       results: json['results'] as int? ?? 0,
       applicationForms: json['applicationForms'] as int? ?? 0,
       examCenters: json['examCenters'] as int? ?? 0,
+      examRoutines: json['examRoutines'] as int? ?? 0,
       general: json['general'] as int? ?? 0,
     );
   }
@@ -172,6 +192,7 @@ class NoticeStats {
     'results': results,
     'applicationForms': applicationForms,
     'examCenters': examCenters,
+    'examRoutines': examRoutines,
     'general': general,
   };
 }
