@@ -20,7 +20,12 @@ import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 
 class MarketplaceActivityPage extends StatefulWidget {
   final int initialTabIndex;
-  const MarketplaceActivityPage({super.key, this.initialTabIndex = 0});
+  final int? initialRequestId;
+  const MarketplaceActivityPage({
+    super.key,
+    this.initialTabIndex = 0,
+    this.initialRequestId,
+  });
 
   @override
   State<MarketplaceActivityPage> createState() =>
@@ -75,12 +80,12 @@ class _MarketplaceActivityPageState extends State<MarketplaceActivityPage> {
                   Tab(text: 'Saved'),
                 ],
               ),
-              const Expanded(
+              Expanded(
                 child: TabBarView(
                   children: [
                     _SellingView(),
-                    _InquiriesView(),
-                    _RequestsView(),
+                    _InquiriesView(initialRequestId: widget.initialRequestId),
+                    _RequestsView(initialRequestId: widget.initialRequestId),
                     _SavedView(),
                   ],
                 ),
@@ -307,7 +312,8 @@ Widget _buildEmptyState(
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _InquiriesView extends StatefulWidget {
-  const _InquiriesView();
+  final int? initialRequestId;
+  const _InquiriesView({this.initialRequestId});
   @override
   State<_InquiriesView> createState() => _InquiriesViewState();
 }
@@ -317,6 +323,10 @@ class _InquiriesViewState extends State<_InquiriesView> {
   List<BookPurchaseRequest> _requests = [];
   bool _isLoading = true;
   final Set<int> _selectedIds = {};
+
+  // Deep-linking
+  final Map<int, GlobalKey> _requestKeys = {};
+  bool _hasScrolled = false;
 
   bool get _isSelectionMode => _selectedIds.isNotEmpty;
 
@@ -341,6 +351,23 @@ class _InquiriesViewState extends State<_InquiriesView> {
         _requests = results;
         _isLoading = false;
       });
+
+      if (widget.initialRequestId != null && !_hasScrolled) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToRequest());
+      }
+    }
+  }
+
+  void _scrollToRequest() {
+    if (_hasScrolled || !mounted) return;
+    final key = _requestKeys[widget.initialRequestId];
+    if (key?.currentContext != null) {
+      Scrollable.ensureVisible(
+        key!.currentContext!,
+        duration: const Duration(seconds: 1),
+        curve: Curves.easeInOut,
+      );
+      setState(() => _hasScrolled = true);
     }
   }
 
@@ -516,10 +543,15 @@ class _InquiriesViewState extends State<_InquiriesView> {
               itemBuilder: (_, i) {
                 final r = _requests[i];
                 final isSelected = _selectedIds.contains(r.id);
+                final isTarget = widget.initialRequestId == r.id;
+                final key = _requestKeys[r.id] ??= GlobalKey();
+
                 return _InquiryCard(
+                  key: key,
                   request: r,
                   isDark: isDark,
                   isSelected: isSelected,
+                  isHighlighted: isTarget,
                   onAccept: _isSelectionMode
                       ? null
                       : () => _respond(r.id, true, listingId: r.listingId),
@@ -562,15 +594,18 @@ class _InquiryCard extends StatelessWidget {
   final VoidCallback? onAccept;
   final VoidCallback? onReject;
   final bool isSelected;
+  final bool isHighlighted;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
   const _InquiryCard({
+    super.key,
     required this.request,
     required this.isDark,
     this.onAccept,
     this.onReject,
     this.isSelected = false,
+    this.isHighlighted = false,
     this.onTap,
     this.onLongPress,
   });
@@ -590,12 +625,12 @@ class _InquiryCard extends StatelessWidget {
           color: isDark ? AppColors.cardDark : AppColors.cardLight,
           borderRadius: AppRadius.lgAll,
           border: Border.all(
-            color: isSelected
+            color: isSelected || isHighlighted
                 ? AppColors.primary
                 : (isDark ? Colors.white10 : Colors.black12),
-            width: isSelected ? 2 : 1,
+            width: isSelected || isHighlighted ? 2 : 1,
           ),
-          boxShadow: isSelected
+          boxShadow: isSelected || isHighlighted
               ? [
                   BoxShadow(
                     color: AppColors.primary.withValues(alpha: 0.2),
@@ -789,7 +824,8 @@ class _InquiryCard extends StatelessWidget {
 // Refactored from book_requests_page.dart
 
 class _RequestsView extends StatefulWidget {
-  const _RequestsView();
+  final int? initialRequestId;
+  const _RequestsView({this.initialRequestId});
   @override
   State<_RequestsView> createState() => _RequestsViewState();
 }
@@ -799,6 +835,10 @@ class _RequestsViewState extends State<_RequestsView> {
   List<BookPurchaseRequest> _requests = [];
   bool _isLoading = true;
   final Set<int> _selectedIds = {};
+
+  // Deep-linking
+  final Map<int, GlobalKey> _requestKeys = {};
+  bool _hasScrolled = false;
 
   bool get _isSelectionMode => _selectedIds.isNotEmpty;
 
@@ -824,6 +864,23 @@ class _RequestsViewState extends State<_RequestsView> {
         _isLoading = false;
         _selectedIds.clear();
       });
+
+      if (widget.initialRequestId != null && !_hasScrolled) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToRequest());
+      }
+    }
+  }
+
+  void _scrollToRequest() {
+    if (_hasScrolled || !mounted) return;
+    final key = _requestKeys[widget.initialRequestId];
+    if (key?.currentContext != null) {
+      Scrollable.ensureVisible(
+        key!.currentContext!,
+        duration: const Duration(seconds: 1),
+        curve: Curves.easeInOut,
+      );
+      setState(() => _hasScrolled = true);
     }
   }
 
@@ -1273,6 +1330,7 @@ class _RequestsViewState extends State<_RequestsView> {
                   request: r,
                   isDark: isDark,
                   isSelected: isSelected,
+                  isHighlighted: widget.initialRequestId == r.id,
                   onCancel:
                       (_isSelectionMode || r.status != RequestStatus.pending)
                       ? null
@@ -1758,6 +1816,7 @@ class _RequestCard extends StatelessWidget {
   final VoidCallback? onViewContact;
   final VoidCallback? onRateSeller;
   final bool isSelected;
+  final bool isHighlighted;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -1769,6 +1828,7 @@ class _RequestCard extends StatelessWidget {
     this.onViewContact,
     this.onRateSeller,
     this.isSelected = false,
+    this.isHighlighted = false,
     this.onTap,
     this.onLongPress,
   });
@@ -1785,12 +1845,12 @@ class _RequestCard extends StatelessWidget {
           color: isDark ? AppColors.cardDark : AppColors.cardLight,
           borderRadius: AppRadius.lgAll,
           border: Border.all(
-            color: isSelected
+            color: isSelected || isHighlighted
                 ? AppColors.primary
                 : (isDark ? Colors.white10 : Colors.black12),
-            width: isSelected ? 2 : 1,
+            width: isSelected || isHighlighted ? 2 : 1,
           ),
-          boxShadow: isSelected
+          boxShadow: isSelected || isHighlighted
               ? [
                   BoxShadow(
                     color: AppColors.primary.withValues(alpha: 0.2),

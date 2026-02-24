@@ -14,7 +14,12 @@ import 'package:smart_pulchowk/core/widgets/pdf_viewer.dart';
 
 class ClassroomPage extends StatefulWidget {
   final String userRole;
-  const ClassroomPage({super.key, this.userRole = 'student'});
+  final String? initialAssignmentId;
+  const ClassroomPage({
+    super.key,
+    this.userRole = 'student',
+    this.initialAssignmentId,
+  });
 
   @override
   State<ClassroomPage> createState() => _ClassroomPageState();
@@ -32,6 +37,10 @@ class _ClassroomPageState extends State<ClassroomPage>
   bool _isLoading = true;
   bool _isSwitchingAccount = false;
   String? _errorMessage;
+
+  // Deep-linking
+  final Map<int, GlobalKey> _assignmentKeys = {};
+  bool _hasScrolledToAssignment = false;
 
   @override
   void initState() {
@@ -105,6 +114,42 @@ class _ClassroomPageState extends State<ClassroomPage>
         });
       }
     }
+
+    if (widget.initialAssignmentId != null && !_hasScrolledToAssignment) {
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _scrollToAssignment(),
+      );
+    }
+  }
+
+  void _scrollToAssignment() {
+    if (_hasScrolledToAssignment || !mounted) return;
+
+    final targetId = int.tryParse(widget.initialAssignmentId!);
+    if (targetId == null) return;
+
+    // Search in both todo and done
+    final indexInTodo = _todoAssignments.indexWhere((a) => a.id == targetId);
+    final indexInDone = _doneAssignments.indexWhere((a) => a.id == targetId);
+
+    if (indexInTodo != -1) {
+      _tabController.animateTo(0);
+    } else if (indexInDone != -1) {
+      _tabController.animateTo(1);
+    }
+
+    // Give some time for tab animation
+    Future.delayed(const Duration(milliseconds: 300), () {
+      final key = _assignmentKeys[targetId];
+      if (key?.currentContext != null) {
+        Scrollable.ensureVisible(
+          key!.currentContext!,
+          duration: const Duration(seconds: 1),
+          curve: Curves.easeInOut,
+        );
+        setState(() => _hasScrolledToAssignment = true);
+      }
+    });
   }
 
   @override
@@ -444,11 +489,19 @@ class _ClassroomPageState extends State<ClassroomPage>
       physics: const BouncingScrollPhysics(),
       itemCount: assignments.length,
       separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-      itemBuilder: (context, index) => _AssignmentCard(
-        assignment: assignments[index],
-        index: index,
-        onRefresh: () => _loadData(forceRefresh: true),
-      ),
+      itemBuilder: (context, index) {
+        final assignment = assignments[index];
+        final key = _assignmentKeys[assignment.id] ??= GlobalKey();
+
+        return _AssignmentCard(
+          key: key,
+          assignment: assignment,
+          index: index,
+          onRefresh: () => _loadData(forceRefresh: true),
+          initiallyExpanded:
+              widget.initialAssignmentId == assignment.id.toString(),
+        );
+      },
     );
   }
 
@@ -720,11 +773,14 @@ class _AssignmentCard extends StatefulWidget {
   final Assignment assignment;
   final int index;
   final VoidCallback? onRefresh;
+  final bool initiallyExpanded;
 
   const _AssignmentCard({
+    super.key,
     required this.assignment,
     required this.index,
     this.onRefresh,
+    this.initiallyExpanded = false,
   });
 
   @override
@@ -753,6 +809,11 @@ class _AssignmentCardState extends State<_AssignmentCard>
       parent: _expansionController,
       curve: Curves.fastOutSlowIn,
     );
+
+    if (widget.initiallyExpanded) {
+      _isExpanded = true;
+      _expansionController.value = 1.0;
+    }
   }
 
   @override

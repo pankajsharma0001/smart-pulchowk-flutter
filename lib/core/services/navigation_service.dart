@@ -9,6 +9,9 @@ import 'package:smart_pulchowk/features/marketplace/chat_room_page.dart';
 import 'package:smart_pulchowk/features/marketplace/marketplace_activity_page.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/features/events/event_details_page.dart';
+import 'package:smart_pulchowk/features/notices/notices_page.dart';
+import 'package:smart_pulchowk/features/lost_found/lost_found_details_page.dart';
+import 'package:smart_pulchowk/features/classroom/classroom_page.dart';
 
 class NavigationService {
   NavigationService._();
@@ -54,10 +57,21 @@ class NavigationService {
       return;
     }
 
-    if (t.contains('purchase_request')) {
+    if (t.contains('purchase_request') || t.contains('request_response')) {
+      final requestIdStr = data['requestId']?.toString();
+      final requestId = int.tryParse(requestIdStr ?? '');
+      final isRequestResponse = t.contains('request_response');
+
+      // If it's a response to a request I made, I should look at "Requests" tab (index 2)
+      // If it's a new inquiry for my book, I should look at "Inquiries" tab (index 1)
+      final tabIndex = isRequestResponse ? 2 : 1;
+
       _navigateToTab(
-        3,
-        subPage: const MarketplaceActivityPage(initialTabIndex: 1),
+        3, // Marketplace
+        subPage: MarketplaceActivityPage(
+          initialTabIndex: tabIndex,
+          initialRequestId: requestId,
+        ),
       );
       return;
     }
@@ -97,11 +111,23 @@ class NavigationService {
 
     // 4. Notices
     if (t.contains('notice')) {
+      final noticeIdStr = data['noticeId']?.toString();
+      final noticeId = int.tryParse(noticeIdStr ?? '');
+      final category = data['category']?.toString();
       final attachmentUrl = data['attachmentUrl']?.toString();
       final noticeTitle = data['noticeTitle']?.toString() ?? 'Notice';
 
-      _navigateToTab(8); // Notices tab
+      // Navigate to the Notices tab, pre-filtered to the right category
+      // and scrolled to the specific notice
+      _navigateToTab(
+        8,
+        subPage: NoticesPage(
+          initialCategory: category,
+          initialNoticeId: noticeId,
+        ),
+      );
 
+      // If the notice has an attachment, open it on top
       if (attachmentUrl != null && attachmentUrl.isNotEmpty) {
         final urlLower = attachmentUrl.toLowerCase();
         final body = data['body']?.toString().toLowerCase() ?? '';
@@ -115,9 +141,11 @@ class NavigationService {
                 body.contains('pdf'));
 
         if (pdf) {
-          _navigateToRoot(
-            CustomPdfViewer(url: attachmentUrl, title: noticeTitle),
-          );
+          Future.delayed(const Duration(milliseconds: 400), () {
+            _navigateToRoot(
+              CustomPdfViewer(url: attachmentUrl, title: noticeTitle),
+            );
+          });
         } else {
           final isImg =
               urlLower.contains('.jpg') ||
@@ -125,7 +153,11 @@ class NavigationService {
               urlLower.contains('.png') ||
               urlLower.contains('.webp');
           if (isImg) {
-            _navigateToRoot(FullScreenImageViewer(imageUrls: [attachmentUrl]));
+            Future.delayed(const Duration(milliseconds: 400), () {
+              _navigateToRoot(
+                FullScreenImageViewer(imageUrls: [attachmentUrl]),
+              );
+            });
           }
         }
       }
@@ -134,13 +166,30 @@ class NavigationService {
 
     // 5. Lost & Found
     if (t.contains('lost_found') || t.contains('lostfound')) {
-      _navigateToTab(9);
+      final itemIdStr = data['itemId']?.toString();
+      final itemId = int.tryParse(itemIdStr ?? '');
+      if (itemId != null) {
+        _navigateToTab(
+          9, // Lost & Found
+          subPage: LostFoundDetailsPage(itemId: itemId),
+        );
+      } else {
+        _navigateToTab(9);
+      }
       return;
     }
 
     // 6. Classroom
     if (t.contains('assignment') || t.contains('grading')) {
-      _navigateToTab(2);
+      final assignmentId = data['assignmentId']?.toString();
+      if (assignmentId != null) {
+        _navigateToTab(
+          2, // Classroom
+          subPage: ClassroomPage(initialAssignmentId: assignmentId),
+        );
+      } else {
+        _navigateToTab(2);
+      }
       return;
     }
 

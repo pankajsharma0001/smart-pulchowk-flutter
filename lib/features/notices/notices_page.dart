@@ -14,7 +14,10 @@ import 'package:smart_pulchowk/features/notices/notice_editor.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class NoticesPage extends StatefulWidget {
-  const NoticesPage({super.key});
+  final String? initialCategory;
+  final int? initialNoticeId;
+
+  const NoticesPage({super.key, this.initialCategory, this.initialNoticeId});
 
   @override
   State<NoticesPage> createState() => _NoticesPageState();
@@ -32,6 +35,7 @@ class _NoticesPageState extends State<NoticesPage> {
   bool _hasMore = true;
   int _offset = 0;
   static const int _limit = 15;
+  int? _highlightNoticeId;
 
   List<Notice> _notices = [];
   NoticeStats? _stats;
@@ -62,6 +66,12 @@ class _NoticesPageState extends State<NoticesPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialCategory != null) {
+      _selectedCategory = widget.initialCategory;
+    }
+    if (widget.initialNoticeId != null) {
+      _highlightNoticeId = widget.initialNoticeId;
+    }
     _loadData();
     _scrollController.addListener(_onScroll);
   }
@@ -124,6 +134,32 @@ class _NoticesPageState extends State<NoticesPage> {
           _offset = _notices.length;
           _hasMore = _notices.length >= _limit;
         });
+
+        // Scroll to highlighted notice if we came from a notification tap
+        if (_highlightNoticeId != null && mounted) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final targetIndex = _notices.indexWhere(
+              (n) => n.id == _highlightNoticeId,
+            );
+            if (targetIndex != -1 && _scrollController.hasClients) {
+              // Approx card height to estimate scroll position
+              const estimatedCardHeight = 130.0;
+              final scrollTarget = targetIndex * estimatedCardHeight;
+              _scrollController.animateTo(
+                scrollTarget.clamp(
+                  0.0,
+                  _scrollController.position.maxScrollExtent,
+                ),
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeOutCubic,
+              );
+            }
+            // Clear highlight after 2 seconds
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted) setState(() => _highlightNoticeId = null);
+            });
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error loading notices: $e');
@@ -497,15 +533,32 @@ class _NoticesPageState extends State<NoticesPage> {
           );
         }
         final notice = _notices[index];
+        final isHighlighted = _highlightNoticeId == notice.id;
         return StaggeredScaleFade(
           key: ValueKey('notice_${notice.id}'),
           index: index,
-          child: _NoticeCard(
-            notice: notice,
-            isDark: isDark,
-            userRole: _userRole,
-            onEdit: () => _openNoticeEditor(notice: notice),
-            onDelete: () => _deleteNotice(notice),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 400),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: isHighlighted
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.4),
+                        blurRadius: 18,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : [],
+            ),
+            child: _NoticeCard(
+              notice: notice,
+              isDark: isDark,
+              userRole: _userRole,
+              isHighlighted: isHighlighted,
+              onEdit: () => _openNoticeEditor(notice: notice),
+              onDelete: () => _deleteNotice(notice),
+            ),
           ),
         );
       },
@@ -517,6 +570,7 @@ class _NoticeCard extends StatelessWidget {
   final Notice notice;
   final bool isDark;
   final String userRole;
+  final bool isHighlighted;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
@@ -524,6 +578,7 @@ class _NoticeCard extends StatelessWidget {
     required this.notice,
     required this.isDark,
     required this.userRole,
+    this.isHighlighted = false,
     required this.onEdit,
     required this.onDelete,
   });
