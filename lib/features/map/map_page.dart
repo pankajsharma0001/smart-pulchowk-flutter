@@ -16,6 +16,7 @@ import 'package:smart_pulchowk/features/map/widgets/category_filter_bar.dart';
 import 'package:smart_pulchowk/features/map/widgets/location_details_sheet.dart';
 import 'package:smart_pulchowk/features/map/widgets/chat_bot_widget.dart';
 import 'package:smart_pulchowk/features/map/models/chatbot_response.dart';
+import 'package:smart_pulchowk/features/map/services/campus_router.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon URLs (single source of truth)
@@ -415,16 +416,34 @@ class _MapPageState extends State<MapPage> {
       _kIconUrls.entries.map((entry) async {
         try {
           final iconName = '${entry.key}-icon';
+
+          // 1. Check in-memory cache
           if (_iconCache.containsKey(entry.key)) {
             await _mapController!.addImage(iconName, _iconCache[entry.key]!);
             return;
           }
+
+          // 2. Check Hive persistent cache
+          final cached = StorageService.readIconCache(entry.key);
+          if (cached != null) {
+            final bytes = Uint8List.fromList(cached);
+            _iconCache[entry.key] = bytes;
+            await _mapController!.addImage(iconName, bytes);
+            return;
+          }
+
+          // 3. Download from network and save to both caches
           final response = await http
               .get(Uri.parse(entry.value))
               .timeout(const Duration(seconds: 5));
           if (response.statusCode == 200) {
             _iconCache[entry.key] = response.bodyBytes;
             await _mapController!.addImage(iconName, response.bodyBytes);
+            // Persist to Hive for offline use
+            StorageService.writeIconCache(
+              entry.key,
+              response.bodyBytes.toList(),
+            );
           } else {
             throw Exception('HTTP ${response.statusCode}');
           }
@@ -457,6 +476,8 @@ class _MapPageState extends State<MapPage> {
           _iconCache[key] = response.bodyBytes;
           await _mapController!.addImage('$key-icon', response.bodyBytes);
           _failedIcons.remove(key);
+          // Persist to Hive for offline use
+          StorageService.writeIconCache(key, response.bodyBytes.toList());
         }
       } catch (_) {}
     }
@@ -933,6 +954,22 @@ class _MapPageState extends State<MapPage> {
       setState(() => _isCalculatingRoute = false);
       return;
     }
+
+    // 1. Try Dijkstra's algorithm (works offline)
+    final campusRoute = CampusRouter.findRoute(sc, ec);
+    if (campusRoute != null && campusRoute.distanceMeters < straight * 5) {
+      setState(() {
+        _routeCoordinates = campusRoute.points;
+        _routeDistance = campusRoute.formattedDistance;
+        _routeDuration = campusRoute.formattedDuration;
+        _isNavigationPanelExpanded = false;
+      });
+      _drawRoute();
+      setState(() => _isCalculatingRoute = false);
+      return;
+    }
+
+    // 2. Fallback: Try OSRM (online only)
     final url =
         'https://router.project-osrm.org/route/v1/foot/${sc[0]},${sc[1]};${ec[0]},${ec[1]}?overview=full&geometries=geojson&radiuses=200;200';
     try {

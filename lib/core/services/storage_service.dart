@@ -9,12 +9,14 @@ class StorageService {
   static const _secureStorage = FlutterSecureStorage();
   static late Box _cacheBox;
   static late Box _settingsBox;
+  static late Box<List<int>> _iconCacheBox;
 
   /// Initialize Hive and open common boxes.
   static Future<void> init() async {
     await Hive.initFlutter();
     _cacheBox = await Hive.openBox(AppConstants.apiCacheBox);
     _settingsBox = await Hive.openBox('settings_box');
+    _iconCacheBox = await Hive.openBox<List<int>>('map_icon_cache');
   }
 
   // ── Secure Storage ────────────────────────────────────────────────────────
@@ -88,5 +90,22 @@ class StorageService {
 
   static Future<void> setHasSeenOnboarding(bool value) async {
     await _settingsBox.put('has_seen_onboarding', value);
+  }
+
+  // ── Map Icon Cache ────────────────────────────────────────────────────────
+
+  /// Save map icon bytes to persistent cache.
+  static Future<void> writeIconCache(String key, List<int> bytes) async {
+    await _iconCacheBox.put(key, bytes);
+  }
+
+  /// Read map icon bytes from persistent cache.
+  static List<int>? readIconCache(String key) {
+    return _iconCacheBox.get(key);
+  }
+
+  /// Check if a map icon is cached.
+  static bool hasIconCache(String key) {
+    return _iconCacheBox.containsKey(key);
   }
 }
