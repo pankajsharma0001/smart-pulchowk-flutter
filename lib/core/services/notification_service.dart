@@ -15,6 +15,10 @@ class NotificationService {
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
+  /// Pending payload from a cold-start notification tap.
+  /// Stored until MainLayout is ready to process it.
+  static Map<String, dynamic>? _pendingPayload;
+
   static final StreamController<Map<String, dynamic>> _chatStreamController =
       StreamController<Map<String, dynamic>>.broadcast();
 
@@ -31,6 +35,13 @@ class NotificationService {
   /// Initialize notifications (permission request, channel setup).
   static Future<void> initialize() async {
     try {
+      // Enable foreground notification presentation (critical for iOS)
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
       // Initialize local notifications
       const AndroidInitializationSettings initializationSettingsAndroid =
           AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -85,7 +96,8 @@ class NotificationService {
         debugPrint(
           'Notification clicked from terminated: ${initialMessage.data}',
         );
-        NavigationService.handleNotificationPayload(initialMessage.data);
+        // Store as pending — MainLayout is not mounted yet during main()
+        _pendingPayload = initialMessage.data;
       }
 
       // Listen to foreground messages
@@ -166,6 +178,20 @@ class NotificationService {
       }
     } catch (e) {
       debugPrint('Error initializing notifications: $e');
+    }
+  }
+
+  /// Process any pending notification payload from a cold-start tap.
+  /// Should be called from MainLayout.initState() once the widget tree is ready.
+  static void processPendingPayload() {
+    if (_pendingPayload != null) {
+      final payload = _pendingPayload!;
+      _pendingPayload = null;
+      debugPrint('Processing pending notification payload: ${payload['type']}');
+      // Short delay to ensure MainLayout navigation stack is fully initialized
+      Future.delayed(const Duration(milliseconds: 500), () {
+        NavigationService.handleNotificationPayload(payload);
+      });
     }
   }
 

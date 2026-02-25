@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
+import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/widgets/custom_app_bar.dart';
 import 'package:smart_pulchowk/features/events/events_page.dart';
 import 'package:smart_pulchowk/features/home/home_page.dart';
@@ -16,7 +17,6 @@ import 'package:smart_pulchowk/features/clubs/clubs_page.dart';
 import 'package:smart_pulchowk/features/lost_found/lost_found.dart';
 import 'package:smart_pulchowk/features/admin/admin_page.dart';
 import 'package:smart_pulchowk/features/profile/profile_page.dart';
-import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:smart_pulchowk/features/map/map.dart';
@@ -100,6 +100,11 @@ class MainLayoutState extends State<MainLayout>
 
     // Silent startup check — no snackbar on initial load
     _checkUserRole(null, true);
+
+    // Process any pending notification from a cold-start tap
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.processPendingPayload();
+    });
   }
 
   @override
@@ -1139,8 +1144,16 @@ class _FadeIndexedStackState extends State<_FadeIndexedStack>
             ),
           );
         } else if (isPrevious) {
-          // Keep previous child visible underneath during transition
-          return widget.children[i];
+          // Fade out previous page to avoid merged/overlapping appearance
+          return FadeTransition(
+            opacity: _controller.drive(
+              Tween<double>(
+                begin: 1.0,
+                end: 0.0,
+              ).chain(CurveTween(curve: Curves.easeIn)),
+            ),
+            child: widget.children[i],
+          );
         } else {
           // Keep all other tabs alive but offstage to preserve state
           return Offstage(
