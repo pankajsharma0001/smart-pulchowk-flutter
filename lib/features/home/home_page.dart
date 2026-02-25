@@ -118,7 +118,7 @@ class _HomeContentState extends State<_HomeContent> {
               ),
               const SizedBox(height: AppSpacing.xxl),
               _RegisteredEventsSection(enrollmentFuture: _enrollmentFuture),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.sm),
               _NextEventSection(eventsFuture: _eventsFuture),
             ],
           ),
@@ -490,7 +490,25 @@ class _HomeSearchBar extends StatelessWidget {
         haptics.selectionClick();
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const SearchPage()),
+          PageRouteBuilder(
+            pageBuilder: (_, animation, __) => const SearchPage(),
+            transitionsBuilder: (_, animation, secondaryAnimation, child) {
+              return FadeTransition(
+                opacity: animation.drive(CurveTween(curve: Curves.easeOut)),
+                child: SlideTransition(
+                  position: animation.drive(
+                    Tween<Offset>(
+                      begin: const Offset(0, 0.03),
+                      end: Offset.zero,
+                    ).chain(CurveTween(curve: Curves.easeOutCubic)),
+                  ),
+                  child: child,
+                ),
+              );
+            },
+            transitionDuration: const Duration(milliseconds: 250),
+            reverseTransitionDuration: const Duration(milliseconds: 200),
+          ),
         );
       },
       borderRadius: BorderRadius.circular(16),
@@ -554,18 +572,19 @@ class _ExploreChips extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final List<Map<String, dynamic>> chips = [
-      {'label': 'All', 'icon': '✨', 'active': true},
       {
         'label': 'Campus Clubs',
         'icon': '👥',
         'future': clubsFuture,
         'countExtractor': (data) => (data as List).length.toString(),
+        'tabIndex': 5,
       },
       {
         'label': 'Events',
         'icon': '📅',
         'future': eventsFuture,
         'countExtractor': (data) => (data as List).length.toString(),
+        'tabIndex': 6,
       },
       {
         'label': 'IOE Notices',
@@ -573,87 +592,101 @@ class _ExploreChips extends StatelessWidget {
         'future': noticeStatsFuture,
         'countExtractor': (data) =>
             (data as NoticeStats?)?.total.toString() ?? '0',
+        'tabIndex': 8,
       },
       {
         'label': 'Lost & Found',
         'icon': '🔍',
         'future': lostFoundFuture,
         'countExtractor': (data) => (data as List).length.toString(),
+        'tabIndex': 9,
       },
     ];
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      child: Row(
-        children: chips.map((chip) {
-          final bool isActive = chip['active'] ?? false;
-          final isDark = Theme.of(context).brightness == Brightness.dark;
-          final Future? future = chip['future'];
+    // Wrap in NotificationListener to prevent horizontal scroll from triggering
+    // the parent RefreshIndicator (pull-to-refresh)
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) => true, // absorb scroll events
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        child: Row(
+          children: chips.map((chip) {
+            final bool isActive = chip['active'] ?? false;
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final Future? future = chip['future'];
+            final int? tabIndex = chip['tabIndex'] as int?;
 
-          return Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: InkWell(
-              onTap: () {
-                haptics.lightImpact();
-              },
-              borderRadius: BorderRadius.circular(99),
-              child: AnimatedContainer(
-                duration: AppAnimations.fast,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 8,
-                ),
-                decoration: isActive
-                    ? BoxDecoration(
-                        gradient: AppColors.primaryGradient,
-                        borderRadius: BorderRadius.circular(99),
-                        boxShadow: AppShadows.glow(
-                          AppColors.primary,
-                          intensity: 0.2,
+            return Padding(
+              padding: const EdgeInsets.only(right: 10),
+              child: InkWell(
+                onTap: () {
+                  haptics.lightImpact();
+                  if (tabIndex != null) {
+                    MainLayout.of(context)?.setSelectedIndex(tabIndex);
+                  }
+                },
+                borderRadius: BorderRadius.circular(99),
+                child: AnimatedContainer(
+                  duration: AppAnimations.fast,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  decoration: isActive
+                      ? BoxDecoration(
+                          gradient: AppColors.primaryGradient,
+                          borderRadius: BorderRadius.circular(99),
+                          boxShadow: AppShadows.glow(
+                            AppColors.primary,
+                            intensity: 0.2,
+                          ),
+                        )
+                      : isDark
+                      ? AppDecorations.glassDark(
+                          opacity: 0.05,
+                          borderRadius: 99,
+                        )
+                      : AppDecorations.glass(opacity: 0.03, borderRadius: 99),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(chip['icon'], style: const TextStyle(fontSize: 14)),
+                      const SizedBox(width: 8),
+                      Text(
+                        chip['label'],
+                        style: AppTextStyles.labelMedium.copyWith(
+                          color: isActive
+                              ? Colors.white
+                              : (isDark ? Colors.white : Colors.black87),
+                          fontWeight: isActive
+                              ? FontWeight.w800
+                              : FontWeight.w600,
                         ),
-                      )
-                    : isDark
-                    ? AppDecorations.glassDark(opacity: 0.05, borderRadius: 99)
-                    : AppDecorations.glass(opacity: 0.03, borderRadius: 99),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(chip['icon'], style: const TextStyle(fontSize: 14)),
-                    const SizedBox(width: 8),
-                    Text(
-                      chip['label'],
-                      style: AppTextStyles.labelMedium.copyWith(
-                        color: isActive
-                            ? Colors.white
-                            : (isDark ? Colors.white : Colors.black87),
-                        fontWeight: isActive
-                            ? FontWeight.w800
-                            : FontWeight.w600,
                       ),
-                    ),
-                    if (future != null)
-                      FutureBuilder(
-                        future: future,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return _buildSmallLoader(isActive, isDark);
-                          }
-                          final count = chip['countExtractor'](snapshot.data);
-                          if (count == '0' || count == null)
-                            return const SizedBox.shrink();
+                      if (future != null)
+                        FutureBuilder(
+                          future: future,
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return _buildSmallLoader(isActive, isDark);
+                            }
+                            final count = chip['countExtractor'](snapshot.data);
+                            if (count == '0' || count == null)
+                              return const SizedBox.shrink();
 
-                          return _buildCountBadge(count, isActive, isDark);
-                        },
-                      ),
-                  ],
+                            return _buildCountBadge(count, isActive, isDark);
+                          },
+                        ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        }).toList(),
+            );
+          }).toList(),
+        ),
       ),
     );
   }
