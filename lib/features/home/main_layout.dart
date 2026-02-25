@@ -63,11 +63,14 @@ class MainLayoutState extends State<MainLayout>
   int get currentIndex => _selectedIndex;
 
   // Navigator keys for each tab's independent navigation stack
-  // We expand this to support all menu features (10 total)
+  // We expand this to support all menu features (12 total)
   final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(
     12,
     (_) => GlobalKey<NavigatorState>(),
   );
+
+  /// Tracks which tabs have been visited to enable lazy initialization.
+  final Set<int> _visitedTabs = {0};
 
   @override
   void initState() {
@@ -222,6 +225,7 @@ class MainLayoutState extends State<MainLayout>
       setState(() {
         _isBackNavigation = false;
         _selectedIndex = index;
+        _visitedTabs.add(index); // Mark as visited for lazy loading
         tabIndexNotifier.value = index;
         // Keep history manageable
         if (_tabHistory.isEmpty || _tabHistory.last != index) {
@@ -446,11 +450,13 @@ class MainLayoutState extends State<MainLayout>
                   isBackNavigation: _isBackNavigation,
                   children: List.generate(
                     12,
-                    (i) => _TabNavigator(
-                      key: i == 2 ? ValueKey('role_$_userRole') : null,
-                      navigatorKey: _navigatorKeys[i],
-                      rootPage: _pageForIndex(i),
-                    ),
+                    (i) => _visitedTabs.contains(i)
+                        ? _TabNavigator(
+                            key: i == 2 ? ValueKey('role_$_userRole') : null,
+                            navigatorKey: _navigatorKeys[i],
+                            rootPage: _pageForIndex(i),
+                          )
+                        : const SizedBox.shrink(), // Lazy: unvisited tabs are empty
                   ),
                 ),
                 bottomNavigationBar: _BottomNavBar(
@@ -1155,10 +1161,19 @@ class _FadeIndexedStackState extends State<_FadeIndexedStack>
             child: widget.children[i],
           );
         } else {
-          // Keep all other tabs alive but offstage to preserve state
+          // Offstage + no tickers + not visible = minimal resource usage
           return Offstage(
             offstage: true,
-            child: TickerMode(enabled: false, child: widget.children[i]),
+            child: TickerMode(
+              enabled: false,
+              child: Visibility(
+                visible: false,
+                maintainState: true,
+                maintainAnimation: false,
+                maintainSize: false,
+                child: widget.children[i],
+              ),
+            ),
           );
         }
       }),
