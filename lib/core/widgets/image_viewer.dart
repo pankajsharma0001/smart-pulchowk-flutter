@@ -100,21 +100,29 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
               physics: const BouncingScrollPhysics(),
               itemBuilder: (context, index) {
                 final actualIndex = index % widget.imageUrls.length;
+                final tag = widget.heroTagBuilder?.call(actualIndex);
+
+                Widget image = Center(
+                  child: SmartImage(
+                    imageUrl: widget.imageUrls[actualIndex],
+                    fit: BoxFit.contain,
+                    showProgress: true,
+                    errorWidget: const Icon(
+                      Icons.broken_image_rounded,
+                      color: Colors.white54,
+                      size: 64,
+                    ),
+                  ),
+                );
+
+                if (tag != null) {
+                  image = Hero(tag: tag, child: image);
+                }
+
                 return InteractiveViewer(
                   minScale: 1.0,
                   maxScale: 4.0,
-                  child: Center(
-                    child: SmartImage(
-                      imageUrl: widget.imageUrls[actualIndex],
-                      fit: BoxFit.contain,
-                      showProgress: true,
-                      errorWidget: const Icon(
-                        Icons.broken_image_rounded,
-                        color: Colors.white54,
-                        size: 64,
-                      ),
-                    ),
-                  ),
+                  child: image,
                 );
               },
             ),

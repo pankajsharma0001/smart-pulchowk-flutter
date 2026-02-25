@@ -361,10 +361,10 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
 
   void _openBookDetails(BookListing book) async {
     _searchFocusNode.unfocus();
-    final didChange = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(builder: (_) => BookDetailsPage(listing: book)),
-    );
+    final didChange = await Navigator.of(context, rootNavigator: true)
+        .push<bool>(
+          MaterialPageRoute(builder: (_) => BookDetailsPage(listing: book)),
+        );
     if (didChange == true) _onRefresh();
   }
 
@@ -666,7 +666,7 @@ class _BookCard extends StatelessWidget {
                 fit: StackFit.expand,
                 children: [
                   Hero(
-                    tag: 'book_image_${book.id}',
+                    tag: 'book_image_${book.id}_0',
                     child: imageUrl != null && imageUrl.isNotEmpty
                         ? SmartImage(
                             imageUrl: imageUrl,

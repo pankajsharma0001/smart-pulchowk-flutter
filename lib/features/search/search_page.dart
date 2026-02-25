@@ -394,8 +394,7 @@ class _ResultCard extends StatelessWidget {
         }
         break;
       case SearchResultType.event:
-        Navigator.push(
-          context,
+        Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
             builder: (context) =>
                 EventDetailsPage(event: result.originalObject as ClubEvent),
@@ -403,8 +402,7 @@ class _ResultCard extends StatelessWidget {
         );
         break;
       case SearchResultType.book:
-        Navigator.push(
-          context,
+        Navigator.of(context, rootNavigator: true).push(
           MaterialPageRoute(
             builder: (context) =>
                 BookDetailsPage(listing: result.originalObject as BookListing),

@@ -939,10 +939,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
           itemCount: images.length,
           onPageChanged: (i) => setState(() => _currentImageIndex = i),
           itemBuilder: (_, i) {
-            final isPrimary = i == 0;
-            final tag = isPrimary
-                ? 'book_image_${_book.id}'
-                : images[i].imageUrl;
+            final tag = 'book_image_${_book.id}_$i';
 
             return ClipRect(
               child: Stack(
@@ -980,6 +977,8 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                                     .map((it) => it.imageUrl)
                                     .toList(),
                                 initialIndex: i,
+                                heroTagBuilder: (index) =>
+                                    'book_image_${_book.id}_$index',
                               ),
                             ),
                           );
@@ -999,7 +998,10 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                           color: isDark
                               ? AppColors.surfaceContainerDark
                               : AppColors.surfaceContainerLight,
-                          child: const Icon(Icons.broken_image_rounded, size: 48),
+                          child: const Icon(
+                            Icons.broken_image_rounded,
+                            size: 48,
+                          ),
                         ),
                       ),
                     ),

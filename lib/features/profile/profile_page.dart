@@ -1149,8 +1149,7 @@ class _PurchaseRequestCard extends StatelessWidget {
       onTap: listing != null
           ? () {
               haptics.selectionClick();
-              Navigator.push(
-                context,
+              Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(
                   builder: (_) => BookDetailsPage(listing: listing),
                 ),
@@ -1411,10 +1410,10 @@ class _HorizontalBookCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return GestureDetector(
-      onTap: () => Navigator.push(
+      onTap: () => Navigator.of(
         context,
-        MaterialPageRoute(builder: (_) => BookDetailsPage(listing: book)),
-      ),
+        rootNavigator: true,
+      ).push(MaterialPageRoute(builder: (_) => BookDetailsPage(listing: book))),
       child: Container(
         width: double.infinity,
         height: 110,
