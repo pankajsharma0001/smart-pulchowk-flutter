@@ -4,230 +4,261 @@ import 'package:maplibre_gl/maplibre_gl.dart';
 
 /// Offline campus router using Dijkstra's shortest path algorithm.
 ///
-/// The walkway graph is hand-defined using real campus intersection coordinates.
-/// Each node represents a walkway intersection/junction, and edges represent
-/// walkable paths between them with Haversine distances.
+/// The walkway graph is defined using real campus **road and path intersections**
+/// (not building locations). This ensures routes follow actual walkable paths.
 class CampusRouter {
   CampusRouter._();
 
   // ── Walkway Graph Nodes ──────────────────────────────────────────────────
-  // Key intersections on Pulchowk Campus walkways.
+  // These are points on actual campus roads and footpaths (NOT buildings).
   // Format: [longitude, latitude]
   static const List<List<double>> _nodes = [
-    // 0: Main Entrance gate
+    // ── Main Road (south, entrance road going east) ──
+    // 0: Main gate (road start)
     [85.31775, 27.68137],
-    // 1: Cave junction (near main entrance road)
-    [85.31795, 27.68085],
-    // 2: Dean Office road junction
-    [85.31861, 27.68103],
-    // 3: Architecture Dept junction
-    [85.31831, 27.68045],
-    // 4: Central road – near ICTC
-    [85.31915, 27.68224],
-    // 5: E Block / Workshop area
-    [85.31840, 27.68060],
-    // 6: Electrical Dept / Block C junction
-    [85.31834, 27.68214],
-    // 7: Fountain area / Central testing lab
-    [85.31888, 27.68236],
-    // 8: Badminton court junction (west)
-    [85.31850, 27.68195],
-    // 9: Continuing Education / Robotics area
-    [85.31905, 27.68147],
-    // 10: Machine Workshop / Parking junction
-    [85.31907, 27.68127],
-    // 11: Library / Clinic area
-    [85.31943, 27.68158],
-    // 12: Water Vending / ICT Building
-    [85.31951, 27.68173],
-    // 13: Om Stationery / Water Tap junction
-    [85.31985, 27.68184],
-    // 14: First Entrance / Siddhartha Bank junction
-    [85.31946, 27.68207],
-    // 15: Second Entrance
+    // 1: Road bend near cave
+    [85.31795, 27.68095],
+    // 2: Road junction near Architecture/E Block
+    [85.31840, 27.68055],
+    // 3: Road junction near MSC Hostel / Hydro Lab
+    [85.31920, 27.68020],
+    // 4: Road junction near Dean Office
+    [85.31860, 27.68105],
+    // 5: Road junction near High Voltage Lab
+    [85.31935, 27.68095],
+    // 6: Road junction near Workshop / Mess
+    [85.31950, 27.68110],
+    // 7: Road junction near Machine Workshop
+    [85.31906, 27.68130],
+
+    // ── Central Walkway (west to east, main internal path) ──
+    // 8: Path junction near main gate (inside, going north)
+    [85.31790, 27.68150],
+    // 9: Path junction near Badminton/Electrical Dept
+    [85.31850, 27.68180],
+    // 10: Path junction near ICTC building
+    [85.31900, 27.68200],
+    // 11: Path junction near Continuing Ed / Robotics
+    [85.31905, 27.68150],
+    // 12: Path junction near Library / Clinic
+    [85.31940, 27.68160],
+    // 13: Path junction near Water Vending / ICT
+    [85.31950, 27.68175],
+    // 14: Path junction near Om Stationery
+    [85.31985, 27.68185],
+
+    // ── North-South Central Road ──
+    // 15: Road junction near First Entrance / Siddhartha ATM
+    [85.31945, 27.68210],
+    // 16: Road junction near Second Entrance
     [85.31960, 27.68215],
-    // 16: Parking area (central)
-    [85.31993, 27.68215],
-    // 17: Helicopter Parking / Mech Dept
-    [85.31969, 27.68229],
-    // 18: Saraswati Mandir junction
-    [85.31940, 27.68256],
-    // 19: PI Chautari / D Block
-    [85.31988, 27.68268],
-    // 20: Civil Dept / Embark junction
-    [85.31936, 27.68297],
-    // 21: F Block junction
-    [85.31961, 27.68279],
-    // 22: Dept of Applied Sciences junction
-    [85.32004, 27.68295],
-    // 23: G Block junction
-    [85.32018, 27.68310],
-    // 24: CIDS / heavy labs road
-    [85.31990, 27.68301],
-    // 25: Heavy Lab Block / Hydraulic Lab
-    [85.32034, 27.68217],
-    // 26: Heavy Lab
-    [85.32050, 27.68221],
-    // 27: Mech Dept (east block)
-    [85.32078, 27.68239],
-    // 28: The Helm / FSU Office area
-    [85.32083, 27.68263],
-    // 29: FSU / Parking junction (east)
-    [85.32076, 27.68285],
-    // 30: Science & Humanities junction
-    [85.32054, 27.68304],
-    // 31: Center for Energy Studies
-    [85.32086, 27.68322],
-    // 32: Hydropower Testing Lab / SEDS
-    [85.32053, 27.68347],
-    // 33: Paraphet junction
-    [85.32149, 27.68291],
-    // 34: Suspension Bridge / Changing Room
-    [85.32131, 27.68261],
-    // 35: Cricket Ground junction
-    [85.32215, 27.68333],
-    // 36: Volleyball Court junction
-    [85.32322, 27.68225],
-    // 37: Basketball Court area
-    [85.32259, 27.68182],
-    // 38: Gym area / Calisthenics park
-    [85.32278, 27.68190],
-    // 39: Music Club / Niraula Store
-    [85.32322, 27.68183],
-    // 40: Chemical Eng Lab junction
-    [85.32329, 27.68178],
-    // 41: Canteen / Gym Hall area
-    [85.32355, 27.68125],
-    // 42: Garden area / Badminton court (east)
-    [85.32367, 27.68169],
-    // 43: Hostel Block C junction
-    [85.32391, 27.68149],
-    // 44: Hostel Block B junction
-    [85.32390, 27.68184],
-    // 45: Staff Quarter junction
-    [85.32411, 27.68250],
-    // 46: Hostel Block A junction
-    [85.32393, 27.68219],
-    // 47: Girls Hostel junction
-    [85.32406, 27.68307],
-    // 48: Teacher's Quarter junction
-    [85.32471, 27.68303],
-    // 49: Football Ground junction
-    [85.32293, 27.68263],
-    // 50: Saheed Shukra Park
-    [85.31887, 27.68318],
-    // 51: High Voltage Lab / Campus Mess
-    [85.31935, 27.68094],
-    // 52: Hydro Lab / MSC Hostel
-    [85.31902, 27.68009],
-    // 53: Dept of Roads
-    [85.31987, 27.68075],
-    // 54: Exam Control Office area
-    [85.32103, 27.68107],
-    // 55: NTBNS office junction
-    [85.32070, 27.68302],
-    // 56: Pulchowk Girls office junction
-    [85.32067, 27.68292],
-    // 57: Nabil Bank ATM junction
-    [85.31854, 27.68283],
+    // 17: Road junction near Parking / Heavy Lab Block
+    [85.31995, 27.68215],
+    // 18: Road junction near Helicopter Parking
+    [85.31970, 27.68230],
+
+    // ── Upper campus walkways ──
+    // 19: Path junction near Fountain / Block C area
+    [85.31888, 27.68235],
+    // 20: Path junction near Nabil ATM / Central Material Lab
+    [85.31855, 27.68270],
+    // 21: Path junction near Embark College
+    [85.31890, 27.68270],
+    // 22: Path junction near Saraswati Mandir
+    [85.31940, 27.68258],
+    // 23: Path junction near Civil Dept / Saheed Shukra Park
+    [85.31890, 27.68310],
+    // 24: Path junction near D Block / Mech Dept
+    [85.31990, 27.68250],
+    // 25: Path junction near F Block
+    [85.31960, 27.68280],
+    // 26: Path junction near PI Chautari
+    [85.31990, 27.68270],
+    // 27: Path junction near CIDS
+    [85.31990, 27.68300],
+    // 28: Path junction near G Block / Applied Sciences
+    [85.32005, 27.68310],
+    // 29: Path junction near Dept Applied Sciences
+    [85.32005, 27.68295],
+
+    // ── East campus road (labs area) ──
+    // 30: Road junction near Heavy Lab Block (east)
+    [85.32035, 27.68210],
+    // 31: Road junction near Heavy Lab / Hydraulic Lab
+    [85.32050, 27.68220],
+    // 32: Road junction near Mech Dept (east)
+    [85.32080, 27.68240],
+    // 33: Road junction near Helm / Suspension Bridge
+    [85.32085, 27.68265],
+    // 34: Road junction near Suspension Bridge
+    [85.32130, 27.68260],
+    // 35: Road junction near FSU Office / Parking
+    [85.32080, 27.68285],
+    // 36: Road junction near Paraphet
+    [85.32150, 27.68290],
+    // 37: Road junction near Science & Humanities
+    [85.32055, 27.68305],
+    // 38: Road junction near Center for Energy Studies
+    [85.32085, 27.68320],
+    // 39: Road junction near Hydropower Testing / SEDS
+    [85.32050, 27.68350],
+    // 40: Road junction near NTBNS / Pulchowk Girls
+    [85.32070, 27.68300],
+
+    // ── Sports area roads ──
+    // 41: Road junction near Changing Room
+    [85.32170, 27.68265],
+    // 42: Road junction near Football Ground (west edge)
+    [85.32230, 27.68270],
+    // 43: Road junction near Cricket Ground (south)
+    [85.32215, 27.68320],
+    // 44: Road junction near Basketball Court
+    [85.32260, 27.68185],
+    // 45: Road junction near Volleyball Court
+    [85.32320, 27.68230],
+    // 46: Road junction near Calisthenics / Gym path
+    [85.32280, 27.68195],
+
+    // ── Hostel area roads ──
+    // 47: Road junction near Canteen / Exam Control
+    [85.32105, 27.68110],
+    // 48: Road junction near Music Club / Niraula Store
+    [85.32322, 27.68185],
+    // 49: Road junction near Chem Lab / Badminton (east)
+    [85.32340, 27.68175],
+    // 50: Road junction near Gym Hall / Garden
+    [85.32355, 27.68155],
+    // 51: Road junction near Hostel Block C
+    [85.32390, 27.68150],
+    // 52: Road junction near Hostel Block B
+    [85.32390, 27.68185],
+    // 53: Road junction near Hostel Block A / Volleyball
+    [85.32393, 27.68220],
+    // 54: Road junction near Staff Quarter
+    [85.32410, 27.68250],
+    // 55: Road junction near Girls Hostel
+    [85.32405, 27.68310],
+    // 56: Road junction near Teacher's Quarter
+    [85.32470, 27.68305],
+    // 57: Road junction near Football Ground (east)
+    [85.32340, 27.68280],
+    // 58: Road junction near Cricket pitch
+    [85.32345, 27.68300],
+
+    // ── Additional connector nodes ──
+    // 59: Path junction near Exam Control / Dept of Roads
+    [85.32000, 27.68085],
+    // 60: Path going to canteen area
+    [85.32100, 27.68125],
+    // 61: Path junction near Locus Office / Electrical Dept
+    [85.31855, 27.68140],
   ];
 
   // ── Walkway Edges ─────────────────────────────────────────────────────────
-  // Each pair [a, b] means nodes a and b are connected by a walkable path.
-  // Distances are computed automatically via Haversine.
+  // Each pair [a, b] means nodes a and b are connected by a walkable road/path.
   static const List<List<int>> _edges = [
-    // Main entrance road → Dean Office / Cave
-    [0, 1], // Main Entrance → Cave
-    [0, 8], // Main Entrance → Badminton court junction
-    [1, 2], // Cave → Dean Office
-    [1, 3], // Cave → Architecture
-    [1, 5], // Cave → E Block
-    [2, 51], // Dean Office → High Voltage Lab
-    [2, 10], // Dean Office → Machine Workshop
-    [3, 5], // Architecture → E Block
-    [3, 52], // Architecture → MSC Hostel / Hydro Lab
-    [5, 52], // E Block → MSC Hostel
-    [51, 53], // High Voltage Lab → Dept of Roads
-    [51, 10], // High Voltage Lab → Machine Workshop
-    [53, 54], // Dept of Roads → Exam Control Office
-    // Central campus walkways
-    [6, 7], // Electrical/Block C → Fountain
-    [6, 8], // Electrical → Badminton court
-    [7, 4], // Fountain → ICTC
-    [7, 18], // Fountain → Saraswati Mandir
-    [7, 57], // Fountain → Nabil ATM
-    [57, 20], // Nabil ATM → Civil Dept
-    [57, 50], // Nabil ATM → Saheed Shukra Park
-    [50, 20], // Saheed Shukra Park → Civil Dept
-    [4, 14], // ICTC → First Entrance
-    [4, 6], // ICTC → Block C
-    [8, 9], // Badminton → Continuing Education
-    [9, 10], // Continuing Education → Machine Workshop
-    [9, 11], // Continuing Education → Library
-    [10, 11], // Machine Workshop → Library / Clinic
-    [11, 12], // Library → Water Vending
-    [12, 13], // Water Vending → Om Stationery
-    [13, 15], // Om Stationery → Second Entrance
-    [14, 15], // First Entrance → Second Entrance
-    [14, 18], // First Entrance → Saraswati Mandir
-    [15, 16], // Second Entrance → Parking
-    [15, 17], // Second Entrance → Helicopter Parking
-    [16, 17], // Parking → Helicopter Parking
-    [16, 25], // Parking → Heavy Lab Block
-    [17, 19], // Helicopter Parking → PI Chautari
-    [18, 21], // Saraswati Mandir → F Block
-    [18, 20], // Saraswati Mandir → Civil Dept
-    [19, 21], // PI Chautari → F Block
-    [19, 22], // PI Chautari → Applied Sciences
-    [20, 21], // Civil Dept → F Block
-    [21, 24], // F Block → CIDS
-    [22, 23], // Applied Sciences → G Block
-    [22, 24], // Applied Sciences → CIDS
-    [23, 32], // G Block → Hydropower Testing Lab
-    [24, 30], // CIDS → Science & Humanities
-    [23, 30], // G Block → Science & Humanities
-    // East campus (labs and departments)
-    [25, 26], // Heavy Lab Block → Heavy Lab
-    [26, 27], // Heavy Lab → Mech Dept (east)
-    [27, 28], // Mech Dept → The Helm
-    [28, 34], // The Helm → Suspension Bridge
-    [28, 29], // The Helm → FSU / Parking
-    [29, 55], // FSU → NTBNS
-    [29, 56], // FSU → Pulchowk Girls
-    [55, 30], // NTBNS → Science & Humanities
-    [56, 33], // Pulchowk Girls → Paraphet
-    [30, 31], // Science & Humanities → Energy Studies
-    [31, 32], // Energy Studies → Hydropower
-    [33, 34], // Paraphet → Suspension Bridge
-    [33, 35], // Paraphet → Cricket Ground
-    [34, 49], // Suspension Bridge → Football Ground
-    // Sports / east-central area
-    [35, 47], // Cricket Ground → Girls Hostel
-    [36, 37], // Volleyball Court → Basketball Court
-    [37, 38], // Basketball → Calisthenics
-    [38, 39], // Calisthenics → Niraula Store
-    [39, 40], // Niraula Store → Chem Lab
-    [40, 42], // Chem Lab → Garden Area
-    [42, 43], // Garden → Hostel Block C
-    [41, 43], // Canteen → Hostel Block C
-    [43, 44], // Hostel C → Hostel B
-    [44, 46], // Hostel B → Hostel A
-    [46, 45], // Hostel A → Staff Quarter
-    [45, 47], // Staff Quarter → Girls Hostel
-    [47, 48], // Girls Hostel → Teacher's Quarter
-    [49, 36], // Football → Volleyball
-    [49, 33], // Football → Paraphet
-    [36, 46], // Volleyball → Hostel A
-    [25, 13], // Heavy Lab Block → Om Stationery
-    // Cross connections for better routing
-    [13, 16], // Om Stationery → Parking
-    [27, 34], // Mech Dept → Suspension Bridge area
-    [29, 33], // FSU → Paraphet
-    [54, 41], // Exam Control → Canteen
-    [37, 34], // Basketball → Suspension Bridge
-    [35, 31], // Cricket Ground → Energy Studies
-    [19, 25], // PI Chautari → Heavy Lab Block
-    [41, 54], // Canteen → Exam Control
+    // Main gate area
+    [0, 8], // Gate → internal path north
+    [0, 1], // Gate → road south (cave direction)
+    [8, 9], // Internal path → Badminton junction
+    [8, 61], // Internal path → Locus junction
+    // South road (entrance road)
+    [1, 4], // Cave → Dean Office junction
+    [1, 2], // Cave → Architecture junction
+    [2, 3], // Architecture → MSC Hostel road
+    [4, 5], // Dean Office → HV Lab junction
+    [4, 7], // Dean Office → Machine Workshop
+    [4, 61], // Dean Office → Locus junction
+    [5, 6], // HV Lab → Workshop / Mess
+    [5, 59], // HV Lab → Dept of Roads road
+    [6, 7], // Workshop → Machine Workshop
+    [6, 12], // Workshop → Library path
+    [7, 11], // Machine Workshop → Continuing Ed
+    [7, 61], // Machine Workshop → Locus junction
+    // Central walkways
+    [9, 10], // Badminton → ICTC
+    [9, 19], // Badminton → Fountain area
+    [9, 61], // Badminton → Locus junction
+    [10, 11], // ICTC → Continuing Ed
+    [10, 15], // ICTC → First Entrance
+    [10, 19], // ICTC → Fountain area
+    [11, 12], // Continuing Ed → Library
+    [12, 13], // Library → Water Vending
+    [13, 14], // Water Vending → Om Stationery
+    [14, 16], // Om Stationery → Second Entrance
+    [14, 17], // Om Stationery → Parking
+    [15, 16], // First Entrance → Second Entrance
+    [15, 22], // First Entrance → Saraswati Mandir
+    [16, 17], // Second Entrance → Parking
+    [16, 18], // Second Entrance → Helicopter Parking
+    [17, 18], // Parking → Helicopter
+    [17, 30], // Parking → Heavy Lab Block
+    // Upper campus (north)
+    [18, 24], // Helicopter → D Block / Mech
+    [19, 20], // Fountain → Nabil ATM area
+    [19, 21], // Fountain → Embark area
+    [19, 22], // Fountain → Saraswati Mandir path
+    [20, 23], // Nabil ATM → Civil / Park
+    [20, 21], // Nabil ATM → Embark
+    [21, 22], // Embark → Saraswati Mandir
+    [22, 25], // Saraswati Mandir → F Block
+    [22, 24], // Saraswati Mandir → D Block
+    [23, 25], // Civil / Park → F Block
+    [24, 26], // D Block → PI Chautari
+    [24, 30], // D Block → Heavy Lab Block road
+    [25, 26], // F Block → PI Chautari
+    [25, 27], // F Block → CIDS
+    [26, 27], // PI Chautari → CIDS
+    [26, 29], // PI Chautari → Applied Sciences
+    [27, 28], // CIDS → G Block
+    [28, 29], // G Block → Applied Sciences
+    [28, 39], // G Block → Hydropower Testing
+    [29, 37], // Applied Sciences → Science & Humanities
+    // East campus (labs road)
+    [30, 31], // Heavy Lab Block → Heavy Lab
+    [31, 32], // Heavy Lab → Mech Dept (east)
+    [32, 33], // Mech Dept → Helm area
+    [33, 34], // Helm → Suspension Bridge
+    [33, 35], // Helm → FSU junction
+    [34, 41], // Suspension Bridge → Changing Room
+    [35, 40], // FSU → NTBNS/Girls office
+    [35, 36], // FSU → Paraphet
+    [36, 41], // Paraphet → Changing Room
+    [36, 43], // Paraphet → Cricket Ground
+    [37, 38], // Science & Humanities → Energy Studies
+    [37, 40], // Science & Humanities → NTBNS junction
+    [38, 39], // Energy Studies → Hydropower
+    [38, 43], // Energy Studies → Cricket Ground
+    // Sports area
+    [41, 42], // Changing Room → Football (west)
+    [42, 44], // Football → Basketball
+    [42, 57], // Football → Football (east)
+    [44, 46], // Basketball → Calisthenics
+    [46, 48], // Calisthenics → Music Club / Niraula
+    [45, 53], // Volleyball → Hostel A
+    [45, 57], // Volleyball → Football (east)
+    [57, 58], // Football (east) → Cricket pitch
+    [58, 55], // Cricket pitch → Girls Hostel
+    [43, 38], // Cricket Ground → Energy Studies
+    [43, 55], // Cricket Ground → Girls Hostel
+    // Hostel / canteen area roads
+    [47, 60], // Exam Control → canteen path
+    [59, 47], // Dept of Roads road → Exam Control
+    [60, 50], // Canteen path → Gym Hall
+    [48, 49], // Music Club → Chem Lab
+    [49, 50], // Chem Lab → Gym Hall
+    [50, 51], // Gym Hall → Hostel C
+    [51, 52], // Hostel C → Hostel B
+    [52, 53], // Hostel B → Hostel A
+    [53, 54], // Hostel A → Staff Quarter
+    [54, 55], // Staff Quarter → Girls Hostel
+    [55, 56], // Girls Hostel → Teacher's Quarter
+    // Cross connections
+    [36, 57], // Paraphet → Football east
+    [44, 34], // Basketball → Suspension Bridge area
+    [46, 45], // Calisthenics → Volleyball
+    [42, 36], // Football west → Paraphet
+    [48, 46], // Music Club → Calisthenics
   ];
 
   // ── Haversine Distance ────────────────────────────────────────────────────
@@ -246,8 +277,6 @@ class CampusRouter {
   /// Find the route between two arbitrary [lng, lat] points.
   ///
   /// Returns `null` if no path can be found.
-  /// The result is a [CampusRoute] containing the path as [LatLng] list,
-  /// total distance in meters, and estimated walk time.
   static CampusRoute? findRoute(
     List<double> startCoords,
     List<double> endCoords,
@@ -257,7 +286,6 @@ class CampusRouter {
     final endNode = _findNearestNode(endCoords);
 
     if (startNode == endNode) {
-      // Same node — return direct line
       final dist = _haversine(startCoords, endCoords);
       return CampusRoute(
         points: [
@@ -284,11 +312,9 @@ class CampusRouter {
     final visited = List.filled(n, false);
     dist[startNode] = 0;
 
-    // Simple priority queue using a sorted list
     final pq = <_PQEntry>[_PQEntry(startNode, 0)];
 
     while (pq.isNotEmpty) {
-      // Extract min
       pq.sort((a, b) => a.dist.compareTo(b.dist));
       final current = pq.removeAt(0);
       final u = current.node;
@@ -308,7 +334,7 @@ class CampusRouter {
       }
     }
 
-    if (dist[endNode] == double.infinity) return null; // No path
+    if (dist[endNode] == double.infinity) return null;
 
     // 4. Reconstruct path
     final path = <int>[];
@@ -317,18 +343,16 @@ class CampusRouter {
       path.add(current);
       current = prev[current];
     }
-    path.reversed; // in-place won't work, need to create reversed list
 
     final pathNodes = path.reversed.toList();
 
-    // 5. Build LatLng list: start → graph nodes → end
+    // 5. Build LatLng list: start point → graph path nodes → end point
     final points = <LatLng>[LatLng(startCoords[1], startCoords[0])];
     for (final nodeIdx in pathNodes) {
       points.add(LatLng(_nodes[nodeIdx][1], _nodes[nodeIdx][0]));
     }
     points.add(LatLng(endCoords[1], endCoords[0]));
 
-    // Total distance = snap-to-start + graph path + snap-to-end
     final snapStartDist = _haversine(startCoords, _nodes[startNode]);
     final snapEndDist = _haversine(_nodes[endNode], endCoords);
     final totalDist = snapStartDist + dist[endNode] + snapEndDist;
@@ -336,7 +360,6 @@ class CampusRouter {
     return CampusRoute(points: points, distanceMeters: totalDist);
   }
 
-  /// Find the graph node nearest to the given coordinates.
   static int _findNearestNode(List<double> coords) {
     int nearest = 0;
     double minDist = double.infinity;
@@ -356,7 +379,6 @@ class CampusRoute {
   final List<LatLng> points;
   final double distanceMeters;
 
-  /// Estimated walking time in seconds (assuming 1.2 m/s walking speed).
   double get walkTimeSeconds => distanceMeters / 1.2;
 
   String get formattedDistance => distanceMeters < 1000
@@ -370,14 +392,12 @@ class CampusRoute {
   const CampusRoute({required this.points, required this.distanceMeters});
 }
 
-/// Internal edge representation for the adjacency list.
 class _Edge {
   final int to;
   final double weight;
   const _Edge(this.to, this.weight);
 }
 
-/// Internal priority queue entry.
 class _PQEntry {
   final int node;
   final double dist;

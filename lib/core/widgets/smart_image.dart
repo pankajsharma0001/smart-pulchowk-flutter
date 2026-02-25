@@ -87,44 +87,47 @@ class SmartImage extends StatelessWidget {
           height: height,
           fit: fit,
           progressIndicatorBuilder: showProgress
-              ? (context, url, progress) => Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    ShimmerWrapper(
-                      child: Skeleton(
-                        width: width,
-                        height: height,
-                        borderRadius: borderRadius,
-                        shape: shape,
+              ? (context, url, progress) {
+                  final pColor = Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white70
+                      : Theme.of(context).primaryColor;
+                  return Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ShimmerWrapper(
+                        child: Skeleton(
+                          width: width,
+                          height: height,
+                          borderRadius: borderRadius,
+                          shape: shape,
+                        ),
                       ),
-                    ),
-                    Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          CircularProgressIndicator(
-                            value: progress.progress,
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Theme.of(context).primaryColor,
+                      Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircularProgressIndicator(
+                              value: progress.progress,
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(pColor),
                             ),
-                          ),
-                          if (progress.progress != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              '${(progress.progress! * 100).toInt()}%',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).primaryColor,
+                            if (progress.progress != null) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                '${(progress.progress! * 100).toInt()}%',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: pColor,
+                                ),
                               ),
-                            ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
-                    ),
-                  ],
-                )
+                    ],
+                  );
+                }
               : null,
           placeholder: showProgress
               ? null

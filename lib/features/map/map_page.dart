@@ -955,21 +955,7 @@ class _MapPageState extends State<MapPage> {
       return;
     }
 
-    // 1. Try Dijkstra's algorithm (works offline)
-    final campusRoute = CampusRouter.findRoute(sc, ec);
-    if (campusRoute != null && campusRoute.distanceMeters < straight * 5) {
-      setState(() {
-        _routeCoordinates = campusRoute.points;
-        _routeDistance = campusRoute.formattedDistance;
-        _routeDuration = campusRoute.formattedDuration;
-        _isNavigationPanelExpanded = false;
-      });
-      _drawRoute();
-      setState(() => _isCalculatingRoute = false);
-      return;
-    }
-
-    // 2. Fallback: Try OSRM (online only)
+    // 1. Try OSRM (online — best quality routes)
     final url =
         'https://router.project-osrm.org/route/v1/foot/${sc[0]},${sc[1]};${ec[0]},${ec[1]}?overview=full&geometries=geojson&radiuses=200;200';
     try {
@@ -985,9 +971,7 @@ class _MapPageState extends State<MapPage> {
               .map<LatLng>((c) => LatLng(c[1], c[0]))
               .toList();
           final distance = route['distance'] as num;
-          if (distance > 2000 || distance > straight * 3) {
-            _createStraightLine(sc, ec, straight);
-          } else {
+          if (distance <= 2000 && distance <= straight * 3) {
             setState(() {
               _routeCoordinates = coords;
               _routeDistance = distance < 1000
@@ -997,22 +981,35 @@ class _MapPageState extends State<MapPage> {
               _routeDuration = secs < 60
                   ? '${secs.round()} sec'
                   : '${(secs / 60).round()} min';
-              _isNavigationPanelExpanded =
-                  false; // Auto-collapse when route found
+              _isNavigationPanelExpanded = false;
             });
             _drawRoute();
+            setState(() => _isCalculatingRoute = false);
+            return;
           }
-        } else {
-          _createStraightLine(sc, ec, straight);
         }
-      } else {
-        _createStraightLine(sc, ec, straight);
       }
     } catch (_) {
-      _createStraightLine(sc, ec, straight);
-    } finally {
-      setState(() => _isCalculatingRoute = false);
+      // OSRM failed (offline or timeout) — fall through to Dijkstra
     }
+
+    // 2. Fallback: Dijkstra campus routing (works offline)
+    final campusRoute = CampusRouter.findRoute(sc, ec);
+    if (campusRoute != null && campusRoute.distanceMeters < straight * 5) {
+      setState(() {
+        _routeCoordinates = campusRoute.points;
+        _routeDistance = campusRoute.formattedDistance;
+        _routeDuration = campusRoute.formattedDuration;
+        _isNavigationPanelExpanded = false;
+      });
+      _drawRoute();
+      setState(() => _isCalculatingRoute = false);
+      return;
+    }
+
+    // 3. Final fallback: Straight line
+    _createStraightLine(sc, ec, straight);
+    setState(() => _isCalculatingRoute = false);
   }
 
   void _createStraightLine(
