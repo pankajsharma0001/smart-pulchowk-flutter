@@ -45,12 +45,17 @@ class _AdminPageState extends State<AdminPage>
           ),
           bottom: TabBar(
             controller: _tabController,
-            isScrollable: true,
+            isScrollable: false, // Make tabs fill the row
             labelColor: AppColors.secondary,
             unselectedLabelColor: AppColors.textSecondary.withValues(
               alpha: 0.7,
             ),
             indicatorColor: AppColors.secondary,
+            labelStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ), // Slightly smaller font for better fit
+            unselectedLabelStyle: const TextStyle(fontSize: 12),
             tabs: const [
               Tab(text: 'Overview'),
               Tab(text: 'User Roles'),

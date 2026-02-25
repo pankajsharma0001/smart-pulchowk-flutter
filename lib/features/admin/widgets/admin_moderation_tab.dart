@@ -108,28 +108,50 @@ class _AdminModerationTabState extends State<AdminModerationTab>
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
-          child: SegmentedButton<String>(
-            segments: const [
-              ButtonSegment(
-                value: 'open',
-                label: Text('Open'),
-                icon: Icon(Icons.error_outline),
-              ),
-              ButtonSegment(
-                value: 'in_review',
-                label: Text('Reviewing'),
-                icon: Icon(Icons.pending_outlined),
-              ),
-              ButtonSegment(
-                value: 'resolved',
-                label: Text('Resolved'),
-                icon: Icon(Icons.check_circle_outline),
-              ),
-            ],
-            selected: {_selectedStatus},
-            onSelectionChanged: (newSelection) {
-              setState(() => _selectedStatus = newSelection.first);
-              _fetchReports();
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final bool showIcons = constraints.maxWidth > 400;
+              return SizedBox(
+                width: double.infinity,
+                child: SegmentedButton<String>(
+                  style: SegmentedButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                  ),
+                  segments: [
+                    ButtonSegment(
+                      value: 'open',
+                      label: const Text('Open', style: TextStyle(fontSize: 12)),
+                      icon: showIcons ? const Icon(Icons.error_outline) : null,
+                    ),
+                    ButtonSegment(
+                      value: 'in_review',
+                      label: const Text(
+                        'Reviewing',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      icon: showIcons
+                          ? const Icon(Icons.pending_outlined)
+                          : null,
+                    ),
+                    ButtonSegment(
+                      value: 'resolved',
+                      label: const Text(
+                        'Resolved',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      icon: showIcons
+                          ? const Icon(Icons.check_circle_outline)
+                          : null,
+                    ),
+                  ],
+                  selected: {_selectedStatus},
+                  onSelectionChanged: (newSelection) {
+                    setState(() => _selectedStatus = newSelection.first);
+                    _fetchReports();
+                  },
+                ),
+              );
             },
           ),
         ),

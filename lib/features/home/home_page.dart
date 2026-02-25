@@ -346,28 +346,54 @@ class _RegisteredEventsLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Skeleton(height: 12, width: 120),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: _SectionLabel(label: 'Your Registrations'),
         ),
         const SizedBox(height: AppSpacing.md),
         SizedBox(
-          height: 80,
+          height: 100,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             itemCount: 2,
             itemBuilder: (context, index) => Padding(
               padding: const EdgeInsets.only(right: 12),
-              child: ShimmerWrapper(
-                child: Container(
-                  width: 200,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: MediaQuery.of(context).size.width * 0.8,
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.surfaceDark.withValues(alpha: 0.2)
+                      : Colors.white.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color:
+                        (isDark ? AppColors.borderDark : AppColors.borderLight)
+                            .withValues(alpha: 0.3),
+                  ),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: const ShimmerWrapper(
+                  child: Row(
+                    children: [
+                      Skeleton(width: 48, height: 48, borderRadius: 14),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Skeleton(height: 14, width: 140, borderRadius: 6),
+                            SizedBox(height: 8),
+                            Skeleton(height: 10, width: 100, borderRadius: 5),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
@@ -385,17 +411,50 @@ class _NextEventLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: Skeleton(height: 12, width: 100),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: _SectionLabel(label: 'Next Event'),
         ),
         const SizedBox(height: AppSpacing.md),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          child: ShimmerWrapper(child: Skeleton(height: 100, borderRadius: 20)),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppColors.surfaceDark.withValues(alpha: 0.2)
+                  : Colors.white.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: (isDark ? AppColors.borderDark : AppColors.borderLight)
+                    .withValues(alpha: 0.3),
+              ),
+            ),
+            child: const ShimmerWrapper(
+              child: Row(
+                children: [
+                  Skeleton(width: 48, height: 48, borderRadius: 14),
+                  SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Skeleton(height: 14, width: 180, borderRadius: 6),
+                        SizedBox(height: 8),
+                        Skeleton(height: 10, width: 120, borderRadius: 5),
+                      ],
+                    ),
+                  ),
+                  Skeleton(width: 20, height: 20, borderRadius: 4),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );

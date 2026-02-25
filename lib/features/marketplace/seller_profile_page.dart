@@ -121,7 +121,7 @@ class _SellerProfilePageState extends State<SellerProfilePage>
 
   Widget _buildAppBar(BuildContext context, bool isDark, ColorScheme cs) {
     return SliverAppBar(
-      expandedHeight: 180,
+      expandedHeight: 220, // Increased for more room
       pinned: true,
       elevation: 0,
       backgroundColor: isDark ? AppColors.cardDark : Colors.white,
@@ -146,67 +146,85 @@ class _SellerProfilePageState extends State<SellerProfilePage>
                 ),
               ),
             ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const SizedBox(height: 48),
-                Hero(
-                  tag: 'seller_avatar_${widget.sellerId}',
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 4),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 48),
+                  Hero(
+                    tag: 'seller_avatar_${widget.sellerId}',
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 4),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: SmartImage(
+                        imageUrl: widget.sellerImage,
+                        width: 72,
+                        height: 72,
+                        shape: BoxShape.circle,
+                        errorWidget: Icon(
+                          Icons.person,
+                          size: 36,
+                          color: cs.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    widget.sellerName ?? 'Seller Profile',
+                    style: AppTextStyles.h5.copyWith(
+                      color: isDark ? Colors.white : Colors.black,
+                      fontWeight: FontWeight.w900,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  if (widget.isVerified) ...[
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.verified_rounded,
+                              size: 14,
+                              color: Colors.blue,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Verified Seller',
+                              style: AppTextStyles.caption.copyWith(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Active Member',
+                          style: AppTextStyles.overline.copyWith(
+                            color: isDark ? Colors.white54 : Colors.black54,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                       ],
                     ),
-                    child: SmartImage(
-                      imageUrl: widget.sellerImage,
-                      width: 72,
-                      height: 72,
-                      shape: BoxShape.circle,
-                      errorWidget: Icon(
-                        Icons.person,
-                        size: 36,
-                        color: cs.primary,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  widget.sellerName ?? 'Seller Profile',
-                  style: AppTextStyles.h5.copyWith(
-                    color: isDark ? Colors.white : Colors.black,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                if (widget.isVerified) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.verified_rounded,
-                        size: 14,
-                        color: Colors.blue,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Verified Seller',
-                        style: AppTextStyles.caption.copyWith(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ],
         ),

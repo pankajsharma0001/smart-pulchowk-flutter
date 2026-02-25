@@ -27,8 +27,8 @@ class Skeleton extends StatelessWidget {
       margin: margin,
       decoration: BoxDecoration(
         color: isDark
-            ? Colors.white.withValues(alpha: 0.30)
-            : Colors.black.withValues(alpha: 0.18),
+            ? Colors.white.withValues(alpha: 0.12) // Subtler for dark mode
+            : Colors.black.withValues(alpha: 0.08), // Subtler for light mode
         borderRadius: shape == BoxShape.circle
             ? null
             : BorderRadius.circular(borderRadius),
@@ -48,10 +48,10 @@ class ShimmerWrapper extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Shimmer.fromColors(
-      baseColor: isDark ? const Color(0xFF252538) : const Color(0xFFE0E0EA),
+      baseColor: isDark ? const Color(0xFF1E1E2E) : const Color(0xFFE2E8F0),
       highlightColor: isDark
-          ? const Color(0xFF404060)
-          : const Color(0xFFF8F8FF),
+          ? const Color(0xFF323248)
+          : const Color(0xFFF1F5F9),
       period: const Duration(milliseconds: 1200),
       direction: ShimmerDirection.ltr,
       child: child,
