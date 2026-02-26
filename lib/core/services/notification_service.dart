@@ -40,7 +40,23 @@ class NotificationService {
     try {
       debugPrint('NotificationService: Starting initialization...');
 
-      // 1. Initialize local notifications FIRST
+      // Handle cold-start payload FIRST, before any async work,
+      // so it's available by the time MainLayout mounts.
+      // This avoids a race condition where runApp() fires before
+      // _pendingPayload is set.
+      final coldStartMessage =
+          initialMessage ?? await _messaging.getInitialMessage();
+      if (coldStartMessage != null) {
+        debugPrint(
+          'Notification clicked from terminated: ${coldStartMessage.data}',
+        );
+        _pendingPayload = coldStartMessage.data;
+        ApiService.invalidateNotificationsCache().catchError(
+          (e) => debugPrint('NotificationService: Cache Error: $e'),
+        );
+      }
+
+      // 1. Initialize local notifications
       try {
         const AndroidInitializationSettings initializationSettingsAndroid =
             AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -163,7 +179,7 @@ class NotificationService {
         }
       });
 
-      // 1. Listen to background notification clicks (App in background)
+      // Background notification clicks (App in background)
       FirebaseMessaging.onMessageOpenedApp.listen((
         RemoteMessage message,
       ) async {
@@ -172,15 +188,6 @@ class NotificationService {
         _refreshStreamController.add(null);
         _handleOrQueuePayload(message.data);
       });
-
-      // 2. Handle initial notification (App terminated)
-      final message = initialMessage ?? await _messaging.getInitialMessage();
-      if (message != null) {
-        debugPrint('Notification clicked from terminated: ${message.data}');
-        // Store as pending — MainLayout is not mounted yet during main()
-        await ApiService.invalidateNotificationsCache();
-        _pendingPayload = message.data;
-      }
 
       // Listen to token refresh
       FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
