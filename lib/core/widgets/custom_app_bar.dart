@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/core/widgets/smart_image.dart';
@@ -11,6 +12,7 @@ import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/services/auth_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:smart_pulchowk/features/settings/help_center_page.dart';
+import 'package:smart_pulchowk/core/services/notification_service.dart';
 
 enum AppPage {
   home,
@@ -249,28 +251,35 @@ class _NotificationBellState extends State<_NotificationBell> {
   final ApiService _api = ApiService();
   int _unreadCount = 0;
   bool _isDisposed = false;
+  Timer? _periodicTimer;
+  StreamSubscription<void>? _refreshSubscription;
+  bool _isRefreshingCount = false;
 
   @override
   void initState() {
     super.initState();
     _fetchUnreadCount();
-    // Periodically fetch in background while app is active
+    _refreshSubscription = NotificationService.refreshStream.listen((_) {
+      _refreshUnreadWithRetry();
+    });
     _startPeriodicFetch();
   }
 
   @override
   void dispose() {
     _isDisposed = true;
+    _periodicTimer?.cancel();
+    _refreshSubscription?.cancel();
     super.dispose();
   }
 
-  void _startPeriodicFetch() async {
-    while (!_isDisposed) {
-      await Future.delayed(const Duration(minutes: 2));
+  void _startPeriodicFetch() {
+    _periodicTimer?.cancel();
+    _periodicTimer = Timer.periodic(const Duration(minutes: 2), (_) {
       if (!_isDisposed && mounted) {
         _fetchUnreadCount();
       }
-    }
+    });
   }
 
   Future<void> _fetchUnreadCount() async {
@@ -282,6 +291,28 @@ class _NotificationBellState extends State<_NotificationBell> {
         });
       }
     } catch (_) {}
+  }
+
+  Future<void> _refreshUnreadWithRetry() async {
+    if (_isRefreshingCount || _isDisposed || !mounted) return;
+    _isRefreshingCount = true;
+    final previous = _unreadCount;
+    try {
+      for (int attempt = 0; attempt < 3; attempt++) {
+        final notifications = await _api.getNotifications(
+          forceRefresh: true,
+        );
+        if (!mounted || _isDisposed) return;
+        final unread = notifications.where((n) => !n.isRead).length;
+        if (unread != previous || attempt == 2) {
+          setState(() => _unreadCount = unread);
+          return;
+        }
+        await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
+      }
+    } catch (_) {} finally {
+      _isRefreshingCount = false;
+    }
   }
 
   @override

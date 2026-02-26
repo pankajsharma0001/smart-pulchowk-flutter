@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/theme/theme_provider.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
@@ -13,6 +15,73 @@ import 'package:smart_pulchowk/core/widgets/theme_change_animator.dart';
 import 'package:smart_pulchowk/core/services/connectivity_service.dart';
 import 'firebase_options.dart';
 
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // For notification payloads, OS already displays in background/terminated.
+  // We only render local notifications for data-only pushes.
+  if (message.notification != null) return;
+
+  final title =
+      message.data['title']?.toString() ??
+      message.data['notificationTitle']?.toString();
+  final body =
+      message.data['body']?.toString() ??
+      message.data['message']?.toString() ??
+      message.data['notificationBody']?.toString();
+
+  if ((title == null || title.isEmpty) && (body == null || body.isEmpty)) {
+    return;
+  }
+
+  final plugin = FlutterLocalNotificationsPlugin();
+  const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const darwinInit = DarwinInitializationSettings();
+  const initSettings = InitializationSettings(
+    android: androidInit,
+    iOS: darwinInit,
+  );
+  await plugin.initialize(initSettings);
+
+  final androidPlugin = plugin
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >();
+  await androidPlugin?.createNotificationChannel(
+    const AndroidNotificationChannel(
+      'high_importance_channel',
+      'High Importance Notifications',
+      description: 'This channel is used for important notifications.',
+      importance: Importance.max,
+    ),
+  );
+
+  await plugin.show(
+    message.hashCode,
+    title,
+    body,
+    const NotificationDetails(
+      android: AndroidNotificationDetails(
+        'high_importance_channel',
+        'High Importance Notifications',
+        importance: Importance.max,
+        priority: Priority.high,
+        showWhen: true,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      ),
+    ),
+    payload: Uri(
+      queryParameters: message.data.map((k, v) => MapEntry(k, v.toString())),
+    ).query,
+  );
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   bool firebaseInitialized = false;
@@ -23,6 +92,9 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     firebaseInitialized = true;
+
+    // Register background handler after initialization
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   } catch (e) {
     debugPrint('Firebase initialization failed: $e');
   }
@@ -35,11 +107,29 @@ void main() async {
   final favoritesProvider = FavoritesProvider();
   haptics.init(themeProvider);
 
-  // Initialize async services (non-blocking)
+  // Initialize notification services
   if (firebaseInitialized) {
-    NotificationService.initialize().catchError(
-      (e) => debugPrint('Notification initialization failed: $e'),
-    );
+    // Capture cold-start notification BEFORE runApp() so the payload
+    // is guaranteed to be available when MainLayout mounts.
+    RemoteMessage? initialMessage;
+    try {
+      initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+    } catch (e) {
+      debugPrint('Failed to get initial message: $e');
+    }
+
+    // Initialize notification service (attaches listeners, creates channels)
+    // and pass the pre-captured initial message.
+    NotificationService.initialize(initialMessage: initialMessage)
+        .then((_) {
+          NotificationService.ensurePermission().then((granted) {
+            if (granted) NotificationService.syncSubscriptions();
+          });
+        })
+        .catchError((e) {
+          debugPrint('Notification initialization failed: $e');
+        });
+
     AnalyticsService.logAppOpen().catchError(
       (e) => debugPrint('Analytics logAppOpen failed: $e'),
     );
@@ -51,14 +141,6 @@ void main() async {
       favoritesProvider: favoritesProvider,
     ),
   );
-
-  // Request notification permission after the first frame so the prompt is shown.
-  WidgetsBinding.instance.addPostFrameCallback((_) async {
-    final granted = await NotificationService.ensurePermission();
-    if (granted) {
-      await NotificationService.syncSubscriptions();
-    }
-  });
 }
 
 class SmartPulchowkApp extends StatelessWidget {

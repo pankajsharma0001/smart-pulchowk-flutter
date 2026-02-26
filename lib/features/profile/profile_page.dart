@@ -1043,66 +1043,154 @@ class _ProfilePageState extends State<ProfilePage>
     return ShimmerWrapper(
       child: CustomScrollView(
         slivers: [
+          // Header shimmer
           SliverToBoxAdapter(
             child: Container(
               height: 250,
               padding: const EdgeInsets.symmetric(vertical: 40),
-              child: const Column(
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Skeleton(height: 88, width: 88, borderRadius: 44),
-                  SizedBox(height: 16),
-                  Skeleton(height: 24, width: 150),
-                  SizedBox(height: 8),
-                  Skeleton(height: 14, width: 200),
+                  const Skeleton(height: 88, width: 88, borderRadius: 44),
+                  const SizedBox(height: 16),
+                  const Skeleton(height: 24, width: 150),
+                  const SizedBox(height: 8),
+                  const Skeleton(height: 14, width: 200),
+                  const SizedBox(height: 12),
+                  // Role badge skeleton
+                  Skeleton(
+                    height: 22,
+                    width: 70,
+                    borderRadius: 11,
+                    margin: const EdgeInsets.symmetric(horizontal: 5),
+                  ),
                 ],
               ),
             ),
           ),
+
+          // Stats card shimmer
           SliverToBoxAdapter(
             child: Container(
               margin: const EdgeInsets.all(16),
-              height: 120,
+              padding: const EdgeInsets.all(20),
+              height: 130,
               decoration: BoxDecoration(
                 color: isDark ? AppColors.cardDark : Colors.white,
                 borderRadius: AppRadius.lgAll,
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(
-                  4,
-                  (index) => const Skeleton(height: 50, width: 55),
-                ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: List.generate(
+                      4,
+                      (index) => const Column(
+                        children: [
+                          Skeleton(
+                            height: 40,
+                            width: 40,
+                            shape: BoxShape.circle,
+                          ),
+                          SizedBox(height: 8),
+                          Skeleton(height: 14, width: 30),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  // Member since skeleton
+                  const Row(
+                    children: [
+                      Skeleton(height: 12, width: 12, shape: BoxShape.circle),
+                      SizedBox(width: 8),
+                      Skeleton(height: 12, width: 140),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
+
+          // TabBar shimmer
           SliverToBoxAdapter(
             child: Container(
               height: 48,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  Skeleton(height: 30, width: 100, borderRadius: 15),
-                  const SizedBox(width: 8),
-                  Skeleton(height: 30, width: 80, borderRadius: 15),
-                  const SizedBox(width: 8),
-                  Skeleton(height: 30, width: 60, borderRadius: 15),
+                  Skeleton(height: 16, width: 80, borderRadius: 8),
+                  const SizedBox(width: 24),
+                  Skeleton(height: 16, width: 60, borderRadius: 8),
+                  const SizedBox(width: 24),
+                  Skeleton(height: 16, width: 50, borderRadius: 8),
+                  const SizedBox(width: 24),
+                  Skeleton(height: 16, width: 70, borderRadius: 8),
                 ],
               ),
             ),
           ),
+
+          // Body shimmer (Horizontal cards)
           SliverPadding(
             padding: const EdgeInsets.all(16),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.7,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-              ),
+            sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
-                (context, index) => const Skeleton(borderRadius: 12),
-                childCount: 4,
+                (context, index) => Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  height: 110,
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.cardDark : Colors.white,
+                    borderRadius: AppRadius.mdAll,
+                  ),
+                  child: Row(
+                    children: [
+                      const Skeleton(
+                        width: 90,
+                        height: double.infinity,
+                        borderRadius: 0,
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Skeleton(height: 14, width: 120),
+                                  const Spacer(),
+                                  Skeleton(
+                                    height: 14,
+                                    width: 60,
+                                    borderRadius: 4,
+                                  ),
+                                ],
+                              ),
+                              const Spacer(),
+                              Row(
+                                children: [
+                                  Skeleton(
+                                    height: 16,
+                                    width: 50,
+                                    borderRadius: 4,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Skeleton(
+                                    height: 16,
+                                    width: 50,
+                                    borderRadius: 4,
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                childCount: 3,
               ),
             ),
           ),

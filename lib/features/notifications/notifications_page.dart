@@ -27,6 +27,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
   final ScrollController _scrollController = ScrollController();
   late ConfettiController _confettiController;
   StreamSubscription<void>? _refreshSubscription;
+  Timer? _streamRefreshDebounce;
+  bool _isRefreshingFromStream = false;
 
   bool _isLoading = true;
   bool _isLoadingMore = false;
@@ -42,25 +44,25 @@ class _NotificationsPageState extends State<NotificationsPage> {
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 2),
     );
-    _loadNotifications();
+    _loadOnOpen();
     _scrollController.addListener(_onScroll);
 
     // Listen for incoming notifications to refresh the list automatically
-    _refreshSubscription = NotificationService.refreshStream.listen((_) async {
-      if (mounted) {
-        debugPrint(
-          'NotificationsPage: Foreground notification received. Refreshing in 1s...',
-        );
-        // Small delay to ensure backend has finished processing/creating the in-app record
-        await Future.delayed(const Duration(seconds: 1));
-        if (mounted) _loadNotifications(silent: true);
-      }
+    _refreshSubscription = NotificationService.refreshStream.listen((_) {
+      if (!mounted) return;
+      // Debounce burst notifications and refresh once.
+      _streamRefreshDebounce?.cancel();
+      _streamRefreshDebounce = Timer(
+        const Duration(milliseconds: 350),
+        _refreshFromIncomingNotification,
+      );
     });
   }
 
   @override
   void dispose() {
     _refreshSubscription?.cancel();
+    _streamRefreshDebounce?.cancel();
     _scrollController.dispose();
     _confettiController.dispose();
     super.dispose();
@@ -76,7 +78,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
-  Future<void> _loadNotifications({bool silent = false}) async {
+  Future<void> _loadNotifications({
+    bool silent = false,
+    bool syncRole = false,
+  }) async {
     if (!silent) {
       setState(() {
         _isLoading = true;
@@ -85,7 +90,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       });
     }
 
-    if (silent && mounted) {
+    if (silent && syncRole && mounted) {
       debugPrint('NotificationsPage: Manual refresh. Syncing role...');
       await MainLayout.of(context)?.refreshUserRole();
       if (!mounted) return;
@@ -107,6 +112,62 @@ class _NotificationsPageState extends State<NotificationsPage> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadOnOpen() async {
+    try {
+      final data = await _api.getNotifications(limit: _limit, offset: 0);
+      if (mounted) {
+        setState(() {
+          _notifications = data;
+          _isLoading = false;
+          _offset = data.length;
+          _hasMore = data.length >= _limit;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+
+    // Always refresh silently in background so newly inserted notifications appear.
+    _loadNotifications(silent: true);
+  }
+
+  Future<void> _refreshFromIncomingNotification() async {
+    if (!mounted || _isRefreshingFromStream) return;
+    _isRefreshingFromStream = true;
+    final previousTopId = _notifications.isNotEmpty ? _notifications.first.id : null;
+
+    try {
+      for (int attempt = 0; attempt < 3; attempt++) {
+        final data = await _api.getNotifications(
+          limit: _limit,
+          offset: 0,
+          forceRefresh: true,
+        );
+        if (!mounted) return;
+
+        final hasNewTop =
+            data.isNotEmpty && (previousTopId == null || data.first.id != previousTopId);
+        final hasMoreItems = data.length > _notifications.length;
+
+        if (hasNewTop || hasMoreItems || attempt == 2) {
+          setState(() {
+            _notifications = data;
+            _offset = data.length;
+            _hasMore = data.length >= _limit;
+            _isLoading = false;
+          });
+          return;
+        }
+
+        await Future.delayed(Duration(milliseconds: 700 * (attempt + 1)));
+      }
+    } catch (e) {
+      debugPrint('NotificationsPage: stream refresh failed: $e');
+    } finally {
+      _isRefreshingFromStream = false;
     }
   }
 
@@ -251,7 +312,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       body: Stack(
         children: [
           RefreshIndicator(
-            onRefresh: () => _loadNotifications(silent: true),
+            onRefresh: () => _loadNotifications(silent: true, syncRole: true),
             color: cs.primary,
             child: _isLoading
                 ? _buildLoading()

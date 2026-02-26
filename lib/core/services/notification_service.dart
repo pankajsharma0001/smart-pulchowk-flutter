@@ -14,6 +14,7 @@ class NotificationService {
   static final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+  static bool _initialized = false;
 
   /// Pending payload from a cold-start notification tap.
   /// Stored until MainLayout is ready to process it.
@@ -33,129 +34,153 @@ class NotificationService {
   static Stream<void> get refreshStream => _refreshStreamController.stream;
 
   /// Initialize notifications (permission request, channel setup).
-  static Future<void> initialize() async {
+  static Future<void> initialize({RemoteMessage? initialMessage}) async {
+    if (_initialized) return;
+    _initialized = true;
     try {
-      // Enable foreground notification presentation (critical for iOS)
-      await _messaging.setForegroundNotificationPresentationOptions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      debugPrint('NotificationService: Starting initialization...');
 
-      // Initialize local notifications
-      const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('@mipmap/ic_launcher');
-      const DarwinInitializationSettings initializationSettingsDarwin =
-          DarwinInitializationSettings();
-      const InitializationSettings initializationSettings =
-          InitializationSettings(
-            android: initializationSettingsAndroid,
-            iOS: initializationSettingsDarwin,
-          );
-      await _localNotifications.initialize(
-        initializationSettings,
-        onDidReceiveNotificationResponse: (details) {
-          if (details.payload != null) {
-            try {
-              final data = Map<String, dynamic>.from(
-                Uri.splitQueryString(details.payload!),
-              );
-              NavigationService.handleNotificationPayload(data);
-            } catch (e) {
-              debugPrint('Error handling local notification click: $e');
+      // 1. Initialize local notifications FIRST
+      try {
+        const AndroidInitializationSettings initializationSettingsAndroid =
+            AndroidInitializationSettings('@mipmap/ic_launcher');
+        const DarwinInitializationSettings initializationSettingsDarwin =
+            DarwinInitializationSettings();
+        const InitializationSettings initializationSettings =
+            InitializationSettings(
+              android: initializationSettingsAndroid,
+              iOS: initializationSettingsDarwin,
+            );
+        await _localNotifications.initialize(
+          initializationSettings,
+          onDidReceiveNotificationResponse: (details) {
+            if (details.payload != null) {
+              try {
+                final data = Map<String, dynamic>.from(
+                  Uri.splitQueryString(details.payload!),
+                );
+                _handleOrQueuePayload(data);
+              } catch (e) {
+                debugPrint('NotificationService: Local click handle error: $e');
+              }
             }
-          }
-        },
-      );
-
-      // Create high importance channel for Android
-      if (defaultTargetPlatform == TargetPlatform.android) {
-        final androidPlugin = _localNotifications
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >();
-        await androidPlugin?.createNotificationChannel(
-          const AndroidNotificationChannel(
-            'high_importance_channel',
-            'High Importance Notifications',
-            description: 'This channel is used for important notifications.',
-            importance: Importance.max,
-          ),
+          },
         );
+
+        // Create high importance channel for Android
+        if (defaultTargetPlatform == TargetPlatform.android) {
+          final androidPlugin = _localNotifications
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
+          await androidPlugin?.createNotificationChannel(
+            const AndroidNotificationChannel(
+              'high_importance_channel',
+              'High Importance Notifications',
+              description: 'This channel is used for important notifications.',
+              importance: Importance.max,
+            ),
+          );
+        }
+        debugPrint('NotificationService: Local notifications ready');
+      } catch (e) {
+        debugPrint('NotificationService: Local notifications init failed: $e');
       }
 
+      // 2. Enable foreground presentation options (Non-blocking preference)
+      _messaging
+          .setForegroundNotificationPresentationOptions(
+            alert: true,
+            badge: true,
+            sound: true,
+          )
+          .catchError(
+            (e) => debugPrint('FCM: Failed to set presentation options: $e'),
+          );
+
+      // 3. ATTACH LISTENERS
+      // Foreground messages
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+        try {
+          debugPrint('NotificationService: Foreground push received');
+
+          final type = message.data['type']?.toString() ?? '';
+
+          // Suppress only self-sent chat notifications.
+          if (type == 'chat_message' || type == 'chat_mention') {
+            String? currentUserId;
+            try {
+              currentUserId = await ApiService().getDbUserId();
+            } catch (_) {}
+
+            final senderId =
+                message.data['senderId']?.toString() ??
+                message.data['publisherId']?.toString();
+            if (currentUserId != null &&
+                senderId != null &&
+                currentUserId == senderId) {
+              debugPrint('NotificationService: Suppressing self chat push');
+              return;
+            }
+          }
+
+          final title =
+              message.notification?.title ?? message.data['title']?.toString();
+          final body =
+              message.notification?.body ?? message.data['body']?.toString();
+
+          if (title != null || body != null) {
+            await _localNotifications.show(
+              message.hashCode,
+              title,
+              body,
+              const NotificationDetails(
+                android: AndroidNotificationDetails(
+                  'high_importance_channel',
+                  'High Importance Notifications',
+                  importance: Importance.max,
+                  priority: Priority.high,
+                ),
+              ),
+              payload: Uri(
+                queryParameters: message.data.map(
+                  (k, v) => MapEntry(k, v.toString()),
+                ),
+              ).query,
+            );
+          }
+
+          if (type == 'chat_message' || type == 'chat_mention') {
+            _chatStreamController.add(message.data);
+          }
+          _refreshStreamController.add(null);
+
+          ApiService.invalidateNotificationsCache().catchError(
+            (e) => debugPrint('NotificationService: Cache Error: $e'),
+          );
+        } catch (e) {
+          debugPrint('NotificationService: Error in foreground listener: $e');
+        }
+      });
+
       // 1. Listen to background notification clicks (App in background)
-      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      FirebaseMessaging.onMessageOpenedApp.listen((
+        RemoteMessage message,
+      ) async {
         debugPrint('Notification clicked from background: ${message.data}');
-        NavigationService.handleNotificationPayload(message.data);
+        await ApiService.invalidateNotificationsCache();
+        _refreshStreamController.add(null);
+        _handleOrQueuePayload(message.data);
       });
 
       // 2. Handle initial notification (App terminated)
-      final initialMessage = await _messaging.getInitialMessage();
-      if (initialMessage != null) {
-        debugPrint(
-          'Notification clicked from terminated: ${initialMessage.data}',
-        );
+      final message = initialMessage ?? await _messaging.getInitialMessage();
+      if (message != null) {
+        debugPrint('Notification clicked from terminated: ${message.data}');
         // Store as pending — MainLayout is not mounted yet during main()
-        _pendingPayload = initialMessage.data;
+        await ApiService.invalidateNotificationsCache();
+        _pendingPayload = message.data;
       }
-
-      // Listen to foreground messages
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
-        debugPrint('Got a message whilst in the foreground!');
-        debugPrint('Message data: ${message.data}');
-
-        // Don't show notification if it's sent by the current user
-        final publisherId = message.data['publisherId']?.toString();
-        if (publisherId != null) {
-          final currentUserId = await ApiService().getDbUserId();
-          if (currentUserId == publisherId) {
-            debugPrint('Suppressing notification from self ($publisherId)');
-            return;
-          }
-        }
-
-        if (message.notification != null) {
-          debugPrint(
-            'Message also contained a notification: ${message.notification}',
-          );
-
-          // Show local notification for foreground visibility in status bar
-          _localNotifications.show(
-            message.hashCode,
-            message.notification?.title,
-            message.notification?.body,
-            const NotificationDetails(
-              android: AndroidNotificationDetails(
-                'high_importance_channel',
-                'High Importance Notifications',
-                importance: Importance.max,
-                priority: Priority.high,
-                showWhen: true,
-              ),
-              iOS: DarwinNotificationDetails(
-                presentAlert: true,
-                presentBadge: true,
-                presentSound: true,
-              ),
-            ),
-            payload: Uri(
-              queryParameters: message.data.map(
-                (k, v) => MapEntry(k, v.toString()),
-              ),
-            ).query,
-          );
-        }
-
-        // If it's a chat message, emit to our internal stream
-        final type = message.data['type'];
-        if (type == 'chat_message' || type == 'chat_mention') {
-          _chatStreamController.add(message.data);
-        }
-
-        // Trigger a global refresh for notification lists
-        _refreshStreamController.add(null);
-      });
 
       // Listen to token refresh
       FirebaseMessaging.instance.onTokenRefresh.listen((newToken) async {
@@ -181,18 +206,29 @@ class NotificationService {
     }
   }
 
+  static void _handleOrQueuePayload(Map<String, dynamic> data) {
+    if (NavigationService.isMainLayoutReady) {
+      NavigationService.handleNotificationPayload(data);
+      return;
+    }
+    _pendingPayload = data;
+    // MainLayout calls processPendingPayload() in initState; try once now too.
+    processPendingPayload();
+  }
+
   /// Process any pending notification payload from a cold-start tap.
   /// Should be called from MainLayout.initState() once the widget tree is ready.
   static void processPendingPayload() {
-    if (_pendingPayload != null) {
-      final payload = _pendingPayload!;
-      _pendingPayload = null;
-      debugPrint('Processing pending notification payload: ${payload['type']}');
-      // Short delay to ensure MainLayout navigation stack is fully initialized
-      Future.delayed(const Duration(milliseconds: 500), () {
-        NavigationService.handleNotificationPayload(payload);
-      });
-    }
+    if (_pendingPayload == null) return;
+    if (!NavigationService.isMainLayoutReady) return;
+
+    final payload = _pendingPayload!;
+    _pendingPayload = null;
+    debugPrint('Processing pending notification payload: ${payload['type']}');
+    // Short delay to ensure MainLayout navigation stack is fully initialized
+    Future.delayed(const Duration(milliseconds: 300), () {
+      NavigationService.handleNotificationPayload(payload);
+    });
   }
 
   /// Request notification permission if needed.

@@ -19,6 +19,10 @@ class NavigationService {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
+  /// Whether MainLayout is mounted and can accept tab-navigation commands.
+  static bool get isMainLayoutReady =>
+      MainLayout.mainLayoutKey.currentState != null;
+
   /// Handle navigation from an in-app notification tap.
   static void handleInAppNotification(InAppNotification notification) {
     _processAction(
@@ -43,7 +47,7 @@ class NavigationService {
     final t = type.toLowerCase();
 
     // 1. Marketplace & Books
-    if (t.contains('book') || t.contains('request_response')) {
+    if (t.contains('book')) {
       final idStr = data['listingId'] ?? data['bookId'];
       final id = int.tryParse(idStr?.toString() ?? '');
       if (id != null) {
@@ -77,8 +81,13 @@ class NavigationService {
     }
 
     // 2. Chat
-    if (t == 'chat' || t == 'message' || t.contains('chat_message')) {
-      final convId = int.tryParse(data['conversationId']?.toString() ?? '');
+    if (t == 'chat' ||
+        t == 'message' ||
+        t.contains('chat_message') ||
+        t.contains('chat_mention')) {
+      final convId = int.tryParse(
+        (data['conversationId'] ?? data['conversation_id'])?.toString() ?? '',
+      );
       final senderId = data['senderId']?.toString();
       final senderName = data['senderName']?.toString() ?? 'Chat';
       if (convId != null) {

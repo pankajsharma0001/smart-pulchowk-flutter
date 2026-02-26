@@ -83,6 +83,11 @@ class ApiService {
     await StorageService.deleteCacheByPrefix(prefix);
   }
 
+  /// Invalidate cached notifications list/pages.
+  static Future<void> invalidateNotificationsCache() async {
+    await _invalidateCachePrefix('notifications_');
+  }
+
   /// Clear all marketplace caches.
   static void invalidateMarketplaceCache() => _invalidateCachePrefix('mkt_');
 

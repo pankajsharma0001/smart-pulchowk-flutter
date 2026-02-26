@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:smart_pulchowk/core/theme/app_theme.dart';
 
 class Skeleton extends StatelessWidget {
   final double? height;
@@ -48,10 +49,12 @@ class ShimmerWrapper extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Shimmer.fromColors(
-      baseColor: isDark ? const Color(0xFF1E1E2E) : const Color(0xFFE2E8F0),
+      baseColor: isDark
+          ? AppColors.surfaceContainerDark
+          : AppColors.surfaceContainerHighLight,
       highlightColor: isDark
-          ? const Color(0xFF323248)
-          : const Color(0xFFF1F5F9),
+          ? AppColors.surfaceContainerHighDark
+          : AppColors.backgroundLight,
       period: const Duration(milliseconds: 1200),
       direction: ShimmerDirection.ltr,
       child: child,
