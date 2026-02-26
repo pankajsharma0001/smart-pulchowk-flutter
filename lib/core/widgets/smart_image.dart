@@ -46,29 +46,17 @@ class SmartImage extends StatelessWidget {
             width: isFiniteWidth ? width!.toInt() : null,
           )
         : ApiService.processImageUrl(imageUrl, optimizeCloudinary: false);
-
     if (processedUrl == null) return _buildError(context);
+    final String url = processedUrl;
 
-    final uri = Uri.tryParse(processedUrl);
+    final uri = Uri.tryParse(url);
     final isPortalTu =
         uri != null &&
         uri.host.toLowerCase() == 'portal.tu.edu.np' &&
         uri.scheme == 'https';
 
-    if (isPortalTu) {
-      return _PortalTlsFallbackImage(
-        imageUrl: processedUrl,
-        width: width,
-        height: height,
-        fit: fit,
-        borderRadius: borderRadius,
-        shape: shape,
-        errorWidget: errorWidget ?? _buildError(context),
-      );
-    }
-
     // Social media CDNs often block requests with custom User-Agents or specific headers
-    final isSocial = ApiService.isSocialMediaDomain(processedUrl);
+    final isSocial = ApiService.isSocialMediaDomain(url);
     final headers = isSocial ? null : AppConstants.imageHeaders;
 
     return ClipRRect(
@@ -80,58 +68,24 @@ class SmartImage extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(shape: shape),
         clipBehavior: Clip.antiAlias,
-        child: CachedNetworkImage(
-          imageUrl: processedUrl,
-          httpHeaders: headers,
-          width: width,
-          height: height,
-          fit: fit,
-          progressIndicatorBuilder: showProgress
-              ? (context, url, progress) {
-                  final pColor = Theme.of(context).brightness == Brightness.dark
-                      ? Colors.white70
-                      : Theme.of(context).primaryColor;
-                  return Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      ShimmerWrapper(
-                        child: Skeleton(
-                          width: width,
-                          height: height,
-                          borderRadius: borderRadius,
-                          shape: shape,
-                        ),
-                      ),
-                      Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircularProgressIndicator(
-                              value: progress.progress,
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(pColor),
-                            ),
-                            if (progress.progress != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                '${(progress.progress! * 100).toInt()}%',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: pColor,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                }
-              : null,
-          placeholder: showProgress
-              ? null
-              : (context, url) => ShimmerWrapper(
+        child: (isPortalTu || showProgress)
+            ? _ProgressiveImage(
+                imageUrl: url,
+                headers: headers,
+                width: width,
+                height: height,
+                fit: fit,
+                borderRadius: borderRadius,
+                shape: shape,
+                errorWidget: errorWidget ?? _buildError(context),
+              )
+            : CachedNetworkImage(
+                imageUrl: url,
+                httpHeaders: headers,
+                width: width,
+                height: height,
+                fit: fit,
+                placeholder: (context, url) => ShimmerWrapper(
                   child: Skeleton(
                     width: width,
                     height: height,
@@ -139,12 +93,12 @@ class SmartImage extends StatelessWidget {
                     shape: shape,
                   ),
                 ),
-          errorListener: (error) {
-            debugPrint('SmartImage Error [$processedUrl]: $error');
-          },
-          errorWidget: (context, url, error) =>
-              errorWidget ?? _buildError(context),
-        ),
+                errorListener: (error) {
+                  debugPrint('SmartImage Error [$processedUrl]: $error');
+                },
+                errorWidget: (context, url, error) =>
+                    errorWidget ?? _buildError(context),
+              ),
       ),
     );
   }
@@ -174,8 +128,11 @@ class SmartImage extends StatelessWidget {
   }
 }
 
-class _PortalTlsFallbackImage extends StatefulWidget {
+/// A specialized widget that handles manual byte fetching with progress tracking
+/// to avoid the "double download" and "white flash" issues.
+class _ProgressiveImage extends StatefulWidget {
   final String imageUrl;
+  final Map<String, String>? headers;
   final double? width;
   final double? height;
   final BoxFit fit;
@@ -183,10 +140,11 @@ class _PortalTlsFallbackImage extends StatefulWidget {
   final BoxShape shape;
   final Widget errorWidget;
 
-  const _PortalTlsFallbackImage({
+  const _ProgressiveImage({
     required this.imageUrl,
-    required this.width,
-    required this.height,
+    this.headers,
+    this.width,
+    this.height,
     required this.fit,
     required this.borderRadius,
     required this.shape,
@@ -194,88 +152,175 @@ class _PortalTlsFallbackImage extends StatefulWidget {
   });
 
   @override
-  State<_PortalTlsFallbackImage> createState() =>
-      _PortalTlsFallbackImageState();
+  State<_ProgressiveImage> createState() => _ProgressiveImageState();
 }
 
-class _PortalTlsFallbackImageState extends State<_PortalTlsFallbackImage> {
-  static final Map<String, Uint8List> _memoryCache = {};
-  late Future<Uint8List?> _bytesFuture;
+class _ProgressiveImageState extends State<_ProgressiveImage> {
+  static final Map<String, Uint8List> _imageCache = {};
+  late Future<Uint8List?> _imageFuture;
+  Uint8List? _resolvedBytes;
+  double _progress = 0.0;
+  bool _hasStartedDownloading = false;
 
   @override
   void initState() {
     super.initState();
-    _bytesFuture = _fetchBytes();
+    _resolvedBytes = _imageCache[widget.imageUrl];
+    _imageFuture = _fetchImage();
   }
 
-  Future<Uint8List?> _fetchBytes() async {
-    final cached = _memoryCache[widget.imageUrl];
-    if (cached != null) return cached;
+  @override
+  void didUpdateWidget(_ProgressiveImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageUrl != widget.imageUrl) {
+      setState(() {
+        _resolvedBytes = _imageCache[widget.imageUrl];
+        _progress = 0;
+        _hasStartedDownloading = false;
+        _imageFuture = _fetchImage();
+      });
+    }
+  }
 
-    final uri = Uri.parse(widget.imageUrl);
+  Future<Uint8List?> _fetchImage() async {
+    // 1. Check in-memory cache first
+    if (_imageCache.containsKey(widget.imageUrl)) {
+      final bytes = _imageCache[widget.imageUrl];
+      if (mounted) setState(() => _resolvedBytes = bytes);
+      return bytes;
+    }
+
+    final uri = Uri.tryParse(widget.imageUrl);
+    if (uri == null) return null;
+
     final client = HttpClient();
-    client.connectionTimeout = const Duration(seconds: 20);
-    client.badCertificateCallback = (certificate, host, port) =>
-        host == 'portal.tu.edu.np';
-    try {
-      final req = await client.getUrl(uri);
-      final res = await req.close();
-      if (res.statusCode != HttpStatus.ok) return null;
+    client.connectionTimeout = const Duration(seconds: 30);
 
+    // Handle TU Portal bad certificates
+    if (uri.host == 'portal.tu.edu.np') {
+      client.badCertificateCallback = (certificate, host, port) => true;
+    }
+
+    try {
+      final request = await client.getUrl(uri);
+      widget.headers?.forEach((key, value) {
+        request.headers.add(key, value);
+      });
+
+      final response = await request.close();
+      if (response.statusCode != HttpStatus.ok) return null;
+
+      final contentLength = response.contentLength;
       final bytesBuilder = BytesBuilder(copy: false);
-      await for (final chunk in res) {
-        bytesBuilder.add(chunk);
+      int downloaded = 0;
+
+      if (mounted) {
+        setState(() => _hasStartedDownloading = true);
       }
+
+      await for (final chunk in response) {
+        bytesBuilder.add(chunk);
+        downloaded += chunk.length;
+        if (contentLength > 0 && mounted) {
+          setState(() => _progress = downloaded / contentLength);
+        }
+      }
+
       final bytes = bytesBuilder.takeBytes();
-      _memoryCache[widget.imageUrl] = bytes;
+      _imageCache[widget.imageUrl] = bytes;
+      if (mounted) setState(() => _resolvedBytes = bytes);
       return bytes;
     } catch (e) {
-      debugPrint('SmartImage TLS fallback error [${widget.imageUrl}]: $e');
+      debugPrint('ProgressiveImage Error [${widget.imageUrl}]: $e');
       return null;
     } finally {
-      client.close(force: true);
+      client.close();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Priority 1: If we have bytes (resolved or cached), show them IMMEDIATELY
+    if (_resolvedBytes != null) {
+      return _buildImage(_resolvedBytes!);
+    }
+
+    // Priority 2: Use FutureBuilder for the first load
     return FutureBuilder<Uint8List?>(
-      future: _bytesFuture,
+      future: _imageFuture,
       builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return ShimmerWrapper(
-            child: Skeleton(
-              width: widget.width,
-              height: widget.height,
-              borderRadius: widget.borderRadius,
-              shape: widget.shape,
-            ),
-          );
+        if (snapshot.hasData && snapshot.data != null) {
+          return _buildImage(snapshot.data!);
         }
+        if (snapshot.hasError) return widget.errorWidget;
 
-        if (!snapshot.hasData || snapshot.data == null) {
-          return widget.errorWidget;
-        }
+        // Still loading/downloading
+        return _buildLoading(context);
+      },
+    );
+  }
 
-        return ClipRRect(
-          borderRadius: widget.shape == BoxShape.circle
-              ? BorderRadius.zero
-              : BorderRadius.circular(widget.borderRadius),
-          child: Container(
+  Widget _buildLoading(BuildContext context) {
+    final pColor = Theme.of(context).brightness == Brightness.dark
+        ? Colors.white70
+        : Theme.of(context).primaryColor;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ShimmerWrapper(
+          child: Skeleton(
             width: widget.width,
             height: widget.height,
-            decoration: BoxDecoration(shape: widget.shape),
-            clipBehavior: Clip.antiAlias,
-            child: Image.memory(
-              snapshot.data!,
-              width: widget.width,
-              height: widget.height,
-              fit: widget.fit,
-              gaplessPlayback: true,
-            ),
+            borderRadius: widget.borderRadius,
+            shape: widget.shape,
           ),
-        );
-      },
+        ),
+        Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(
+                value: _hasStartedDownloading ? _progress : null,
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(pColor),
+              ),
+              if (_hasStartedDownloading && _progress > 0) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '${(_progress * 100).toInt()}%',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: pColor,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildImage(Uint8List bytes) {
+    return ClipRRect(
+      borderRadius: widget.shape == BoxShape.circle
+          ? BorderRadius.zero
+          : BorderRadius.circular(widget.borderRadius),
+      child: Container(
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(shape: widget.shape),
+        clipBehavior: Clip.antiAlias,
+        child: Image.memory(
+          bytes,
+          width: widget.width,
+          height: widget.height,
+          fit: widget.fit,
+          gaplessPlayback: true,
+        ),
+      ),
     );
   }
 }
