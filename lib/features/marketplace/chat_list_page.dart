@@ -296,6 +296,22 @@ class _ChatListPageState extends State<ChatListPage> {
                                             ),
                                       ),
                                     ),
+                                    if (hasUnread)
+                                      Container(
+                                        padding: const EdgeInsets.all(6),
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.primary,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Text(
+                                          conversation.unreadCount.toString(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
                                     if (conversation.listing != null)
                                       Container(
                                         margin: const EdgeInsets.only(left: 8),

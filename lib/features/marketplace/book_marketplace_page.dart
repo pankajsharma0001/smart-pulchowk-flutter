@@ -12,6 +12,7 @@ import 'package:smart_pulchowk/features/marketplace/chat_list_page.dart';
 import 'package:smart_pulchowk/core/widgets/interactive_wrapper.dart';
 import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
+import 'package:smart_pulchowk/core/services/notification_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // BOOK MARKETPLACE PAGE
@@ -244,13 +245,19 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
                 ],
               ),
               actions: [
-                _ActionButton(
-                  icon: Icons.chat_bubble_outline_rounded,
-                  tooltip: 'Messages',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ChatListPage()),
-                  ),
+                ValueListenableBuilder<int>(
+                  valueListenable: NotificationService.unreadChatCount,
+                  builder: (context, count, _) {
+                    return _ActionButton(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      tooltip: 'Messages',
+                      badgeCount: count,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ChatListPage()),
+                      ),
+                    );
+                  },
                 ),
                 _ActionButton(
                   icon: Icons.dashboard_customize_rounded,
@@ -400,11 +407,13 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
 class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String tooltip;
+  final int badgeCount;
   final VoidCallback onTap;
 
   const _ActionButton({
     required this.icon,
     required this.tooltip,
+    this.badgeCount = 0,
     required this.onTap,
   });
 
@@ -412,7 +421,38 @@ class _ActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return IconButton(
-      icon: Icon(icon, size: 22),
+      icon: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Icon(icon, size: 22),
+          if (badgeCount > 0)
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                decoration: BoxDecoration(
+                  color: AppColors.error,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isDark ? AppColors.backgroundDark : Colors.white,
+                    width: 1.5,
+                  ),
+                ),
+                constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                child: Text(
+                  badgeCount > 9 ? '9+' : badgeCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+        ],
+      ),
       tooltip: tooltip,
       onPressed: onTap,
       color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,

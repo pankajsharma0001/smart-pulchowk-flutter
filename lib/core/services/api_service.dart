@@ -1387,6 +1387,22 @@ class ApiService {
     }
   }
 
+  /// Mark all messages in a conversation as read.
+  Future<Map<String, dynamic>> markMessagesAsRead(int conversationId) async {
+    try {
+      final response = await _authPatch(
+        '/chat/conversations/$conversationId/read',
+      );
+      final result = jsonDecode(response.body);
+      if (result['success'] == true) {
+        _invalidateCache(AppConstants.cacheConversations);
+      }
+      return result;
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
   /// Delete a conversation.
   Future<Map<String, dynamic>> deleteConversation(int conversationId) async {
     try {

@@ -1,4 +1,5 @@
 import 'dart:ui' as ui;
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
@@ -55,6 +56,8 @@ class MainLayoutState extends State<MainLayout>
   late AnimationController _menuController;
   late Animation<double> _menuAnimation;
   bool _isMenuOpen = false;
+  StreamSubscription? _chatSubscription;
+  StreamSubscription? _refreshSubscription;
 
   /// ValueNotifier to notify children when tab changes.
   final ValueNotifier<int> tabIndexNotifier = ValueNotifier<int>(0);
@@ -107,6 +110,34 @@ class MainLayoutState extends State<MainLayout>
     // Process any pending notification from a cold-start tap
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificationService.processPendingPayload();
+      _initUnreadCount();
+      _setupUnreadCountListeners();
+    });
+  }
+
+  Future<void> _initUnreadCount() async {
+    try {
+      final conversations = await _apiService.getConversations();
+      final total = conversations.fold<int>(
+        0,
+        (sum, conv) => sum + conv.unreadCount,
+      );
+      NotificationService.updateUnreadCount(total);
+    } catch (e) {
+      debugPrint('MainLayout: Error fetching unread count: $e');
+    }
+  }
+
+  void _setupUnreadCountListeners() {
+    _chatSubscription?.cancel();
+    _refreshSubscription?.cancel();
+
+    _chatSubscription = NotificationService.chatStream.listen((data) {
+      _initUnreadCount();
+    });
+
+    _refreshSubscription = NotificationService.refreshStream.listen((_) {
+      _initUnreadCount();
     });
   }
 
@@ -188,9 +219,11 @@ class MainLayoutState extends State<MainLayout>
 
   @override
   void dispose() {
+    _chatSubscription?.cancel();
+    _refreshSubscription?.cancel();
+    _menuController.dispose();
     WidgetsBinding.instance.removeObserver(this);
     tabIndexNotifier.dispose();
-    _menuController.dispose();
     super.dispose();
   }
 

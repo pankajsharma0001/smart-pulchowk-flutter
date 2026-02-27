@@ -44,6 +44,14 @@ class NotificationService {
   /// Stream to signal when notification lists should refresh
   static Stream<void> get refreshStream => _refreshStreamController.stream;
 
+  /// Global unread chat message count
+  static final ValueNotifier<int> unreadChatCount = ValueNotifier<int>(0);
+
+  /// Update the total unread count (called from MainLayout or similar)
+  static void updateUnreadCount(int count) {
+    unreadChatCount.value = count;
+  }
+
   /// Initialize notifications (permission request, channel setup).
   static Future<void> initialize({RemoteMessage? initialMessage}) async {
     if (_initialized) return;

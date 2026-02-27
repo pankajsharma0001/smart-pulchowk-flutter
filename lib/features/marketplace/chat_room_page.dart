@@ -66,6 +66,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
           notificationConvId == _activeConversationId) {
         debugPrint('Real-time chat update triggered by notification');
         _loadMessages(refresh: true);
+        _markAsRead();
       }
     });
   }
@@ -110,6 +111,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) {
       if (_activeConversationId != null) {
         _loadMessages(refresh: true);
+        _markAsRead();
       }
     });
   }
@@ -129,17 +131,23 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
 
     if (mounted) {
       setState(() {
-        // Keep original order from API (usually [Latest, ..., Oldest])
-        // Since ListView(reverse: true) shows index 0 at the bottom.
         _messages = results;
-        // Don't set isLoading false on refresh to avoid flickering,
-        // but if it was initial load (!refresh), set it to false.
         if (!refresh) _isLoading = false;
       });
       // Scroll to newest on initial load and when new messages arrived
       if (results.isNotEmpty) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNewest());
+        if (!refresh) _markAsRead(); // Mark as read on initial load
       }
+    }
+  }
+
+  Future<void> _markAsRead() async {
+    if (_activeConversationId == null) return;
+    try {
+      await _api.markMessagesAsRead(_activeConversationId!);
+    } catch (e) {
+      debugPrint('Error marking messages as read: $e');
     }
   }
 
