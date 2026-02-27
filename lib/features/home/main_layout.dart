@@ -117,11 +117,12 @@ class MainLayoutState extends State<MainLayout>
 
   Future<void> _initUnreadCount() async {
     try {
+      // Always bypass cache so counts reflect the latest server state
+      await ApiService.invalidateConversationsCache();
       final conversations = await _apiService.getConversations();
-      final total = conversations.fold<int>(
-        0,
-        (sum, conv) => sum + conv.unreadCount,
-      );
+      // Count conversations that have at least one unread message,
+      // not the raw sum of unread messages across all conversations.
+      final total = conversations.where((c) => c.unreadCount > 0).length;
       NotificationService.updateUnreadCount(total);
     } catch (e) {
       debugPrint('MainLayout: Error fetching unread count: $e');
@@ -145,6 +146,7 @@ class MainLayoutState extends State<MainLayout>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       refreshUserRole();
+      _initUnreadCount(); // Refresh badge when returning to the app
     }
   }
 

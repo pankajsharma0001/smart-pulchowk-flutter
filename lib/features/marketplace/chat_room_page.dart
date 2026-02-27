@@ -42,6 +42,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   bool _isSending = false;
   String? _currentUserId;
   int? _activeConversationId;
+  int? _lastNewestMessageId; // track newest to avoid redundant scrolls
   Timer? _pollTimer;
   StreamSubscription? _chatSubscription;
 
@@ -130,14 +131,24 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     );
 
     if (mounted) {
+      // Detect whether genuinely new messages arrived
+      final newNewest = results.isNotEmpty ? results.first.id : null;
+      final hasNewMessages =
+          newNewest != null && newNewest != _lastNewestMessageId;
+
       setState(() {
         _messages = results;
-        if (!refresh) _isLoading = false;
+        _isLoading = false; // safe to always clear
+        if (hasNewMessages) _lastNewestMessageId = newNewest;
       });
-      // Scroll to newest on initial load and when new messages arrived
-      if (results.isNotEmpty) {
+
+      if (hasNewMessages || !refresh) {
+        // Scroll on initial load OR when new messages genuinely arrive
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToNewest());
-        if (!refresh) _markAsRead(); // Mark as read on initial load
+      }
+      if (!refresh) {
+        // Mark as read on initial load only; polling already calls _markAsRead
+        _markAsRead();
       }
     }
   }
@@ -465,13 +476,12 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
   }
 
   Widget _buildInputArea(bool isDark) {
+    final keyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0;
+    final bottomPad = keyboardVisible
+        ? 12.0
+        : 12.0 + MediaQuery.of(context).padding.bottom + 8.0;
     return Container(
-      padding: EdgeInsets.fromLTRB(
-        12,
-        12,
-        12,
-        12 + MediaQuery.of(context).padding.bottom,
-      ),
+      padding: EdgeInsets.fromLTRB(12, 12, 12, bottomPad),
       decoration: BoxDecoration(
         color: isDark ? AppColors.cardDark : Colors.white,
         boxShadow: [

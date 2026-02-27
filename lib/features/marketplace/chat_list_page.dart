@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/core/models/chat.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
+import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/features/marketplace/chat_room_page.dart';
 import 'package:intl/intl.dart';
@@ -24,6 +26,8 @@ class _ChatListPageState extends State<ChatListPage> {
   bool _isLoading = true;
   String? _currentUserId;
   final Set<int> _selectedIds = {};
+  StreamSubscription? _chatSubscription;
+  StreamSubscription? _refreshSubscription;
 
   bool get _isSelectionMode => _selectedIds.isNotEmpty;
 
@@ -31,6 +35,17 @@ class _ChatListPageState extends State<ChatListPage> {
   void initState() {
     super.initState();
     _initChatList();
+    _setupStreamListeners();
+  }
+
+  void _setupStreamListeners() {
+    // Listen for incoming messages and refresh the conversation list
+    _chatSubscription = NotificationService.chatStream.listen((_) {
+      _loadConversations(forceRefresh: true);
+    });
+    _refreshSubscription = NotificationService.refreshStream.listen((_) {
+      _loadConversations(forceRefresh: true);
+    });
   }
 
   Future<void> _initChatList() async {
@@ -38,17 +53,29 @@ class _ChatListPageState extends State<ChatListPage> {
     _loadConversations();
   }
 
-  Future<void> _loadConversations() async {
-    setState(() => _isLoading = true);
+  Future<void> _loadConversations({bool forceRefresh = false}) async {
+    // Only show full loading indicator on first load, not on background refresh
+    if (!forceRefresh) setState(() => _isLoading = true);
+    if (forceRefresh) {
+      // Bypass the cache so we get fresh unread counts and last messages
+      await ApiService.invalidateConversationsCache();
+    }
     final results = await _api.getConversations();
     if (mounted) {
       setState(() {
         _conversations = results;
         _isLoading = false;
-        // Clean up selection if any of the coversations were removed
+        // Clean up selection if any of the conversations were removed
         _selectedIds.retainWhere((id) => _conversations.any((c) => c.id == id));
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _chatSubscription?.cancel();
+    _refreshSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _bulkDelete() async {
@@ -88,7 +115,9 @@ class _ChatListPageState extends State<ChatListPage> {
           SnackBar(content: Text('Deleted $successCount conversations')),
         );
         _selectedIds.clear();
-        _loadConversations();
+        _loadConversations(
+          forceRefresh: true,
+        ); // bypass cache so deletions take effect
       }
     }
   }
@@ -109,7 +138,7 @@ class _ChatListPageState extends State<ChatListPage> {
         ),
       ),
     );
-    _loadConversations(); // Refresh on return
+    _loadConversations(forceRefresh: true); // Refresh on return with fresh data
   }
 
   String _formatDate(DateTime date) {
@@ -164,7 +193,7 @@ class _ChatListPageState extends State<ChatListPage> {
                   debugPrint('ChatListPage: Manual refresh. Syncing role...');
                   await MainLayout.of(context)?.refreshUserRole();
                 }
-                await _loadConversations();
+                await _loadConversations(forceRefresh: true);
               },
               child: ListView.separated(
                 padding: const EdgeInsets.all(16),

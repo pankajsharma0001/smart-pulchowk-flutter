@@ -88,6 +88,11 @@ class ApiService {
     await _invalidateCachePrefix('notifications_');
   }
 
+  /// Invalidate cached conversations list so the next fetch goes to the network.
+  static Future<void> invalidateConversationsCache() async {
+    await _invalidateCache(AppConstants.cacheConversations);
+  }
+
   /// Clear all marketplace caches.
   static void invalidateMarketplaceCache() => _invalidateCachePrefix('mkt_');
 
