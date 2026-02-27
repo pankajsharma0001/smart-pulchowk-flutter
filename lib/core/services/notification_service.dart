@@ -16,6 +16,17 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
 
+  /// The conversation ID currently being viewed. When set, foreground
+  /// chat notifications for this conversation are suppressed (the chat
+  /// stream still fires so the UI updates in real-time).
+  static int? _activeConversationId;
+
+  /// Call from ChatRoomPage.initState to suppress banners while viewing.
+  static void setActiveConversation(int? id) => _activeConversationId = id;
+
+  /// Call from ChatRoomPage.dispose to re-enable banners.
+  static void clearActiveConversation() => _activeConversationId = null;
+
   /// Pending payload from a cold-start notification tap.
   /// Stored until MainLayout is ready to process it.
   static Map<String, dynamic>? _pendingPayload;
@@ -138,6 +149,24 @@ class NotificationService {
               debugPrint('NotificationService: Suppressing self chat push');
               return;
             }
+
+            // Always update the chat stream for real-time UI
+            _chatStreamController.add(message.data);
+
+            // Suppress banner if user is already viewing this conversation
+            final notifConvId = int.tryParse(
+              message.data['conversationId']?.toString() ?? '',
+            );
+            if (notifConvId != null && notifConvId == _activeConversationId) {
+              debugPrint(
+                'NotificationService: Suppressing banner for active conversation',
+              );
+              _refreshStreamController.add(null);
+              ApiService.invalidateNotificationsCache().catchError(
+                (e) => debugPrint('NotificationService: Cache Error: $e'),
+              );
+              return;
+            }
           }
 
           final title =
@@ -167,7 +196,7 @@ class NotificationService {
           }
 
           if (type == 'chat_message' || type == 'chat_mention') {
-            _chatStreamController.add(message.data);
+            // chatStream was already fired above for chat types
           }
           _refreshStreamController.add(null);
 

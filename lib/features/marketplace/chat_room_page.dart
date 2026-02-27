@@ -52,6 +52,13 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
     _listenForMessages();
   }
 
+  void _setActiveConversation(int? id) {
+    _activeConversationId = id;
+    if (id != null) {
+      NotificationService.setActiveConversation(id);
+    }
+  }
+
   void _listenForMessages() {
     _chatSubscription = NotificationService.chatStream.listen((data) {
       final notificationConvId = int.tryParse(data['conversationId'] ?? '');
@@ -65,7 +72,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
 
   Future<void> _initChat() async {
     _currentUserId = await StorageService.readSecure(AppConstants.dbUserIdKey);
-    _activeConversationId = widget.conversationId;
+    _setActiveConversation(widget.conversationId);
 
     // If we don't have a conversation ID but we have a listing,
     // try to find an existing conversation for this listing and recipient.
@@ -76,7 +83,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
           if (conv.listingId == widget.listing!.id &&
               (conv.buyerId == widget.recipientId ||
                   conv.sellerId == widget.recipientId)) {
-            _activeConversationId = conv.id;
+            _setActiveConversation(conv.id);
             break;
           }
         }
@@ -91,6 +98,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
 
   @override
   void dispose() {
+    NotificationService.clearActiveConversation();
     _pollTimer?.cancel();
     _chatSubscription?.cancel();
     _msgController.dispose();
@@ -192,7 +200,7 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
             if (result['data'] is Map) {
               final msgData = result['data'];
               if (msgData['conversationId'] != null) {
-                _activeConversationId = msgData['conversationId'];
+                _setActiveConversation(msgData['conversationId']);
               }
             }
           } catch (_) {}
@@ -361,40 +369,42 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
           ),
         ],
       ),
-      body: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => FocusScope.of(context).unfocus(),
-        child: Column(
-          children: [
-            Expanded(
-              child: _isLoading
-                  ? _buildMessageSkeleton()
-                  : _messages.isEmpty
-                  ? Center(
-                      child: Text(
-                        'Say hi to ${widget.recipientName}!',
-                        style: const TextStyle(color: Colors.grey),
+      body: SafeArea(
+        bottom: false,
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: Column(
+            children: [
+              Expanded(
+                child: _isLoading
+                    ? _buildMessageSkeleton()
+                    : _messages.isEmpty
+                    ? Center(
+                        child: Text(
+                          'Say hi to ${widget.recipientName}!',
+                          style: const TextStyle(color: Colors.grey),
+                        ),
+                      )
+                    : ListView.builder(
+                        reverse: true,
+                        controller: _scrollController,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = _messages[index];
+                          final isMe =
+                              msg.senderId.toString() ==
+                              _currentUserId.toString();
+                          return _buildMessageBubble(msg, isMe, isDark);
+                        },
                       ),
-                    )
-                  : ListView.builder(
-                      reverse:
-                          true, // Show latest messages at the bottom if list is [Latest, Oldest]
-                      controller: _scrollController,
-                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior
-                          .onDrag, // Common preference
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = _messages[index];
-                        final isMe =
-                            msg.senderId.toString() ==
-                            _currentUserId.toString();
-                        return _buildMessageBubble(msg, isMe, isDark);
-                      },
-                    ),
-            ),
-            _buildInputArea(isDark),
-          ],
+              ),
+              _buildInputArea(isDark),
+            ],
+          ),
         ),
       ),
     );
@@ -448,7 +458,12 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
 
   Widget _buildInputArea(bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        12,
+        12,
+        12 + MediaQuery.of(context).padding.bottom,
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.cardDark : Colors.white,
         boxShadow: [
@@ -459,56 +474,54 @@ class _ChatRoomPageState extends State<ChatRoomPage> {
           ),
         ],
       ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _msgController,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: InputDecoration(
-                  hintText: 'Type a message...',
-                  filled: true,
-                  fillColor: isDark ? Colors.black12 : Colors.grey[100],
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _msgController,
+              textCapitalization: TextCapitalization.sentences,
+              decoration: InputDecoration(
+                hintText: 'Type a message...',
+                filled: true,
+                fillColor: isDark ? Colors.black12 : Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
                 ),
-                minLines: 1,
-                maxLines: 4,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 10,
+                ),
               ),
+              minLines: 1,
+              maxLines: 4,
             ),
-            const SizedBox(width: 8),
-            Container(
-              decoration: const BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-              ),
-              child: IconButton(
-                onPressed: _isSending ? null : _sendMessage,
-                icon: _isSending
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Icon(
-                        Icons.send_rounded,
+          ),
+          const SizedBox(width: 8),
+          Container(
+            decoration: const BoxDecoration(
+              color: AppColors.primary,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              onPressed: _isSending ? null : _sendMessage,
+              icon: _isSending
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
                         color: Colors.white,
-                        size: 20,
+                        strokeWidth: 2,
                       ),
-              ),
+                    )
+                  : const Icon(
+                      Icons.send_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
