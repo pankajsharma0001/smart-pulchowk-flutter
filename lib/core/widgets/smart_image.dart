@@ -68,7 +68,7 @@ class SmartImage extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(shape: shape),
         clipBehavior: Clip.antiAlias,
-        child: (isPortalTu || showProgress)
+        child: isPortalTu
             ? _ProgressiveImage(
                 imageUrl: url,
                 headers: headers,
@@ -85,14 +85,27 @@ class SmartImage extends StatelessWidget {
                 width: width,
                 height: height,
                 fit: fit,
-                placeholder: (context, url) => ShimmerWrapper(
-                  child: Skeleton(
-                    width: width,
-                    height: height,
-                    borderRadius: borderRadius,
-                    shape: shape,
-                  ),
-                ),
+                fadeInDuration: Duration.zero,
+                fadeOutDuration: Duration.zero,
+                progressIndicatorBuilder: showProgress
+                    ? (context, url, progress) => _ImageLoadingOverlay(
+                        width: width,
+                        height: height,
+                        borderRadius: borderRadius,
+                        shape: shape,
+                        progress: progress.progress,
+                      )
+                    : null,
+                placeholder: showProgress
+                    ? null
+                    : (context, url) => ShimmerWrapper(
+                        child: Skeleton(
+                          width: width,
+                          height: height,
+                          borderRadius: borderRadius,
+                          shape: shape,
+                        ),
+                      ),
                 errorListener: (error) {
                   debugPrint('SmartImage Error [$processedUrl]: $error');
                 },
@@ -261,6 +274,44 @@ class _ProgressiveImageState extends State<_ProgressiveImage> {
   }
 
   Widget _buildLoading(BuildContext context) {
+    return _ImageLoadingOverlay(
+      width: widget.width,
+      height: widget.height,
+      borderRadius: widget.borderRadius,
+      shape: widget.shape,
+      progress: _hasStartedDownloading ? _progress : null,
+    );
+  }
+
+  Widget _buildImage(Uint8List bytes) {
+    return Image.memory(
+      bytes,
+      width: widget.width,
+      height: widget.height,
+      fit: widget.fit,
+      gaplessPlayback: true,
+    );
+  }
+}
+
+/// Internal shared loading overlay for SmartImage.
+class _ImageLoadingOverlay extends StatelessWidget {
+  final double? width;
+  final double? height;
+  final double borderRadius;
+  final BoxShape shape;
+  final double? progress;
+
+  const _ImageLoadingOverlay({
+    this.width,
+    this.height,
+    required this.borderRadius,
+    required this.shape,
+    this.progress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final pColor = Theme.of(context).brightness == Brightness.dark
         ? Colors.white70
         : Theme.of(context).primaryColor;
@@ -270,10 +321,10 @@ class _ProgressiveImageState extends State<_ProgressiveImage> {
       children: [
         ShimmerWrapper(
           child: Skeleton(
-            width: widget.width,
-            height: widget.height,
-            borderRadius: widget.borderRadius,
-            shape: widget.shape,
+            width: width,
+            height: height,
+            borderRadius: borderRadius,
+            shape: shape,
           ),
         ),
         Center(
@@ -281,14 +332,14 @@ class _ProgressiveImageState extends State<_ProgressiveImage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               CircularProgressIndicator(
-                value: _hasStartedDownloading ? _progress : null,
+                value: progress,
                 strokeWidth: 2,
                 valueColor: AlwaysStoppedAnimation<Color>(pColor),
               ),
-              if (_hasStartedDownloading && _progress > 0) ...[
+              if (progress != null && progress! > 0) ...[
                 const SizedBox(height: 4),
                 Text(
-                  '${(_progress * 100).toInt()}%',
+                  '${(progress! * 100).toInt()}%',
                   style: TextStyle(
                     fontSize: 10,
                     fontWeight: FontWeight.bold,
@@ -300,27 +351,6 @@ class _ProgressiveImageState extends State<_ProgressiveImage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildImage(Uint8List bytes) {
-    return ClipRRect(
-      borderRadius: widget.shape == BoxShape.circle
-          ? BorderRadius.zero
-          : BorderRadius.circular(widget.borderRadius),
-      child: Container(
-        width: widget.width,
-        height: widget.height,
-        decoration: BoxDecoration(shape: widget.shape),
-        clipBehavior: Clip.antiAlias,
-        child: Image.memory(
-          bytes,
-          width: widget.width,
-          height: widget.height,
-          fit: widget.fit,
-          gaplessPlayback: true,
-        ),
-      ),
     );
   }
 }
