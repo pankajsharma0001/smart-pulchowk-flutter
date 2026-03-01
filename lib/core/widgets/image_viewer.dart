@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_pulchowk/core/widgets/interactive_wrapper.dart';
 import 'package:smart_pulchowk/core/widgets/smart_image.dart';
-import 'dart:ui';
 
 class FullScreenImageViewer extends StatefulWidget {
   final List<String> imageUrls;
@@ -73,21 +72,6 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
         onTap: () => setState(() => _isUiVisible = !_isUiVisible),
         child: Stack(
           children: [
-            // Background Blur
-            Positioned.fill(
-              child: SmartImage(
-                imageUrl: widget.imageUrls[_currentIndex],
-                fit: BoxFit.cover,
-                useCloudinary: false, // Don't optimize background blur
-              ),
-            ),
-            Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
-                child: Container(color: Colors.black.withValues(alpha: 0.7)),
-              ),
-            ),
-
             // Main Image Gallery
             PageView.builder(
               controller: _pageController,
