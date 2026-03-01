@@ -52,14 +52,6 @@ class NotificationService {
     unreadChatCount.value = count;
   }
 
-  /// Global unread in-app notification count
-  static final ValueNotifier<int> unreadInAppCount = ValueNotifier<int>(0);
-
-  /// Update the total unread in-app notification count
-  static void updateInAppUnreadCount(int count) {
-    unreadInAppCount.value = count;
-  }
-
   /// Initialize notifications (permission request, channel setup).
   static Future<void> initialize({RemoteMessage? initialMessage}) async {
     if (_initialized) return;

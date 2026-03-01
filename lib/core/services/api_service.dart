@@ -18,7 +18,6 @@ import 'package:smart_pulchowk/core/models/user.dart';
 import 'package:smart_pulchowk/features/map/models/chatbot_response.dart';
 import 'package:smart_pulchowk/core/services/auth_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
-import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:flutter/foundation.dart';
 import 'package:file_picker/file_picker.dart';
@@ -1444,17 +1443,6 @@ class ApiService {
         if (response.statusCode == 200) {
           final json = jsonDecode(response.body);
           if (json['success'] == true && json['data'] != null) {
-            // Update global unread count if provided in the response metadata
-            if (json['unreadCount'] != null) {
-              NotificationService.updateInAppUnreadCount(
-                (json['unreadCount'] as num).toInt(),
-              );
-            } else if (json['pagination'] != null &&
-                json['pagination']['totalUnread'] != null) {
-              NotificationService.updateInAppUnreadCount(
-                (json['pagination']['totalUnread'] as num).toInt(),
-              );
-            }
             return json['data'];
           }
         }
@@ -1526,24 +1514,6 @@ class ApiService {
       debugPrint('Error marking all notifications read: $e');
       return false;
     }
-  }
-
-  /// Get the total unread in-app notification count
-  Future<int> getNotificationUnreadCount() async {
-    try {
-      final response = await _authGet('/notifications/unread-count');
-      if (response.statusCode == 200) {
-        final json = jsonDecode(response.body);
-        if (json['success'] == true && json['data'] != null) {
-          final count = (json['data']['unreadCount'] as num).toInt();
-          NotificationService.updateInAppUnreadCount(count);
-          return count;
-        }
-      }
-    } catch (e) {
-      debugPrint('Error fetching unread count: $e');
-    }
-    return 0;
   }
 
   // ── Classroom Endpoints ──────────────────────────────────────────────────

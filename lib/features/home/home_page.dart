@@ -491,10 +491,7 @@ class _HomeSearchBar extends StatelessWidget {
         Navigator.push(
           context,
           PageRouteBuilder(
-            pageBuilder: (_, animation, _) => const Padding(
-              padding: EdgeInsets.only(top: 60), // Match CustomAppBar height
-              child: SearchPage(),
-            ),
+            pageBuilder: (_, animation, _) => const SearchPage(),
             transitionsBuilder: (_, animation, secondaryAnimation, child) {
               return FadeTransition(
                 opacity: animation.drive(CurveTween(curve: Curves.easeOut)),

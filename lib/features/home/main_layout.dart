@@ -9,6 +9,7 @@ import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/widgets/custom_app_bar.dart';
 import 'package:smart_pulchowk/features/events/events_page.dart';
 import 'package:smart_pulchowk/features/home/home_page.dart';
+import 'package:smart_pulchowk/features/notifications/notifications.dart';
 import 'package:smart_pulchowk/features/notices/notices_page.dart';
 import 'package:smart_pulchowk/features/settings/settings.dart';
 import 'package:smart_pulchowk/features/marketplace/book_marketplace_page.dart';
@@ -66,7 +67,7 @@ class MainLayoutState extends State<MainLayout>
 
   // Navigator keys for each tab's independent navigation stack
   // We expand this to support all menu features (12 total)
-  final List<GlobalKey<NavigatorState>> navigatorKeys = List.generate(
+  final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(
     12,
     (_) => GlobalKey<NavigatorState>(),
   );
@@ -123,9 +124,6 @@ class MainLayoutState extends State<MainLayout>
       // not the raw sum of unread messages across all conversations.
       final total = conversations.where((c) => c.unreadCount > 0).length;
       NotificationService.updateUnreadCount(total);
-
-      // Also refresh in-app notification count
-      await _apiService.getNotificationUnreadCount();
     } catch (e) {
       debugPrint('MainLayout: Error fetching unread count: $e');
     }
@@ -181,7 +179,7 @@ class MainLayoutState extends State<MainLayout>
         );
 
         // Reset the classroom navigator key to force a clean rebuild of the tab's state
-        navigatorKeys[2] = GlobalKey<NavigatorState>();
+        _navigatorKeys[2] = GlobalKey<NavigatorState>();
 
         haptics.success();
         NotificationService.syncSubscriptions(newRole);
@@ -215,7 +213,7 @@ class MainLayoutState extends State<MainLayout>
         );
       } else if (roleChanged && silent) {
         // Still update the navigator key silently on startup if role differs from default
-        navigatorKeys[2] = GlobalKey<NavigatorState>();
+        _navigatorKeys[2] = GlobalKey<NavigatorState>();
         NotificationService.syncSubscriptions(newRole);
       }
     }
@@ -257,7 +255,7 @@ class MainLayoutState extends State<MainLayout>
     _closeMenu();
     if (_selectedIndex == index) {
       // If tapping the same tab, pop to root of that tab
-      navigatorKeys[index].currentState?.popUntil((route) => route.isFirst);
+      _navigatorKeys[index].currentState?.popUntil((route) => route.isFirst);
     } else {
       setState(() {
         _isBackNavigation = false;
@@ -295,7 +293,7 @@ class MainLayoutState extends State<MainLayout>
     if (subPage != null) {
       // Short delay to allow IndexedStack to switch if needed
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        navigatorKeys[index].currentState?.push(
+        _navigatorKeys[index].currentState?.push(
           PageRouteBuilder(
             pageBuilder: (_, animation, secondaryAnimation) => subPage,
             transitionsBuilder: (_, animation, secondaryAnimation, child) {
@@ -328,6 +326,11 @@ class MainLayoutState extends State<MainLayout>
       case 1:
         return const MapPage();
       case 2:
+        if (_userRole == 'admin') {
+          return const AdminPage();
+        } else if (_userRole == 'notice_manager') {
+          return const NotificationsPage();
+        }
         return ClassroomPage(userRole: _userRole);
       case 3:
         return const BookMarketplacePage();
@@ -358,6 +361,7 @@ class MainLayoutState extends State<MainLayout>
         return AppPage.map;
       case 2:
         if (_userRole == 'admin') return AppPage.dashboard;
+        if (_userRole == 'notice_manager') return AppPage.notifications;
         return AppPage.classroom;
       case 3:
         return AppPage.bookMarketplace;
@@ -388,6 +392,9 @@ class MainLayoutState extends State<MainLayout>
     switch (_selectedIndex) {
       case 2:
         if (_userRole == 'admin') return Icons.admin_panel_settings_rounded;
+        if (_userRole == 'notice_manager') {
+          return Icons.campaign_rounded;
+        }
         return Icons.school_rounded;
       case 5:
         return Icons.groups_rounded;
@@ -407,6 +414,9 @@ class MainLayoutState extends State<MainLayout>
     if (_userRole == 'admin') {
       return Icons.admin_panel_settings_rounded;
     }
+    if (_userRole == 'notice_manager') {
+      return Icons.campaign_rounded;
+    }
     return Icons.grid_view_rounded;
   }
 
@@ -423,7 +433,7 @@ class MainLayoutState extends State<MainLayout>
         }
 
         final NavigatorState? currentNavigator =
-            navigatorKeys[_selectedIndex].currentState;
+            _navigatorKeys[_selectedIndex].currentState;
 
         if (currentNavigator != null && currentNavigator.canPop()) {
           currentNavigator.pop();
@@ -478,7 +488,7 @@ class MainLayoutState extends State<MainLayout>
                     (i) => _visitedTabs.contains(i)
                         ? _TabNavigator(
                             key: i == 2 ? ValueKey('role_$_userRole') : null,
-                            navigatorKey: navigatorKeys[i],
+                            navigatorKey: _navigatorKeys[i],
                             rootPage: _pageForIndex(i),
                           )
                         : const SizedBox.shrink(), // Lazy: unvisited tabs are empty
@@ -786,7 +796,19 @@ class _QuickMenu extends StatelessWidget {
               // Tap area to close
               GestureDetector(
                 onTap: onClose,
-                child: Container(color: Colors.black.withValues(alpha: 0.1)),
+                child: FadeTransition(
+                  opacity: animation,
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    child: BackdropFilter(
+                      filter: ui.ImageFilter.blur(
+                        sigmaX: 10 * animation.value,
+                        sigmaY: 10 * animation.value,
+                      ),
+                      child: Container(color: Colors.transparent),
+                    ),
+                  ),
+                ),
               ),
 
               // Menu Items

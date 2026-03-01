@@ -229,33 +229,10 @@ class _SearchButton extends StatelessWidget {
       ),
       onPressed: () {
         haptics.selectionClick();
-        final mainLayout = MainLayout.of(context);
-        if (mainLayout != null) {
-          mainLayout.navigatorKeys[mainLayout.currentIndex].currentState?.push(
-            PageRouteBuilder(
-              pageBuilder: (_, animation, _) => const Padding(
-                padding: EdgeInsets.only(top: 60), // Match CustomAppBar height
-                child: SearchPage(),
-              ),
-              transitionsBuilder: (_, animation, secondaryAnimation, child) {
-                return FadeTransition(
-                  opacity: animation.drive(CurveTween(curve: Curves.easeOut)),
-                  child: SlideTransition(
-                    position: animation.drive(
-                      Tween<Offset>(
-                        begin: const Offset(0, 0.03),
-                        end: Offset.zero,
-                      ).chain(CurveTween(curve: Curves.easeOutCubic)),
-                    ),
-                    child: child,
-                  ),
-                );
-              },
-              transitionDuration: const Duration(milliseconds: 250),
-              reverseTransitionDuration: const Duration(milliseconds: 200),
-            ),
-          );
-        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const SearchPage()),
+        );
       },
     );
   }
@@ -272,6 +249,7 @@ class _NotificationBell extends StatefulWidget {
 
 class _NotificationBellState extends State<_NotificationBell> {
   final ApiService _api = ApiService();
+  int _unreadCount = 0;
   bool _isDisposed = false;
   Timer? _periodicTimer;
   StreamSubscription<void>? _refreshSubscription;
@@ -306,141 +284,106 @@ class _NotificationBellState extends State<_NotificationBell> {
 
   Future<void> _fetchUnreadCount() async {
     try {
-      await _api.getNotificationUnreadCount();
+      final notifications = await _api.getNotifications();
+      if (mounted) {
+        setState(() {
+          _unreadCount = notifications.where((n) => !n.isRead).length;
+        });
+      }
     } catch (_) {}
   }
 
   Future<void> _refreshUnreadWithRetry() async {
     if (_isRefreshingCount || _isDisposed || !mounted) return;
     _isRefreshingCount = true;
+    final previous = _unreadCount;
     try {
       for (int attempt = 0; attempt < 3; attempt++) {
-        final count = await _api.getNotificationUnreadCount();
+        final notifications = await _api.getNotifications(
+          forceRefresh: true,
+        );
         if (!mounted || _isDisposed) return;
-        if (count > 0 || attempt == 2) {
+        final unread = notifications.where((n) => !n.isRead).length;
+        if (unread != previous || attempt == 2) {
+          setState(() => _unreadCount = unread);
           return;
         }
         await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
       }
-    } catch (_) {
-    } finally {
-      if (!_isDisposed) {
-        _isRefreshingCount = false;
-      }
+    } catch (_) {} finally {
+      _isRefreshingCount = false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<int>(
-      valueListenable: NotificationService.unreadInAppCount,
-      builder: (context, unreadCount, _) {
-        final hasNotifications = unreadCount > 0;
-        final countText = unreadCount > 99 ? '99+' : '$unreadCount';
-
-        return IconButton(
-          icon: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: widget.isActive
-                      ? AppColors.primary
-                      : AppColors.primary.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: Icon(
-                  Icons.notifications_rounded,
-                  size: 20,
-                  color: widget.isActive ? Colors.white : AppColors.primary,
+    return Stack(
+      children: [
+        IconButton(
+          icon: Icon(
+            widget.isActive
+                ? Icons.notifications_rounded
+                : Icons.notifications_none_rounded,
+            color: widget.isActive ? AppColors.primary : null,
+          ),
+          onPressed: () async {
+            haptics.selectionClick();
+            await Navigator.push(
+              context,
+              PageRouteBuilder(
+                pageBuilder: (_, animation, secondaryAnimation) =>
+                    const NotificationsPage(),
+                transitionsBuilder: (_, animation, secondaryAnimation, child) {
+                  final offsetTween = Tween<Offset>(
+                    begin: const Offset(0, 0.04),
+                    end: Offset.zero,
+                  ).chain(CurveTween(curve: Curves.easeOutCubic));
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: animation.drive(offsetTween),
+                      child: child,
+                    ),
+                  );
+                },
+                transitionDuration: const Duration(milliseconds: 260),
+                reverseTransitionDuration: const Duration(milliseconds: 220),
+              ),
+            );
+            // Refresh count when returning
+            _fetchUnreadCount();
+          },
+        ),
+        if (_unreadCount > 0)
+          Positioned(
+            right: 8,
+            top: 8,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color:
+                      Theme.of(context).appBarTheme.backgroundColor ??
+                      Colors.transparent,
+                  width: 1.5,
                 ),
               ),
-              if (hasNotifications)
-                Positioned(
-                  top: -4,
-                  right: -4,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color:
-                            Theme.of(context).appBarTheme.backgroundColor ??
-                            Theme.of(context).scaffoldBackgroundColor,
-                        width: 1.5,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
-                    child: Center(
-                      child: Text(
-                        countText,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              child: Center(
+                child: Text(
+                  _unreadCount > 99 ? '99+' : '$_unreadCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-            ],
+              ),
+            ),
           ),
-          onPressed: () {
-            haptics.selectionClick();
-            if (widget.isActive) return;
-            final mainLayout = MainLayout.of(context);
-            if (mainLayout != null) {
-              mainLayout.navigatorKeys[mainLayout.currentIndex].currentState
-                  ?.push(
-                    PageRouteBuilder(
-                      pageBuilder: (_, animation, __) => const Padding(
-                        padding: EdgeInsets.only(top: 60),
-                        child: NotificationsPage(),
-                      ),
-                      transitionsBuilder:
-                          (_, animation, secondaryAnimation, child) {
-                            return FadeTransition(
-                              opacity: animation.drive(
-                                CurveTween(curve: Curves.easeOut),
-                              ),
-                              child: SlideTransition(
-                                position: animation.drive(
-                                  Tween<Offset>(
-                                    begin: const Offset(0, 0.03),
-                                    end: Offset.zero,
-                                  ).chain(
-                                    CurveTween(curve: Curves.easeOutCubic),
-                                  ),
-                                ),
-                                child: child,
-                              ),
-                            );
-                          },
-                      transitionDuration: const Duration(milliseconds: 250),
-                      reverseTransitionDuration: const Duration(
-                        milliseconds: 200,
-                      ),
-                    ),
-                  )
-                  .then((_) {
-                    _fetchUnreadCount();
-                  });
-            }
-          },
-        );
-      },
+      ],
     );
   }
 }
@@ -526,7 +469,7 @@ class _UserAvatarState extends State<_UserAvatar> {
             onTap: () async {
               haptics.selectionClick();
               await Share.share(
-                'Join me on the Smart Pulchowk app! Stay connected with campus events, clubs, and announcements. Download now!\n\nhttps://smart-pulchowk.vercel.app',
+                'Join me on the Smart Pulchowk app! Stay connected with campus events, clubs, and announcements. Download now!\n\nhttps://smartpulchowk.com',
               );
             },
           ),
