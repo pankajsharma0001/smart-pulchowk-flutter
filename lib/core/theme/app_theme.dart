@@ -1042,7 +1042,7 @@ class AppTheme {
         ),
         dragHandleColor: AppColors.textMutedDark,
         dragHandleSize: Size(36, 4),
-        showDragHandle: true,
+        showDragHandle: false,
       ),
 
       // ── Floating Action Button ──────────────────────────────────────────

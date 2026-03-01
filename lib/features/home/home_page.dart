@@ -674,8 +674,9 @@ class _ExploreChips extends StatelessWidget {
                               return _buildSmallLoader(isActive, isDark);
                             }
                             final count = chip['countExtractor'](snapshot.data);
-                            if (count == '0' || count == null)
+                            if (count == '0' || count == null) {
                               return const SizedBox.shrink();
+                            }
 
                             return _buildCountBadge(count, isActive, isDark);
                           },

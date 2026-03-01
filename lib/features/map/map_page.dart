@@ -106,6 +106,7 @@ class _MapPageState extends State<MapPage> {
   bool _isTogglingMapType = false;
   double _cameraBearing = 0.0;
   StreamSubscription? _actionSubscription;
+  Offset? _tapDownPosition;
 
   @override
   void initState() {
@@ -577,27 +578,42 @@ class _MapPageState extends State<MapPage> {
     _loadGeoJSON();
   }
 
-  void _onPointerDown(PointerDownEvent event) async {
-    if (_mapController == null || !_isStyleLoaded) return;
+  void _onPointerDown(PointerDownEvent event) {
+    _tapDownPosition = event.localPosition;
+  }
 
-    final logicalOffset = event.localPosition;
-    final ratio = MediaQuery.of(context).devicePixelRatio;
-    final physicalPoint = Point<double>(
-      logicalOffset.dx * ratio,
-      logicalOffset.dy * ratio,
-    );
+  void _onPointerUp(PointerUpEvent event) async {
+    // Changed PointerDownEvent to PointerUpEvent
+    if (_mapController == null || !_isStyleLoaded || _tapDownPosition == null) {
+      return;
+    }
 
-    final coordinates = await _mapController!.toLatLng(physicalPoint);
-    _processMapTap(physicalPoint, logicalOffset, coordinates);
+    final upPosition = event.localPosition;
+    final distance = (upPosition - _tapDownPosition!).distance;
+
+    // If the finger moved more than 10 pixels, it's probably a scroll/drag
+    if (distance < 10.0) {
+      final ratio = MediaQuery.of(context).devicePixelRatio;
+      final physicalPoint = Point<double>(
+        upPosition.dx * ratio,
+        upPosition.dy * ratio,
+      );
+
+      final coordinates = await _mapController!.toLatLng(physicalPoint);
+      _processMapTap(physicalPoint, upPosition, coordinates);
+    }
+    _tapDownPosition = null;
   }
 
   void _onMapClick(Point<double> point, LatLng coordinates) {
-    // Handled via _onPointerDown to avoid icon interception
+    // Handled via _onPointerUp
   }
+
+  // Removed _handleMapTap as its logic is now in _onPointerUp
 
   void _processMapTap(
     Point<double> physicalPoint,
-    Offset logicalPoint,
+    Offset logicalPoint, // Changed logicalOffset to logicalPoint
     LatLng coordinates,
   ) async {
     if (_mapController == null) return;
@@ -609,7 +625,7 @@ class _MapPageState extends State<MapPage> {
 
     try {
       // Use logical-to-physical converted radius for hit testing
-      // 24 logical pixels for tighter precision
+      // 16 logical pixels for tighter precision (user preferred)
       const double tapRadius = 16.0;
       final ratio = MediaQuery.of(context).devicePixelRatio;
       final querySize = tapRadius * ratio;
@@ -658,6 +674,7 @@ class _MapPageState extends State<MapPage> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      showDragHandle: false,
       builder: (_) => LocationDetailsSheet(
         title: location['title'] ?? 'Unknown Location',
         description: location['description'],
@@ -1250,6 +1267,8 @@ class _MapPageState extends State<MapPage> {
             // ── MapLibre ──
             Listener(
               onPointerDown: _onPointerDown,
+              onPointerUp: _onPointerUp,
+              behavior: HitTestBehavior.translucent,
               child: MapLibreMap(
                 key: const ValueKey('map_libre_main'),
                 styleString: _currentStyle,
@@ -1304,9 +1323,12 @@ class _MapPageState extends State<MapPage> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Loading campus map…',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textMuted,
+                        'Initializing Map...', // Updated text
+                        style: TextStyle(
+                          // Updated style
+                          color: isDark ? Colors.white : Colors.black87,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -1347,15 +1369,15 @@ class _MapPageState extends State<MapPage> {
                                 color: hasFocus
                                     ? AppColors.primary
                                     : isDark
-                                    ? Colors.white.withOpacity(0.1)
-                                    : AppColors.primary.withOpacity(0.15),
+                                    ? Colors.white.withValues(alpha: 0.1)
+                                    : AppColors.primary.withValues(alpha: 0.15),
                                 width: hasFocus ? 1.5 : 1,
                               ),
                               boxShadow: hasFocus
                                   ? [
                                       BoxShadow(
-                                        color: AppColors.primary.withOpacity(
-                                          0.12,
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.12,
                                         ),
                                         blurRadius: 14,
                                         offset: const Offset(0, 4),
@@ -1363,7 +1385,9 @@ class _MapPageState extends State<MapPage> {
                                     ]
                                   : [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.04),
+                                        color: Colors.black.withValues(
+                                          alpha: 0.04,
+                                        ),
                                         blurRadius: 10,
                                         offset: const Offset(0, 4),
                                       ),
@@ -1419,7 +1443,7 @@ class _MapPageState extends State<MapPage> {
                                             color: isDark
                                                 ? AppColors.textMutedDark
                                                 : AppColors.textMuted
-                                                      .withOpacity(0.6),
+                                                      .withValues(alpha: 0.6),
                                           ),
                                       filled: false,
                                       border: InputBorder.none,
@@ -1465,8 +1489,8 @@ class _MapPageState extends State<MapPage> {
                                     width: 1,
                                     thickness: 1,
                                     color: isDark
-                                        ? Colors.white.withOpacity(0.1)
-                                        : Colors.black.withOpacity(0.08),
+                                        ? Colors.white.withValues(alpha: 0.1)
+                                        : Colors.black.withValues(alpha: 0.08),
                                   ),
                                 ),
                                 PopupMenuButton<String>(
@@ -1581,7 +1605,7 @@ class _MapPageState extends State<MapPage> {
                                       leading: Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: color.withOpacity(0.1),
+                                          color: color.withValues(alpha: 0.1),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(
@@ -1639,7 +1663,7 @@ class _MapPageState extends State<MapPage> {
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurfaceVariant
-                                        .withOpacity(0.5),
+                                        .withValues(alpha: 0.5),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
@@ -1735,7 +1759,7 @@ class _MapPageState extends State<MapPage> {
                                 margin: const EdgeInsets.symmetric(vertical: 1),
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.outline.withOpacity(0.5),
+                                ).colorScheme.outline.withValues(alpha: 0.5),
                               ),
                             ),
                           ),
@@ -1754,7 +1778,7 @@ class _MapPageState extends State<MapPage> {
                               vertical: 12,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
+                              color: AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
@@ -1856,7 +1880,7 @@ class _MapPageState extends State<MapPage> {
                         Icons.my_location_rounded,
                         color: _showMyLocation
                             ? AppColors.primary
-                            : AppColors.primary.withOpacity(0.7),
+                            : AppColors.primary.withValues(alpha: 0.7),
                       ),
               ),
             ),
