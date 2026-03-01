@@ -23,6 +23,7 @@ import 'package:smart_pulchowk/core/constants/app_constants.dart';
 import 'package:smart_pulchowk/features/map/map.dart';
 import 'package:smart_pulchowk/core/widgets/offline_banner.dart';
 import 'package:smart_pulchowk/core/services/connectivity_service.dart';
+import 'package:smart_pulchowk/features/map/services/map_action_service.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN LAYOUT
@@ -351,7 +352,8 @@ class MainLayoutState extends State<MainLayout>
       case 11:
         return ChatBotWidget(
           isPage: true,
-          onLocationsReturned: (locations, action) {
+          onLocationsReturned: (data) {
+            MapActionService.instance.triggerAction(data);
             setSelectedIndex(1);
           },
         );

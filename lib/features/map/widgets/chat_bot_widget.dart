@@ -7,8 +7,7 @@ import 'package:smart_pulchowk/features/map/models/chatbot_response.dart';
 
 /// A beautiful floating chatbot widget that provides campus navigation assistance.
 class ChatBotWidget extends StatefulWidget {
-  final void Function(List<ChatBotLocation> locations, String action)?
-  onLocationsReturned;
+  final void Function(ChatBotData data)? onLocationsReturned;
   final double bottomOffset;
   final bool isPage;
 
@@ -202,10 +201,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
         );
 
         if (response.data!.isMapAction && response.data!.locations.isNotEmpty) {
-          widget.onLocationsReturned?.call(
-            response.data!.locations,
-            response.data!.action,
-          );
+          widget.onLocationsReturned?.call(response.data!);
           Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted) _closeChat();
           });
@@ -607,7 +603,9 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
         left: 16,
         right: 16,
         top: 16,
-        bottom: widget.isPage ? 80 : 16,
+        bottom: widget.isPage
+            ? (max(80.0, MediaQuery.of(context).viewInsets.bottom + 18.0))
+            : 18,
       ),
       decoration: BoxDecoration(
         border: Border(

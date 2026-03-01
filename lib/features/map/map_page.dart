@@ -15,6 +15,8 @@ import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/features/map/widgets/category_filter_bar.dart';
 import 'package:smart_pulchowk/features/map/widgets/location_details_sheet.dart';
 import 'package:smart_pulchowk/features/map/services/campus_router.dart';
+import 'package:smart_pulchowk/features/map/services/map_action_service.dart';
+import 'package:smart_pulchowk/features/map/models/chatbot_response.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Icon URLs (single source of truth)
@@ -103,6 +105,15 @@ class _MapPageState extends State<MapPage> {
   bool _isNavigationPanelExpanded = true;
   bool _isTogglingMapType = false;
   double _cameraBearing = 0.0;
+  StreamSubscription? _actionSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _actionSubscription = MapActionService.instance.actionStream.listen(
+      _handleChatBotAction,
+    );
+  }
 
   static const LatLng _pulchowkCenter = LatLng(
     27.68222689200303,
@@ -171,6 +182,7 @@ class _MapPageState extends State<MapPage> {
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _actionSubscription?.cancel();
     super.dispose();
   }
 
@@ -929,6 +941,59 @@ class _MapPageState extends State<MapPage> {
     _getDirections();
   }
 
+  void _handleChatBotAction(ChatBotData data) {
+    if (!mounted) return;
+
+    // Ensure keyboard closes when AI triggers navigation
+    _searchFocusNode.unfocus();
+    FocusScope.of(context).unfocus();
+
+    if (data.action == 'show_location' && data.locations.isNotEmpty) {
+      final loc = data.locations.first;
+      final match = _allLocations.firstWhere(
+        (l) =>
+            l['title'] == loc.buildingName ||
+            l['building_id'] == loc.buildingId,
+        orElse: () => {
+          'title': loc.buildingName,
+          'coordinates': [loc.lng, loc.lat],
+        },
+      );
+      _flyToLocation(match);
+    } else if (data.action == 'show_route' && data.locations.length >= 2) {
+      // Find start and end locations
+      final start = data.locations.firstWhere(
+        (l) => l.role == 'start',
+        orElse: () => data.locations[0],
+      );
+      final end = data.locations.firstWhere(
+        (l) => l.role == 'end',
+        orElse: () => data.locations[1],
+      );
+
+      final startMatch = _allLocations.firstWhere(
+        (l) =>
+            l['title'] == start.buildingName ||
+            l['building_id'] == start.buildingId,
+        orElse: () => {
+          'title': start.buildingName,
+          'coordinates': [start.lng, start.lat],
+        },
+      );
+      final endMatch = _allLocations.firstWhere(
+        (l) =>
+            l['title'] == end.buildingName ||
+            l['building_id'] == end.buildingId,
+        orElse: () => {
+          'title': end.buildingName,
+          'coordinates': [end.lng, end.lat],
+        },
+      );
+
+      _startNavigationFromPlace(startMatch, endMatch);
+    }
+  }
+
   double _haversineDistance(List<double> c1, List<double> c2) {
     const R = 6371e3;
     final phi1 = c1[1] * pi / 180;
@@ -1232,157 +1297,231 @@ class _MapPageState extends State<MapPage> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       // Search bar
-                      _GlassContainer(
-                        isDark: isDark,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _searchController,
-                                focusNode: _searchFocusNode,
-                                style: Theme.of(context).textTheme.bodyLarge,
-                                onChanged: (v) => setState(() {
-                                  _searchQuery = v;
-                                  _showSuggestions = v.isNotEmpty;
-                                }),
-                                onTap: () => setState(
-                                  () => _showSuggestions =
-                                      _searchQuery.isNotEmpty,
-                                ),
-                                textInputAction: TextInputAction.search,
-                                onSubmitted: (v) {
-                                  if (v.isEmpty) return;
-                                  setState(() {
-                                    _searchQuery = v;
-                                    _showSuggestions = v.isNotEmpty;
-                                  });
-                                  if (_filteredSuggestions.isNotEmpty) {
-                                    _flyToLocation(_filteredSuggestions.first);
-                                  }
-                                },
-                                decoration: InputDecoration(
-                                  hintText:
-                                      'Search labs, canteen, departments…',
-                                  hintStyle: TextStyle(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant
-                                        .withValues(alpha: 0.5),
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.search_rounded,
-                                    color: AppColors.primary,
-                                  ),
-                                  suffixIcon: _searchQuery.isNotEmpty
-                                      ? IconButton(
-                                          icon: const Icon(Icons.clear_rounded),
-                                          onPressed: () {
-                                            haptics.selectionClick();
-                                            setState(() {
-                                              _searchController.clear();
-                                              _searchQuery = '';
-                                              _showSuggestions = false;
-                                            });
-                                          },
-                                        )
-                                      : null,
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 14,
-                                  ),
-                                ),
+                      ListenableBuilder(
+                        listenable: _searchFocusNode,
+                        builder: (context, _) {
+                          final hasFocus = _searchFocusNode.hasFocus;
+                          return AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white.withValues(alpha: 0.08)
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: hasFocus
+                                    ? AppColors.primary
+                                    : isDark
+                                    ? Colors.white.withValues(alpha: 0.12)
+                                    : AppColors.primary.withValues(alpha: 0.15),
+                                width: hasFocus ? 1.5 : 1,
                               ),
-                            ),
-                            Container(
-                              height: 24,
-                              width: 1,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.outline.withValues(alpha: 0.2),
-                            ),
-                            PopupMenuButton<String>(
-                              onSelected: _onCategorySelected,
-                              tooltip: 'Filter by category',
-                              icon: Stack(
-                                children: [
-                                  Icon(
-                                    Icons.tune_rounded,
-                                    color: _selectedCategories.contains('all')
-                                        ? Theme.of(
-                                            context,
-                                          ).colorScheme.onSurfaceVariant
-                                        : AppColors.primary,
-                                  ),
-                                  if (!_selectedCategories.contains('all'))
-                                    Positioned(
-                                      right: 0,
-                                      top: 0,
-                                      child: Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: BoxDecoration(
-                                          color: AppColors.primary,
-                                          shape: BoxShape.circle,
-                                          border: Border.all(
-                                            color: isDark
-                                                ? const Color(0xFF1E293B)
-                                                : Colors.white,
-                                            width: 1.5,
-                                          ),
+                              boxShadow: hasFocus
+                                  ? [
+                                      BoxShadow(
+                                        color: AppColors.primary.withValues(
+                                          alpha: 0.12,
                                         ),
+                                        blurRadius: 14,
+                                        offset: const Offset(0, 4),
                                       ),
+                                    ]
+                                  : [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.04,
+                                        ),
+                                        blurRadius: 10,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.search_rounded,
+                                  size: 22,
+                                  color: hasFocus
+                                      ? AppColors.primary
+                                      : isDark
+                                      ? AppColors.textMutedDark
+                                      : AppColors.textMuted,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _searchController,
+                                    focusNode: _searchFocusNode,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyLarge,
+                                    onChanged: (v) => setState(() {
+                                      _searchQuery = v;
+                                      _showSuggestions = v.isNotEmpty;
+                                    }),
+                                    onTap: () => setState(
+                                      () => _showSuggestions =
+                                          _searchQuery.isNotEmpty,
                                     ),
-                                ],
-                              ),
-                              offset: const Offset(0, 45),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              itemBuilder: (context) => kMapCategories.map((
-                                cat,
-                              ) {
-                                final isActive = _selectedCategories.contains(
-                                  cat.id,
-                                );
-                                return PopupMenuItem<String>(
-                                  value: cat.id,
-                                  child: Row(
+                                    textInputAction: TextInputAction.search,
+                                    onSubmitted: (v) {
+                                      if (v.isEmpty) return;
+                                      setState(() {
+                                        _searchQuery = v;
+                                        _showSuggestions = v.isNotEmpty;
+                                      });
+                                      if (_filteredSuggestions.isNotEmpty) {
+                                        _flyToLocation(
+                                          _filteredSuggestions.first,
+                                        );
+                                      }
+                                    },
+                                    decoration: InputDecoration(
+                                      hintText:
+                                          'Search labs, canteen, departments…',
+                                      hintStyle: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurfaceVariant
+                                            .withValues(alpha: 0.5),
+                                      ),
+                                      filled: false,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                            vertical: 14,
+                                          ),
+                                    ),
+                                  ),
+                                ),
+                                ListenableBuilder(
+                                  listenable: _searchController,
+                                  builder: (context, _) {
+                                    if (_searchQuery.isEmpty) {
+                                      return const SizedBox.shrink();
+                                    }
+                                    return IconButton(
+                                      icon: const Icon(
+                                        Icons.close_rounded,
+                                        size: 20,
+                                      ),
+                                      onPressed: () {
+                                        haptics.selectionClick();
+                                        setState(() {
+                                          _searchController.clear();
+                                          _searchQuery = '';
+                                          _showSuggestions = false;
+                                        });
+                                      },
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    );
+                                  },
+                                ),
+                                const SizedBox(width: 4),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 10,
+                                  ),
+                                  child: VerticalDivider(
+                                    width: 1,
+                                    thickness: 1,
+                                    color: isDark
+                                        ? Colors.white.withValues(alpha: 0.1)
+                                        : Colors.black.withValues(alpha: 0.08),
+                                  ),
+                                ),
+                                PopupMenuButton<String>(
+                                  onSelected: _onCategorySelected,
+                                  tooltip: 'Filter by category',
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                  icon: Stack(
                                     children: [
                                       Icon(
-                                        cat.icon,
-                                        size: 18,
-                                        color: isActive
-                                            ? cat.color
-                                            : Theme.of(
-                                                context,
-                                              ).colorScheme.onSurfaceVariant,
+                                        Icons.tune_rounded,
+                                        size: 22,
+                                        color:
+                                            _selectedCategories.contains('all')
+                                            ? (isDark
+                                                  ? AppColors.textSecondaryDark
+                                                  : AppColors.textSecondary)
+                                            : AppColors.primary,
                                       ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          cat.label,
-                                          style: TextStyle(
-                                            fontWeight: isActive
-                                                ? FontWeight.bold
-                                                : FontWeight.normal,
-                                            color: isActive ? cat.color : null,
+                                      if (!_selectedCategories.contains('all'))
+                                        Positioned(
+                                          right: -1,
+                                          top: -1,
+                                          child: Container(
+                                            width: 9,
+                                            height: 9,
+                                            decoration: BoxDecoration(
+                                              color: AppColors.error,
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                color: isDark
+                                                    ? const Color(0xFF1F2937)
+                                                    : Colors.white,
+                                                width: 1.5,
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                      ),
-                                      if (isActive)
-                                        Icon(
-                                          Icons.check_rounded,
-                                          size: 16,
-                                          color: cat.color,
                                         ),
                                     ],
                                   ),
-                                );
-                              }).toList(),
+                                  offset: const Offset(0, 45),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  itemBuilder: (context) =>
+                                      kMapCategories.map((cat) {
+                                        final isActive = _selectedCategories
+                                            .contains(cat.id);
+                                        return PopupMenuItem<String>(
+                                          value: cat.id,
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                cat.icon,
+                                                size: 18,
+                                                color: isActive
+                                                    ? cat.color
+                                                    : Theme.of(context)
+                                                          .colorScheme
+                                                          .onSurfaceVariant,
+                                              ),
+                                              const SizedBox(width: 12),
+                                              Expanded(
+                                                child: Text(
+                                                  cat.label,
+                                                  style: TextStyle(
+                                                    fontWeight: isActive
+                                                        ? FontWeight.bold
+                                                        : FontWeight.normal,
+                                                    color: isActive
+                                                        ? cat.color
+                                                        : null,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (isActive)
+                                                Icon(
+                                                  Icons.check_rounded,
+                                                  size: 16,
+                                                  color: cat.color,
+                                                ),
+                                            ],
+                                          ),
+                                        );
+                                      }).toList(),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
 
                       // Suggestions dropdown
