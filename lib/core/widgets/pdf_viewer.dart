@@ -1,11 +1,30 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pdfx/pdfx.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/interactive_wrapper.dart';
 import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'package:http/io_client.dart';
+
+class SafeCacheManager {
+  static const key = 'pdfCacheKey';
+  static CacheManager instance = CacheManager(
+    Config(
+      key,
+      stalePeriod: const Duration(days: 7),
+      maxNrOfCacheObjects: 20,
+      repo: JsonCacheInfoRepository(databaseName: key),
+      fileService: HttpFileService(
+        httpClient: IOClient(
+          HttpClient()
+            ..badCertificateCallback =
+                (X509Certificate cert, String host, int port) => true,
+        ),
+      ),
+    ),
+  );
+}
 
 class CustomPdfViewer extends StatefulWidget {
   final String url;
@@ -43,19 +62,29 @@ class _CustomPdfViewerState extends State<CustomPdfViewer> {
 
   Future<void> _loadPdf() async {
     try {
-      final bytes = await _downloadPdfBytes();
-      final dir = await getTemporaryDirectory();
-      final file = File(
-        '${dir.path}/temp_pdf_${DateTime.now().millisecondsSinceEpoch}.pdf',
+      final cacheStream = SafeCacheManager.instance.getFileStream(
+        widget.url,
+        withProgress: true,
       );
-      await file.writeAsBytes(bytes);
 
-      _pdfController = PdfController(document: PdfDocument.openFile(file.path));
-
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      await for (final response in cacheStream) {
+        if (response is DownloadProgress) {
+          if (mounted) {
+            setState(() {
+              _downloadProgress = response.progress ?? 0.0;
+            });
+          }
+        } else if (response is FileInfo) {
+          _pdfController = PdfController(
+            document: PdfDocument.openFile(response.file.path),
+          );
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+          break; // Stop listening to stream once we have the file
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -64,74 +93,6 @@ class _CustomPdfViewerState extends State<CustomPdfViewer> {
           _isLoading = false;
         });
       }
-    }
-  }
-
-  Future<Uint8List> _downloadPdfBytes() async {
-    try {
-      final client = HttpClient();
-      final request = await client.getUrl(Uri.parse(widget.url));
-      final response = await request.close();
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed to load PDF (Status: ${response.statusCode})');
-      }
-
-      final contentLength = response.contentLength;
-      final bytes = BytesBuilder(copy: false);
-      int downloaded = 0;
-
-      await for (final chunk in response) {
-        bytes.add(chunk);
-        downloaded += chunk.length;
-        if (contentLength > 0 && mounted) {
-          setState(() {
-            _downloadProgress = downloaded / contentLength;
-          });
-        }
-      }
-      return bytes.takeBytes();
-    } catch (e) {
-      if (_isTlsCertificateError(e)) {
-        final fallbackBytes = await _downloadPdfBytesWithFallback();
-        if (fallbackBytes != null) return fallbackBytes;
-      }
-      rethrow;
-    }
-  }
-
-  bool _isTlsCertificateError(Object error) {
-    final message = error.toString().toLowerCase();
-    return message.contains('certificate_verify_failed') ||
-        message.contains('handshakeexception') ||
-        message.contains('handshake error');
-  }
-
-  Future<Uint8List?> _downloadPdfBytesWithFallback() async {
-    final uri = Uri.parse(widget.url);
-    final client = HttpClient();
-    client.badCertificateCallback = (cert, host, port) => host == uri.host;
-    try {
-      final request = await client.getUrl(uri);
-      final response = await request.close();
-      if (response.statusCode != HttpStatus.ok) return null;
-
-      final contentLength = response.contentLength;
-      final bytes = BytesBuilder(copy: false);
-      int downloaded = 0;
-
-      await for (final chunk in response) {
-        bytes.add(chunk);
-        downloaded += chunk.length;
-        if (contentLength > 0 && mounted) {
-          setState(() {
-            _downloadProgress = downloaded / contentLength;
-          });
-        }
-      }
-      return bytes.takeBytes();
-    } finally {
-      client.close(force: true);
     }
   }
 

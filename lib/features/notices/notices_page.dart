@@ -11,6 +11,7 @@ import 'package:smart_pulchowk/core/widgets/pdf_viewer.dart';
 import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
 import 'package:smart_pulchowk/core/widgets/empty_state.dart';
 import 'package:smart_pulchowk/features/notices/notice_editor.dart';
+import 'package:smart_pulchowk/core/services/notice_action_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class NoticesPage extends StatefulWidget {
@@ -29,6 +30,7 @@ class _NoticesPageState extends State<NoticesPage> {
   final ScrollController _categoryScrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
+  StreamSubscription? _actionSubscription;
 
   bool _isLoading = true;
   bool _isLoadingMore = false;
@@ -74,6 +76,18 @@ class _NoticesPageState extends State<NoticesPage> {
     }
     _loadData();
     _scrollController.addListener(_onScroll);
+
+    // Listen for navigation actions from other tabs/notifications
+    _actionSubscription = NoticeActionService.instance.actionStream.listen((
+      action,
+    ) {
+      if (!mounted) return;
+      setState(() {
+        if (action.category != null) _selectedCategory = action.category;
+        if (action.noticeId != null) _highlightNoticeId = action.noticeId;
+      });
+      _loadData();
+    });
   }
 
   @override
@@ -82,6 +96,7 @@ class _NoticesPageState extends State<NoticesPage> {
     _categoryScrollController.dispose();
     _searchController.dispose();
     _debounce?.cancel();
+    _actionSubscription?.cancel();
     super.dispose();
   }
 

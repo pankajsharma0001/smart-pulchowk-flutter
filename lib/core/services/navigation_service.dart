@@ -9,9 +9,8 @@ import 'package:smart_pulchowk/features/marketplace/chat_room_page.dart';
 import 'package:smart_pulchowk/features/marketplace/marketplace_activity_page.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/features/events/event_details_page.dart';
-import 'package:smart_pulchowk/features/notices/notices_page.dart';
 import 'package:smart_pulchowk/features/lost_found/lost_found_details_page.dart';
-import 'package:smart_pulchowk/features/classroom/classroom_page.dart';
+import 'package:smart_pulchowk/core/services/notice_action_service.dart';
 
 class NavigationService {
   NavigationService._();
@@ -126,14 +125,13 @@ class NavigationService {
       final attachmentUrl = data['attachmentUrl']?.toString();
       final noticeTitle = data['noticeTitle']?.toString() ?? 'Notice';
 
-      // Navigate to the Notices tab, pre-filtered to the right category
-      // and scrolled to the specific notice
-      _navigateToTab(
-        8,
-        subPage: NoticesPage(
-          initialCategory: category,
-          initialNoticeId: noticeId,
-        ),
+      // Navigate to the Notices tab via tab switching (index 8)
+      _navigateToTab(8);
+
+      // Send the action to the listener in NoticesPage (root of tab 8)
+      NoticeActionService.instance.triggerAction(
+        noticeId: noticeId,
+        category: category,
       );
 
       // If the notice has an attachment, open it on top
@@ -160,7 +158,10 @@ class NavigationService {
               urlLower.contains('.jpg') ||
               urlLower.contains('.jpeg') ||
               urlLower.contains('.png') ||
-              urlLower.contains('.webp');
+              urlLower.contains('.webp') ||
+              title.contains('image') ||
+              body.contains('image');
+
           if (isImg) {
             Future.delayed(const Duration(milliseconds: 400), () {
               _navigateToRoot(
@@ -174,54 +175,43 @@ class NavigationService {
     }
 
     // 5. Lost & Found
-    if (t.contains('lost_found') || t.contains('lostfound')) {
-      final itemIdStr = data['itemId']?.toString();
-      final itemId = int.tryParse(itemIdStr ?? '');
-      if (itemId != null) {
+    if (t.contains('lost') || t.contains('found')) {
+      final idStr = data['itemId'];
+      final id = int.tryParse(idStr?.toString() ?? '');
+      if (id != null) {
         _navigateToTab(
-          9, // Lost & Found
-          subPage: LostFoundDetailsPage(itemId: itemId),
+          0, // Home
+          subPage: LostFoundDetailsPage(itemId: id),
         );
-      } else {
-        _navigateToTab(9);
       }
       return;
     }
 
     // 6. Classroom
-    if (t.contains('assignment') || t.contains('grading')) {
-      final assignmentId = data['assignmentId']?.toString();
-      if (assignmentId != null) {
-        _navigateToTab(
-          2, // Classroom
-          subPage: ClassroomPage(initialAssignmentId: assignmentId),
-        );
-      } else {
-        _navigateToTab(2);
-      }
+    if (t.contains('class') || t == 'assignment' || t == 'material') {
+      _navigateToTab(7); // Classroom index
       return;
     }
 
-    // 7. Security & Role Updates
-    if (t.contains('security') ||
-        t.contains('role') ||
-        t == 'system' ||
-        t.contains('seller')) {
-      _navigateToTab(10); // Settings
+    // 7. System / Other
+    if (t == 'system' || t == 'broadcast') {
+      _navigateToTab(0);
       return;
     }
+
+    debugPrint('Unknown notification type: $type');
   }
 
+  /// Switches the main layout to a specific tab and optionally pushes a sub-page.
   static void _navigateToTab(int index, {Widget? subPage}) {
-    // Navigate using MainLayout's programmatic tab switching
-    MainLayout.mainLayoutKey.currentState?.navigateToTab(
-      index,
-      subPage: subPage,
-    );
+    final state = MainLayout.mainLayoutKey.currentState;
+    if (state != null) {
+      state.navigateToTab(index, subPage: subPage);
+    }
   }
 
+  /// Pushes a page onto the root navigator (on top of everything).
   static void _navigateToRoot(Widget page) {
-    // Push onto root navigator to hide the top/bottom bars
     navigatorKey.currentState?.push(MaterialPageRoute(builder: (_) => page));
   }
 }
