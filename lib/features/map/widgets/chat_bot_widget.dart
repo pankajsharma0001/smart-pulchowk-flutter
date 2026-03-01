@@ -603,7 +603,12 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
 
   Widget _buildInputArea(bool isDark) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: widget.isPage ? 80 : 16,
+      ),
       decoration: BoxDecoration(
         border: Border(
           top: BorderSide(
