@@ -577,24 +577,56 @@ class _MapPageState extends State<MapPage> {
     _loadGeoJSON();
   }
 
-  void _onMapClick(Point<double> point, LatLng coordinates) async {
+  void _onPointerDown(PointerDownEvent event) async {
+    if (_mapController == null || !_isStyleLoaded) return;
+
+    final logicalOffset = event.localPosition;
+    final ratio = MediaQuery.of(context).devicePixelRatio;
+    final physicalPoint = Point<double>(
+      logicalOffset.dx * ratio,
+      logicalOffset.dy * ratio,
+    );
+
+    final coordinates = await _mapController!.toLatLng(physicalPoint);
+    _processMapTap(physicalPoint, logicalOffset, coordinates);
+  }
+
+  void _onMapClick(Point<double> point, LatLng coordinates) {
+    // Handled via _onPointerDown to avoid icon interception
+  }
+
+  void _processMapTap(
+    Point<double> physicalPoint,
+    Offset logicalPoint,
+    LatLng coordinates,
+  ) async {
     if (_mapController == null) return;
+
     if (_searchFocusNode.hasFocus || _showSuggestions) {
       FocusScope.of(context).unfocus();
       setState(() => _showSuggestions = false);
     }
+
     try {
-      final tapRect = Rect.fromLTRB(
-        point.x - 30,
-        point.y - 30,
-        point.x + 30,
-        point.y + 50,
+      // Use logical-to-physical converted radius for hit testing
+      // 24 logical pixels for tighter precision
+      const double tapRadius = 16.0;
+      final ratio = MediaQuery.of(context).devicePixelRatio;
+      final querySize = tapRadius * ratio;
+
+      final queryRect = Rect.fromLTRB(
+        physicalPoint.x - querySize,
+        physicalPoint.y - querySize,
+        physicalPoint.x + querySize,
+        physicalPoint.y + querySize,
       );
+
       final features = await _mapController!.queryRenderedFeaturesInRect(
-        tapRect,
+        queryRect,
         ['markers-layer'],
         null,
       );
+
       if (features.isNotEmpty) {
         final feature = features.first;
         String? title;
@@ -603,6 +635,7 @@ class _MapPageState extends State<MapPage> {
           if (props is Map) title = props['title']?.toString();
           title ??= feature['title']?.toString();
         }
+
         if (title != null && title.isNotEmpty) {
           final location = _allLocations.firstWhere(
             (l) => l['title'] == title,
@@ -610,12 +643,11 @@ class _MapPageState extends State<MapPage> {
           );
           if (location.isNotEmpty) {
             _showLocationDetails(location);
-            return;
           }
         }
       }
     } catch (e) {
-      debugPrint('Error querying features: $e');
+      debugPrint('Error in _processMapTap: $e');
     }
   }
 
@@ -1216,44 +1248,46 @@ class _MapPageState extends State<MapPage> {
           fit: StackFit.expand,
           children: [
             // ── MapLibre ──
-            MapLibreMap(
-              key: const ValueKey('map_libre_main'),
-              styleString: _currentStyle,
-              initialCameraPosition: const CameraPosition(
-                target: _pulchowkCenter,
-                zoom: _initialZoom,
-              ),
-              onMapCreated: _onMapCreated,
-              onStyleLoadedCallback: _onStyleLoaded,
-              onMapClick: _onMapClick,
-              myLocationEnabled: _showMyLocation,
-              myLocationTrackingMode: MyLocationTrackingMode.none,
-              myLocationRenderMode: _showMyLocation
-                  ? MyLocationRenderMode.compass
-                  : MyLocationRenderMode.normal,
-              trackCameraPosition: true,
-              compassEnabled: false,
-              onCameraIdle: () {
-                if (_mapController != null) {
-                  final bearing =
-                      _mapController!.cameraPosition?.bearing ?? 0.0;
-                  if (bearing != _cameraBearing) {
-                    setState(() => _cameraBearing = bearing);
+            Listener(
+              onPointerDown: _onPointerDown,
+              child: MapLibreMap(
+                key: const ValueKey('map_libre_main'),
+                styleString: _currentStyle,
+                initialCameraPosition: const CameraPosition(
+                  target: _pulchowkCenter,
+                  zoom: _initialZoom,
+                ),
+                onMapCreated: _onMapCreated,
+                onStyleLoadedCallback: _onStyleLoaded,
+                onMapClick: _onMapClick,
+                myLocationEnabled: _showMyLocation,
+                myLocationTrackingMode: MyLocationTrackingMode.none,
+                myLocationRenderMode: _showMyLocation
+                    ? MyLocationRenderMode.compass
+                    : MyLocationRenderMode.normal,
+                trackCameraPosition: true,
+                compassEnabled: false,
+                onCameraIdle: () {
+                  if (_mapController != null) {
+                    final bearing =
+                        _mapController!.cameraPosition?.bearing ?? 0.0;
+                    if (bearing != _cameraBearing) {
+                      setState(() => _cameraBearing = bearing);
+                    }
                   }
-                }
-              },
-              cameraTargetBounds: CameraTargetBounds(_campusBounds),
-              minMaxZoomPreference: MinMaxZoomPreference(
-                16,
-                _isSatellite ? 18.45 : 20,
-              ),
-              scrollGesturesEnabled: true,
-              tiltGesturesEnabled: false,
-              rotateGesturesEnabled: true,
-              doubleClickZoomEnabled: true,
-              attributionButtonMargins: Point(8, bottomNavHeight + 4),
-            ),
-
+                },
+                cameraTargetBounds: CameraTargetBounds(_campusBounds),
+                minMaxZoomPreference: MinMaxZoomPreference(
+                  16,
+                  _isSatellite ? 18.45 : 20,
+                ),
+                scrollGesturesEnabled: true,
+                tiltGesturesEnabled: false,
+                rotateGesturesEnabled: true,
+                doubleClickZoomEnabled: true,
+                attributionButtonMargins: Point(8, bottomNavHeight + 4),
+              ), // This closes MapLibreMap
+            ), // This closes Listener
             // ── Loading overlay ──
             if (!_isStyleLoaded)
               Container(
@@ -1313,15 +1347,15 @@ class _MapPageState extends State<MapPage> {
                                 color: hasFocus
                                     ? AppColors.primary
                                     : isDark
-                                    ? Colors.white.withValues(alpha: 0.1)
-                                    : AppColors.primary.withValues(alpha: 0.15),
+                                    ? Colors.white.withOpacity(0.1)
+                                    : AppColors.primary.withOpacity(0.15),
                                 width: hasFocus ? 1.5 : 1,
                               ),
                               boxShadow: hasFocus
                                   ? [
                                       BoxShadow(
-                                        color: AppColors.primary.withValues(
-                                          alpha: 0.12,
+                                        color: AppColors.primary.withOpacity(
+                                          0.12,
                                         ),
                                         blurRadius: 14,
                                         offset: const Offset(0, 4),
@@ -1329,9 +1363,7 @@ class _MapPageState extends State<MapPage> {
                                     ]
                                   : [
                                       BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.04,
-                                        ),
+                                        color: Colors.black.withOpacity(0.04),
                                         blurRadius: 10,
                                         offset: const Offset(0, 4),
                                       ),
@@ -1387,7 +1419,7 @@ class _MapPageState extends State<MapPage> {
                                             color: isDark
                                                 ? AppColors.textMutedDark
                                                 : AppColors.textMuted
-                                                      .withValues(alpha: 0.6),
+                                                      .withOpacity(0.6),
                                           ),
                                       filled: false,
                                       border: InputBorder.none,
@@ -1433,8 +1465,8 @@ class _MapPageState extends State<MapPage> {
                                     width: 1,
                                     thickness: 1,
                                     color: isDark
-                                        ? Colors.white.withValues(alpha: 0.1)
-                                        : Colors.black.withValues(alpha: 0.08),
+                                        ? Colors.white.withOpacity(0.1)
+                                        : Colors.black.withOpacity(0.08),
                                   ),
                                 ),
                                 PopupMenuButton<String>(
@@ -1549,7 +1581,7 @@ class _MapPageState extends State<MapPage> {
                                       leading: Container(
                                         padding: const EdgeInsets.all(8),
                                         decoration: BoxDecoration(
-                                          color: color.withValues(alpha: 0.1),
+                                          color: color.withOpacity(0.1),
                                           shape: BoxShape.circle,
                                         ),
                                         child: Icon(
@@ -1607,7 +1639,7 @@ class _MapPageState extends State<MapPage> {
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurfaceVariant
-                                        .withValues(alpha: 0.5),
+                                        .withOpacity(0.5),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
@@ -1703,7 +1735,7 @@ class _MapPageState extends State<MapPage> {
                                 margin: const EdgeInsets.symmetric(vertical: 1),
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.outline.withValues(alpha: 0.5),
+                                ).colorScheme.outline.withOpacity(0.5),
                               ),
                             ),
                           ),
@@ -1722,7 +1754,7 @@ class _MapPageState extends State<MapPage> {
                               vertical: 12,
                             ),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withValues(alpha: 0.1),
+                              color: AppColors.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
@@ -1824,7 +1856,7 @@ class _MapPageState extends State<MapPage> {
                         Icons.my_location_rounded,
                         color: _showMyLocation
                             ? AppColors.primary
-                            : AppColors.primary.withValues(alpha: 0.7),
+                            : AppColors.primary.withOpacity(0.7),
                       ),
               ),
             ),
