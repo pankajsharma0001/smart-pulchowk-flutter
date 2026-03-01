@@ -39,8 +39,7 @@ const Map<String, String> _kIconUrls = {
   'electrical': 'https://cdn-icons-png.flaticon.com/512/9922/9922144.png',
   'music': 'https://cdn-icons-png.flaticon.com/512/5905/5905923.png',
   'energy': 'https://cdn-icons-png.flaticon.com/512/10053/10053795.png',
-  'helm':
-      'https://png.pngtree.com/png-clipart/20230918/original/pngtree-aircraftplaneairplane-map-pin-icon-aviation-aircraft-transportation-vector-png-image_12363891.png',
+  'helm': 'https://cdn-icons-png.flaticon.com/512/3448/3448279.png',
   'garden': 'https://cdn-icons-png.flaticon.com/512/15359/15359437.png',
   'store': 'https://cdn-icons-png.flaticon.com/512/3448/3448673.png',
   'quarter': 'https://static.thenounproject.com/png/331579-200.png',
@@ -56,13 +55,13 @@ const Map<String, String> _kIconUrls = {
       'https://cdn.iconscout.com/icon/free/png-256/free-fountain-icon-svg-download-png-449881.png',
   'water':
       'https://static.vecteezy.com/system/resources/thumbnails/044/570/540/small_2x/single-water-drop-on-transparent-background-free-png.png',
-  'workshop': 'https://cdn-icons-png.flaticon.com/512/10747/10747285.png',
+  'workshop': 'https://cdn-icons-png.flaticon.com/512/7258/7258548.png',
   'toilet':
       'https://www.shareicon.net/data/2015/09/21/644170_pointer_512x512.png',
   'bridge':
       'https://icons.veryicon.com/png/o/phone/map-anchor-4-colors/01_bridge-blue.png',
   'marker':
-      'https://toppng.com/uploads/preview/eat-play-do-icon-map-marker-115548254600u9yjx6qhj.png',
+      'https://res.cloudinary.com/dbep7iwmy/image/upload/v1772382548/default_marker_bwlmsf.png',
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -532,7 +531,7 @@ class _MapPageState extends State<MapPage> {
             'sports-icon',
             0.11,
             'marker-icon',
-            0.08,
+            0.125,
             'parking-icon',
             0.3,
             'badminton-icon',
@@ -543,6 +542,8 @@ class _MapPageState extends State<MapPage> {
             0.3,
             'fountain-icon',
             0.3,
+            'workshop-icon',
+            0.15,
             0.12,
           ],
           iconAnchor: 'center',
