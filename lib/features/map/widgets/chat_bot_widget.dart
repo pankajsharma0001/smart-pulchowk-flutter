@@ -7,15 +7,16 @@ import 'package:smart_pulchowk/features/map/models/chatbot_response.dart';
 
 /// A beautiful floating chatbot widget that provides campus navigation assistance.
 class ChatBotWidget extends StatefulWidget {
-  /// Callback when the chatbot returns locations to display
   final void Function(List<ChatBotLocation> locations, String action)?
   onLocationsReturned;
   final double bottomOffset;
+  final bool isPage;
 
   const ChatBotWidget({
     super.key,
     this.onLocationsReturned,
     this.bottomOffset = 0,
+    this.isPage = false,
   });
 
   @override
@@ -66,6 +67,9 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
   void initState() {
     super.initState();
     _shuffleSuggestions();
+    if (widget.isPage) {
+      _isOpen = true;
+    }
 
     _panelAnimationController = AnimationController(
       duration: const Duration(milliseconds: 350),
@@ -241,6 +245,17 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (widget.isPage) {
+      return Container(
+        color: isDark ? const Color(0xFF0D1321) : Colors.grey[50],
+        child: SafeArea(
+          bottom: false,
+          child: _buildChatPanel(isDark, double.infinity),
+        ),
+      );
+    }
+
     final mediaQuery = MediaQuery.of(context);
     final viewInsets = mediaQuery.viewInsets;
     final viewPadding = mediaQuery.padding;
@@ -376,15 +391,21 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
 
   Widget _buildChatPanel(bool isDark, double height) {
     return Container(
-      width: 340,
+      width: widget.isPage ? double.infinity : 340,
       height: height,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.1),
-          width: 1,
-        ),
+        borderRadius: widget.isPage
+            ? BorderRadius.zero
+            : BorderRadius.circular(24),
+        border: widget.isPage
+            ? null
+            : Border.all(
+                color: (isDark ? Colors.white : Colors.black).withValues(
+                  alpha: 0.1,
+                ),
+                width: 1,
+              ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.2),
@@ -406,16 +427,18 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
         ),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
+        borderRadius: widget.isPage
+            ? BorderRadius.zero
+            : const BorderRadius.only(
+                topLeft: Radius.circular(24),
+                topRight: Radius.circular(24),
+              ),
       ),
       child: Row(
         children: [
@@ -423,7 +446,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
-              'PulchowkX Assistant',
+              'Smart Pulchowk Assistant',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -431,10 +454,11 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
               ),
             ),
           ),
-          IconButton(
-            onPressed: _toggleChat,
-            icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
-          ),
+          if (!widget.isPage)
+            IconButton(
+              onPressed: _toggleChat,
+              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+            ),
         ],
       ),
     );
@@ -538,15 +562,19 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
             bottomRight: Radius.circular(isUser ? 4 : 16),
           ),
         ),
-        child: Text(
-          message.content,
-          style: TextStyle(
-            color: isUser
-                ? Colors.white
-                : isError
-                ? Colors.red
-                : (isDark ? Colors.white : Colors.black87),
-            fontSize: 14,
+        child: Material(
+          type: MaterialType.transparency,
+          child: Text(
+            message.content,
+            style: TextStyle(
+              color: isUser
+                  ? Colors.white
+                  : isError
+                  ? Colors.red
+                  : (isDark ? Colors.white : Colors.black87),
+              fontSize: 14,
+              decoration: TextDecoration.none,
+            ),
           ),
         ),
       ),

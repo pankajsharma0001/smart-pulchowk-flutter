@@ -348,6 +348,13 @@ class MainLayoutState extends State<MainLayout>
         return const LostFoundPage();
       case 10:
         return const SettingsPage();
+      case 11:
+        return ChatBotWidget(
+          isPage: true,
+          onLocationsReturned: (locations, action) {
+            setSelectedIndex(1);
+          },
+        );
       default:
         return const SizedBox.shrink();
     }
@@ -379,6 +386,8 @@ class MainLayoutState extends State<MainLayout>
         return AppPage.lostAndFound;
       case 10:
         return AppPage.settings;
+      case 11:
+        return AppPage.campusAssistant;
       default:
         return AppPage.home;
     }
@@ -408,6 +417,10 @@ class MainLayoutState extends State<MainLayout>
         return Icons.search_rounded;
       case 10:
         return Icons.settings_rounded;
+      case 3:
+        return Icons.auto_stories_rounded;
+      case 11:
+        return Icons.assistant_rounded;
     }
 
     // Default role-based icon for main tabs (Home, Map, Books, Profile)
@@ -581,15 +594,6 @@ class MainLayoutState extends State<MainLayout>
               ),
             ),
           ),
-
-          // ── App-wide ChatBot overlay ──────────────────────────────────
-          ChatBotWidget(
-            bottomOffset: MediaQuery.of(context).padding.bottom + 65.0,
-            onLocationsReturned: (locations, action) {
-              // Switch to map tab when chatbot returns map locations
-              setSelectedIndex(1);
-            },
-          ),
         ],
       ),
     );
@@ -652,8 +656,8 @@ class _BottomNavBar extends StatelessWidget {
     final totalWidth = MediaQuery.of(context).size.width;
     final itemWidth = totalWidth / 5;
 
-    final indicatorIndex = [0, 1, 3, 4].contains(selectedIndex)
-        ? selectedIndex
+    final indicatorIndex = [0, 1, 11, 4].contains(selectedIndex)
+        ? (selectedIndex == 11 ? 3 : selectedIndex)
         : 2;
 
     return SizedBox(
@@ -682,7 +686,7 @@ class _BottomNavBar extends StatelessWidget {
                 // ── Sliding Indicator Pill ──
                 if (selectedIndex == 0 ||
                     selectedIndex == 1 ||
-                    selectedIndex == 3 ||
+                    selectedIndex == 11 ||
                     selectedIndex == 4)
                   AnimatedPositioned(
                     duration: const Duration(milliseconds: 400),
@@ -733,18 +737,18 @@ class _BottomNavBar extends StatelessWidget {
                     ),
                     // Center gap for floating button
                     SizedBox(width: itemWidth),
-                    // Right side: Books + Profile
+                    // Right side: Assistant + Profile
                     Expanded(
                       flex: 2,
                       child: Row(
                         children: [
                           Expanded(
                             child: _NavItem(
-                              icon: Icons.auto_stories_outlined,
-                              activeIcon: Icons.auto_stories_rounded,
-                              label: 'Books',
-                              isActive: selectedIndex == 3,
-                              onTap: () => onItemSelected(3),
+                              icon: Icons.assistant_outlined,
+                              activeIcon: Icons.assistant_rounded,
+                              label: 'Assistant',
+                              isActive: selectedIndex == 11,
+                              onTap: () => onItemSelected(11),
                             ),
                           ),
                           Expanded(
@@ -912,6 +916,12 @@ class _QuickMenu extends StatelessWidget {
         label: 'Settings',
         index: 10,
         color: const Color(0xFF64748B),
+      ),
+      _QuickMenuItemData(
+        icon: Icons.auto_stories_rounded,
+        label: 'Book Market',
+        index: 3,
+        color: const Color(0xFFF97316),
       ),
     ]);
 
