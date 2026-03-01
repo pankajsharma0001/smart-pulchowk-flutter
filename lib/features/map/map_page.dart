@@ -1306,14 +1306,14 @@ class _MapPageState extends State<MapPage> {
                             padding: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
                               color: isDark
-                                  ? Colors.white.withValues(alpha: 0.08)
+                                  ? AppColors.surfaceDark
                                   : Colors.white,
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: hasFocus
                                     ? AppColors.primary
                                     : isDark
-                                    ? Colors.white.withValues(alpha: 0.12)
+                                    ? Colors.white.withValues(alpha: 0.1)
                                     : AppColors.primary.withValues(alpha: 0.15),
                                 width: hasFocus ? 1.5 : 1,
                               ),
@@ -1353,9 +1353,11 @@ class _MapPageState extends State<MapPage> {
                                   child: TextField(
                                     controller: _searchController,
                                     focusNode: _searchFocusNode,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodyLarge,
+                                    style: AppTextStyles.bodyMedium.copyWith(
+                                      color: isDark
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.textPrimary,
+                                    ),
                                     onChanged: (v) => setState(() {
                                       _searchQuery = v;
                                       _showSuggestions = v.isNotEmpty;
@@ -1380,12 +1382,13 @@ class _MapPageState extends State<MapPage> {
                                     decoration: InputDecoration(
                                       hintText:
                                           'Search labs, canteen, departments…',
-                                      hintStyle: TextStyle(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant
-                                            .withValues(alpha: 0.5),
-                                      ),
+                                      hintStyle: AppTextStyles.bodyMedium
+                                          .copyWith(
+                                            color: isDark
+                                                ? AppColors.textMutedDark
+                                                : AppColors.textMuted
+                                                      .withValues(alpha: 0.6),
+                                          ),
                                       filled: false,
                                       border: InputBorder.none,
                                       enabledBorder: InputBorder.none,

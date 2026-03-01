@@ -38,7 +38,7 @@ class _ProfilePageState extends State<ProfilePage>
   bool _isStudent = false;
 
   static const _allTabs = [
-    'My Listings',
+    'My Listing',
     'Activity',
     'Saved',
     'Classroom',
@@ -1046,8 +1046,8 @@ class _ProfilePageState extends State<ProfilePage>
           // Header shimmer
           SliverToBoxAdapter(
             child: Container(
-              height: 250,
-              padding: const EdgeInsets.symmetric(vertical: 40),
+              height: 270,
+              padding: const EdgeInsets.symmetric(vertical: 24),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
