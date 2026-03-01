@@ -38,18 +38,18 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
 
   // All available suggestion chips
   static const List<String> _allSuggestions = [
+    'Summarize recent notices',
+    'Any upcoming events?',
     'Where is the library?',
+    'List active clubs',
+    'Any lost items reported?',
     'Find ICTC Building',
+    'How to sell a book?',
+    'Exam routine?',
+    'Dean Office location',
+    'Latest results',
+    'What can you help with?',
     'Canteen location',
-    'Dean Office',
-    'Where is the gym?',
-    'Find the hostel',
-    'Main entrance',
-    'Computer lab',
-    'Robotics Club',
-    'Football ground',
-    'ATM location',
-    'Exam office',
   ];
 
   // Current 3 random suggestions
@@ -197,7 +197,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
           ),
         );
 
-        if (response.data!.locations.isNotEmpty) {
+        if (response.data!.isMapAction && response.data!.locations.isNotEmpty) {
           widget.onLocationsReturned?.call(
             response.data!.locations,
             response.data!.action,
@@ -423,7 +423,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
           const SizedBox(width: 12),
           const Expanded(
             child: Text(
-              'Campus Assistant',
+              'PulchowkX Assistant',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 16,
@@ -458,7 +458,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
               ),
               const SizedBox(height: 16),
               Text(
-                'Ask me anything about Pulchowk!',
+                'Ask me anything — notices, events, map, and more!',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: (isDark ? Colors.white : Colors.black).withValues(

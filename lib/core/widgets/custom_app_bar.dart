@@ -299,9 +299,7 @@ class _NotificationBellState extends State<_NotificationBell> {
     final previous = _unreadCount;
     try {
       for (int attempt = 0; attempt < 3; attempt++) {
-        final notifications = await _api.getNotifications(
-          forceRefresh: true,
-        );
+        final notifications = await _api.getNotifications(forceRefresh: true);
         if (!mounted || _isDisposed) return;
         final unread = notifications.where((n) => !n.isRead).length;
         if (unread != previous || attempt == 2) {
@@ -310,7 +308,8 @@ class _NotificationBellState extends State<_NotificationBell> {
         }
         await Future.delayed(Duration(milliseconds: 500 * (attempt + 1)));
       }
-    } catch (_) {} finally {
+    } catch (_) {
+    } finally {
       _isRefreshingCount = false;
     }
   }
@@ -469,7 +468,7 @@ class _UserAvatarState extends State<_UserAvatar> {
             onTap: () async {
               haptics.selectionClick();
               await Share.share(
-                'Join me on the Smart Pulchowk app! Stay connected with campus events, clubs, and announcements. Download now!\n\nhttps://smartpulchowk.com',
+                'Join me on the Smart Pulchowk app! Stay connected with campus events, clubs, and announcements. Download now!\n\nhttps://smart-pulchowk.vercel.app',
               );
             },
           ),

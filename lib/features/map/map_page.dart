@@ -14,8 +14,6 @@ import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/features/map/widgets/category_filter_bar.dart';
 import 'package:smart_pulchowk/features/map/widgets/location_details_sheet.dart';
-import 'package:smart_pulchowk/features/map/widgets/chat_bot_widget.dart';
-import 'package:smart_pulchowk/features/map/models/chatbot_response.dart';
 import 'package:smart_pulchowk/features/map/services/campus_router.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1135,30 +1133,6 @@ class _MapPageState extends State<MapPage> {
     if (_isStyleLoaded && _mapController != null) _addMarkersToMap();
   }
 
-  // ── ChatBot location handling ──
-  void _handleChatBotLocations(List<ChatBotLocation> locations, String action) {
-    if (locations.isEmpty) return;
-
-    final first = locations.first;
-    final targetLatLng = LatLng(first.lat, first.lng);
-
-    if (action == 'show_route') {
-      // If AI says show route, try to find the match in our markers or just route to latlng
-      final destinationMatch = _allLocations.firstWhere(
-        (l) => l['id'] == first.buildingId,
-        orElse: () => _allLocations.isNotEmpty ? _allLocations.first : {},
-      );
-      if (destinationMatch.isNotEmpty) {
-        _showStartPointPicker(destinationMatch);
-      }
-    } else {
-      // Just center on the location
-      _mapController?.animateCamera(
-        CameraUpdate.newLatLngZoom(targetLatLng, 17.5),
-      );
-    }
-  }
-
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -1751,13 +1725,7 @@ class _MapPageState extends State<MapPage> {
               ),
             ),
 
-            // ── ChatBot Assistant (Stacked last to overlay everything) ──
-            ChatBotWidget(
-              bottomOffset: bottomNavHeight,
-              onLocationsReturned: (locations, action) {
-                _handleChatBotLocations(locations, action);
-              },
-            ),
+            // (ChatBot removed — now lives in MainLayout as an app-wide overlay)
           ],
         ),
       ),

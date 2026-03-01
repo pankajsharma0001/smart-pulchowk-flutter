@@ -35,14 +35,22 @@ class ChatBotLocation {
 class ChatBotData {
   final String message;
   final List<ChatBotLocation> locations;
-  final String
-  action; // "show_route", "show_location", "show_multiple_locations"
+  final String action;
 
   ChatBotData({
     required this.message,
     required this.locations,
     required this.action,
   });
+
+  /// True when the response is text-only (no map interaction needed).
+  bool get isTextOnly => action == 'text_answer';
+
+  /// True when the response should trigger a map action (location/route).
+  bool get isMapAction =>
+      action == 'show_route' ||
+      action == 'show_location' ||
+      action == 'show_multiple_locations';
 
   factory ChatBotData.fromJson(Map<String, dynamic> json) {
     final locationsJson = json['locations'] as List<dynamic>? ?? [];

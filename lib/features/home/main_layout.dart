@@ -581,6 +581,15 @@ class MainLayoutState extends State<MainLayout>
               ),
             ),
           ),
+
+          // ── App-wide ChatBot overlay ──────────────────────────────────
+          ChatBotWidget(
+            bottomOffset: MediaQuery.of(context).padding.bottom + 65.0,
+            onLocationsReturned: (locations, action) {
+              // Switch to map tab when chatbot returns map locations
+              setSelectedIndex(1);
+            },
+          ),
         ],
       ),
     );
