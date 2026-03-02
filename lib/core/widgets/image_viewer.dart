@@ -100,7 +100,23 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
                 );
 
                 if (tag != null) {
-                  image = Hero(tag: tag, child: image);
+                  image = Hero(
+                    tag: tag,
+                    flightShuttleBuilder:
+                        (
+                          flightContext,
+                          animation,
+                          flightDirection,
+                          fromHeroContext,
+                          toHeroContext,
+                        ) {
+                          return SmartImage(
+                            imageUrl: widget.imageUrls[actualIndex],
+                            fit: BoxFit.cover,
+                          );
+                        },
+                    child: image,
+                  );
                 }
 
                 return InteractiveViewer(

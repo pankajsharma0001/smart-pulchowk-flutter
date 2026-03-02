@@ -989,6 +989,19 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                     },
                     child: Hero(
                       tag: tag,
+                      flightShuttleBuilder:
+                          (
+                            flightContext,
+                            animation,
+                            flightDirection,
+                            fromHeroContext,
+                            toHeroContext,
+                          ) {
+                            return SmartImage(
+                              imageUrl: images[i].imageUrl,
+                              fit: BoxFit.cover,
+                            );
+                          },
                       child: SmartImage(
                         imageUrl: images[i].imageUrl,
                         fit: BoxFit.cover,
