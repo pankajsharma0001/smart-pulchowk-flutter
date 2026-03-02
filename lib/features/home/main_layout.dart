@@ -8,7 +8,6 @@ import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:smart_pulchowk/core/widgets/custom_app_bar.dart';
 import 'package:smart_pulchowk/features/events/events_page.dart';
 import 'package:smart_pulchowk/features/home/home_page.dart';
-import 'package:smart_pulchowk/features/notifications/notifications.dart';
 import 'package:smart_pulchowk/features/notices/notices_page.dart';
 import 'package:smart_pulchowk/features/settings/settings.dart';
 import 'package:smart_pulchowk/features/marketplace/book_marketplace_page.dart';
@@ -328,8 +327,6 @@ class MainLayoutState extends State<MainLayout>
       case 2:
         if (_userRole == 'admin') {
           return const AdminPage();
-        } else if (_userRole == 'notice_manager') {
-          return const NotificationsPage();
         }
         return ClassroomPage(userRole: _userRole);
       case 3:
@@ -369,7 +366,6 @@ class MainLayoutState extends State<MainLayout>
         return AppPage.map;
       case 2:
         if (_userRole == 'admin') return AppPage.dashboard;
-        if (_userRole == 'notice_manager') return AppPage.notifications;
         return AppPage.classroom;
       case 3:
         return AppPage.bookMarketplace;

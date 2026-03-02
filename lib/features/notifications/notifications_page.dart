@@ -12,6 +12,7 @@ import 'package:smart_pulchowk/core/models/notification.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/core/widgets/staggered_scale_fade.dart';
 import 'package:smart_pulchowk/core/widgets/empty_state.dart';
+import 'package:smart_pulchowk/core/services/connectivity_service.dart';
 import 'package:smart_pulchowk/core/services/notification_service.dart';
 import 'package:intl/intl.dart';
 
@@ -46,6 +47,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
     );
     _loadOnOpen();
     _scrollController.addListener(_onScroll);
+
+    // Rebuild UI when connectivity changes to show/hide offline message
+    ConnectivityService.instance.onConnectivityChanged.listen((_) {
+      if (mounted) setState(() {});
+    });
 
     // Listen for incoming notifications to refresh the list automatically
     _refreshSubscription = NotificationService.refreshStream.listen((_) {
@@ -137,7 +143,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Future<void> _refreshFromIncomingNotification() async {
     if (!mounted || _isRefreshingFromStream) return;
     _isRefreshingFromStream = true;
-    final previousTopId = _notifications.isNotEmpty ? _notifications.first.id : null;
+    final previousTopId = _notifications.isNotEmpty
+        ? _notifications.first.id
+        : null;
 
     try {
       for (int attempt = 0; attempt < 3; attempt++) {
@@ -149,7 +157,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
         if (!mounted) return;
 
         final hasNewTop =
-            data.isNotEmpty && (previousTopId == null || data.first.id != previousTopId);
+            data.isNotEmpty &&
+            (previousTopId == null || data.first.id != previousTopId);
         final hasMoreItems = data.length > _notifications.length;
 
         if (hasNewTop || hasMoreItems || attempt == 2) {
@@ -395,6 +404,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   Widget _buildEmptyState(ColorScheme cs) {
+    final bool isOnline = ConnectivityService.instance.isOnline;
+
+    if (!isOnline) {
+      return const EmptyState(
+        title: 'No Internet Connection',
+        subtitle: 'Please check your network settings and try again.',
+        icon: Icons.wifi_off_rounded,
+      );
+    }
+
     return const EmptyState(
       title: 'All caught up!',
       subtitle: 'No new notifications at the moment.',
