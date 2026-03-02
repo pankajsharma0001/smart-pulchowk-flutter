@@ -357,10 +357,12 @@ class _BookMarketplacePageState extends State<BookMarketplacePage>
         if (index >= _books.length) {
           return const ShimmerBookCard();
         }
-        return _BookCard(
-          book: _books[index],
-          isDark: isDark,
-          onTap: () => _openBookDetails(_books[index]),
+        return RepaintBoundary(
+          child: _BookCard(
+            book: _books[index],
+            isDark: isDark,
+            onTap: () => _openBookDetails(_books[index]),
+          ),
         );
       },
     );
@@ -695,7 +697,7 @@ class _BookCard extends StatelessWidget {
           ),
           boxShadow: isDark ? null : AppShadows.xs,
         ),
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

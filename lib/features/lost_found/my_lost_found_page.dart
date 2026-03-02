@@ -103,20 +103,22 @@ class _MyLostFoundPageState extends State<MyLostFoundPage>
         padding: const EdgeInsets.all(AppSpacing.md),
         itemCount: _myItems.length,
         itemBuilder: (context, index) {
-          return LostFoundCard(
-            item: _myItems[index],
-            type: LostFoundCardType.list,
-            showOwner: false,
-            onTap: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      LostFoundDetailsPage(itemId: _myItems[index].id),
-                ),
-              );
-              _fetchMyData(forceRefresh: true);
-            },
+          return RepaintBoundary(
+            child: LostFoundCard(
+              item: _myItems[index],
+              type: LostFoundCardType.list,
+              showOwner: false,
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        LostFoundDetailsPage(itemId: _myItems[index].id),
+                  ),
+                );
+                _fetchMyData(forceRefresh: true);
+              },
+            ),
           );
         },
       ),

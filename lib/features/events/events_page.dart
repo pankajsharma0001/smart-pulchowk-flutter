@@ -181,7 +181,7 @@ class _EventsPageState extends State<EventsPage>
       ),
       itemCount: events.length,
       itemBuilder: (context, index) {
-        return EventCard(event: events[index]);
+        return RepaintBoundary(child: EventCard(event: events[index]));
       },
     );
   }

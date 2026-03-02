@@ -578,7 +578,7 @@ class _BookCard extends StatelessWidget {
           borderRadius: AppRadius.lgAll,
           border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
         ),
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
@@ -945,21 +944,18 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Blurred Background
-                  SmartImage(
-                    imageUrl: images[i].imageUrl,
-                    fit: BoxFit.cover,
-                    width: double.infinity,
-                    height: double.infinity,
-                    useCloudinary: false,
-                    errorWidget: const SizedBox.shrink(),
-                  ),
-                  ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                      child: Container(
-                        color: (isDark ? Colors.black : Colors.white)
-                            .withValues(alpha: 0.2),
+                  // Themed background (replaces expensive blur + double image load)
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: isDark
+                            ? [const Color(0xFF1A1A2E), const Color(0xFF16213E)]
+                            : [
+                                const Color(0xFFE8EAF6),
+                                const Color(0xFFC5CAE9),
+                              ],
                       ),
                     ),
                   ),

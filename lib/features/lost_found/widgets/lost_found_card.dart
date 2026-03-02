@@ -37,7 +37,7 @@ class LostFoundCard extends StatelessWidget {
         decoration: isDark
             ? AppDecorations.cardDark(borderRadius: AppRadius.lg)
             : AppDecorations.card(borderRadius: AppRadius.lg),
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -228,7 +228,7 @@ class LostFoundCard extends StatelessWidget {
               width: 80,
               height: 80,
               decoration: BoxDecoration(borderRadius: AppRadius.mdAll),
-              clipBehavior: Clip.antiAlias,
+              clipBehavior: Clip.hardEdge,
               child: Stack(
                 fit: StackFit.expand,
                 children: [

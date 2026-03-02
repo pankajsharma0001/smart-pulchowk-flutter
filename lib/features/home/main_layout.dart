@@ -1,4 +1,3 @@
-import 'dart:ui' as ui;
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -396,9 +395,6 @@ class MainLayoutState extends State<MainLayout>
   }
 
   IconData _getCenterIcon() {
-    debugPrint(
-      'MainLayout: _selectedIndex=$_selectedIndex, _userRole=$_userRole',
-    );
     // If a submenu page is selected, show its specific icon
     switch (_selectedIndex) {
       case 2:
@@ -509,9 +505,13 @@ class MainLayoutState extends State<MainLayout>
                         : const SizedBox.shrink(), // Lazy: unvisited tabs are empty
                   ),
                 ),
-                bottomNavigationBar: _BottomNavBar(
-                  selectedIndex: _selectedIndex,
-                  onItemSelected: setSelectedIndex,
+                bottomNavigationBar: RepaintBoundary(
+                  child: _BottomNavBar(
+                    selectedIndex: _selectedIndex,
+                    onItemSelected: (index) {
+                      setSelectedIndex(index);
+                    },
+                  ),
                 ),
               );
             },
@@ -664,112 +664,105 @@ class _BottomNavBar extends StatelessWidget {
 
     return SizedBox(
       height: barHeight,
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            height: barHeight,
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              border: Border(top: BorderSide(color: borderColor, width: 0.5)),
-              boxShadow: isDark
-                  ? []
-                  : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        blurRadius: 10,
-                        offset: const Offset(0, -2),
+      child: Container(
+        height: barHeight,
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          border: Border(top: BorderSide(color: borderColor, width: 0.5)),
+          boxShadow: isDark
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+        ),
+        padding: EdgeInsets.only(bottom: bottomPadding),
+        child: Stack(
+          children: [
+            // ── Sliding Indicator Pill ──
+            if (selectedIndex == 0 ||
+                selectedIndex == 1 ||
+                selectedIndex == 11 ||
+                selectedIndex == 4)
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOutBack,
+                left: indicatorIndex * itemWidth + (itemWidth - 48) / 2,
+                top: (65.0 - 52.0) / 2,
+                child: Container(
+                  width: 48,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color:
+                        (isDark ? const Color(0xFF818CF8) : AppColors.primary)
+                            .withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+            // Icons Row
+            Row(
+              children: [
+                // Left side: Home + Map
+                Expanded(
+                  flex: 2,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _NavItem(
+                          icon: Icons.home_outlined,
+                          activeIcon: Icons.home_rounded,
+                          label: 'Home',
+                          isActive: selectedIndex == 0,
+                          onTap: () => onItemSelected(0),
+                        ),
+                      ),
+                      Expanded(
+                        child: _NavItem(
+                          icon: Icons.navigation_outlined,
+                          activeIcon: Icons.navigation_rounded,
+                          label: 'Map',
+                          isActive: selectedIndex == 1,
+                          onTap: () => onItemSelected(1),
+                        ),
                       ),
                     ],
-            ),
-            padding: EdgeInsets.only(bottom: bottomPadding),
-            child: Stack(
-              children: [
-                // ── Sliding Indicator Pill ──
-                if (selectedIndex == 0 ||
-                    selectedIndex == 1 ||
-                    selectedIndex == 11 ||
-                    selectedIndex == 4)
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeOutBack,
-                    left: indicatorIndex * itemWidth + (itemWidth - 48) / 2,
-                    top: (65.0 - 52.0) / 2,
-                    child: Container(
-                      width: 48,
-                      height: 52,
-                      decoration: BoxDecoration(
-                        color:
-                            (isDark
-                                    ? const Color(0xFF818CF8)
-                                    : AppColors.primary)
-                                .withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
                   ),
-                // Icons Row
-                Row(
-                  children: [
-                    // Left side: Home + Map
-                    Expanded(
-                      flex: 2,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _NavItem(
-                              icon: Icons.home_outlined,
-                              activeIcon: Icons.home_rounded,
-                              label: 'Home',
-                              isActive: selectedIndex == 0,
-                              onTap: () => onItemSelected(0),
-                            ),
-                          ),
-                          Expanded(
-                            child: _NavItem(
-                              icon: Icons.navigation_outlined,
-                              activeIcon: Icons.navigation_rounded,
-                              label: 'Map',
-                              isActive: selectedIndex == 1,
-                              onTap: () => onItemSelected(1),
-                            ),
-                          ),
-                        ],
+                ),
+                // Center gap for floating button
+                SizedBox(width: itemWidth),
+                // Right side: Assistant + Profile
+                Expanded(
+                  flex: 2,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _NavItem(
+                          icon: Icons.assistant_outlined,
+                          activeIcon: Icons.assistant_rounded,
+                          label: 'Assistant',
+                          isActive: selectedIndex == 11,
+                          onTap: () => onItemSelected(11),
+                        ),
                       ),
-                    ),
-                    // Center gap for floating button
-                    SizedBox(width: itemWidth),
-                    // Right side: Assistant + Profile
-                    Expanded(
-                      flex: 2,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _NavItem(
-                              icon: Icons.assistant_outlined,
-                              activeIcon: Icons.assistant_rounded,
-                              label: 'Assistant',
-                              isActive: selectedIndex == 11,
-                              onTap: () => onItemSelected(11),
-                            ),
-                          ),
-                          Expanded(
-                            child: _NavItem(
-                              icon: Icons.person_outline_rounded,
-                              activeIcon: Icons.person_rounded,
-                              label: 'Profile',
-                              isActive: selectedIndex == 4,
-                              onTap: () => onItemSelected(4),
-                            ),
-                          ),
-                        ],
+                      Expanded(
+                        child: _NavItem(
+                          icon: Icons.person_outline_rounded,
+                          activeIcon: Icons.person_rounded,
+                          label: 'Profile',
+                          isActive: selectedIndex == 4,
+                          onTap: () => onItemSelected(4),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -814,14 +807,8 @@ class _QuickMenu extends StatelessWidget {
                 child: FadeTransition(
                   opacity: animation,
                   child: Container(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    child: BackdropFilter(
-                      filter: ui.ImageFilter.blur(
-                        sigmaX: 10 * animation.value,
-                        sigmaY: 10 * animation.value,
-                      ),
-                      child: Container(color: Colors.transparent),
-                    ),
+                    color: Colors.black.withValues(alpha: 0.4),
+                    child: const SizedBox.expand(),
                   ),
                 ),
               ),

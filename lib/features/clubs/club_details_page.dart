@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -277,31 +276,25 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
             final isFavorite = favorites.isClubFavorite(_club.id);
             return Padding(
               padding: const EdgeInsets.only(right: 8.0, top: 8, bottom: 8),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.1),
-                      ),
-                    ),
-                    child: IconButton(
-                      icon: Icon(
-                        isFavorite
-                            ? Icons.favorite_rounded
-                            : Icons.favorite_border_rounded,
-                        color: isFavorite ? Colors.redAccent : Colors.white,
-                      ),
-                      onPressed: () {
-                        haptics.selectionClick();
-                        favorites.toggleClubFavorite(_club.id);
-                      },
-                    ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.15),
                   ),
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    isFavorite
+                        ? Icons.favorite_rounded
+                        : Icons.favorite_border_rounded,
+                    color: isFavorite ? Colors.redAccent : Colors.white,
+                  ),
+                  onPressed: () {
+                    haptics.selectionClick();
+                    favorites.toggleClubFavorite(_club.id);
+                  },
                 ),
               ),
             );

@@ -330,18 +330,20 @@ class _LostFoundPageState extends State<LostFoundPage>
       ),
       itemCount: _items.length,
       itemBuilder: (context, index) {
-        return LostFoundCard(
-          item: _items[index],
-          onTap: () {
-            FocusScope.of(context).unfocus();
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    LostFoundDetailsPage(itemId: _items[index].id),
-              ),
-            );
-          },
+        return RepaintBoundary(
+          child: LostFoundCard(
+            item: _items[index],
+            onTap: () {
+              FocusScope.of(context).unfocus();
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      LostFoundDetailsPage(itemId: _items[index].id),
+                ),
+              );
+            },
+          ),
         );
       },
     );

@@ -685,7 +685,7 @@ class _SellBookPageState extends State<SellBookPage> {
                             color: Colors.white.withValues(alpha: 0.1),
                           ),
                         ),
-                        clipBehavior: Clip.antiAlias,
+                        clipBehavior: Clip.hardEdge,
                         child: SmartImage(
                           imageUrl: entry.value.imageUrl,
                           fit: BoxFit.cover,

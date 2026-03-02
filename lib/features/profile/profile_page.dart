@@ -1515,7 +1515,7 @@ class _HorizontalBookCard extends StatelessWidget {
           ),
           boxShadow: isDark ? null : AppShadows.xs,
         ),
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         child: Row(
           children: [
             // Image

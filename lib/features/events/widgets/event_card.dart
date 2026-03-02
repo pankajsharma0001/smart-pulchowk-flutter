@@ -40,7 +40,7 @@ class EventCard extends StatelessWidget {
         decoration: isDark
             ? AppDecorations.cardDark(borderRadius: AppRadius.lg)
             : AppDecorations.card(borderRadius: AppRadius.lg),
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

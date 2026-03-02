@@ -1,3 +1,4 @@
+import 'dart:collection';
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
@@ -67,7 +68,7 @@ class SmartImage extends StatelessWidget {
         width: width,
         height: height,
         decoration: BoxDecoration(shape: shape),
-        clipBehavior: Clip.antiAlias,
+        clipBehavior: Clip.hardEdge,
         child: isPortalTu
             ? _ProgressiveImage(
                 imageUrl: url,
@@ -169,7 +170,28 @@ class _ProgressiveImage extends StatefulWidget {
 }
 
 class _ProgressiveImageState extends State<_ProgressiveImage> {
-  static final Map<String, Uint8List> _imageCache = {};
+  /// LRU cache: max 50 entries. LinkedHashMap maintains insertion order;
+  /// we move accessed entries to the end, and evict from the front.
+  static const int _maxCacheSize = 50;
+  static final LinkedHashMap<String, Uint8List> _imageCache =
+      LinkedHashMap<String, Uint8List>();
+
+  static Uint8List? _cacheGet(String key) {
+    final value = _imageCache.remove(key);
+    if (value != null) {
+      _imageCache[key] = value; // Move to end (most recently used)
+    }
+    return value;
+  }
+
+  static void _cachePut(String key, Uint8List value) {
+    _imageCache.remove(key); // Remove if exists to re-insert at end
+    _imageCache[key] = value;
+    while (_imageCache.length > _maxCacheSize) {
+      _imageCache.remove(_imageCache.keys.first); // Evict oldest
+    }
+  }
+
   late Future<Uint8List?> _imageFuture;
   Uint8List? _resolvedBytes;
   double _progress = 0.0;
@@ -178,7 +200,7 @@ class _ProgressiveImageState extends State<_ProgressiveImage> {
   @override
   void initState() {
     super.initState();
-    _resolvedBytes = _imageCache[widget.imageUrl];
+    _resolvedBytes = _cacheGet(widget.imageUrl);
     _imageFuture = _fetchImage();
   }
 
@@ -187,7 +209,7 @@ class _ProgressiveImageState extends State<_ProgressiveImage> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.imageUrl != widget.imageUrl) {
       setState(() {
-        _resolvedBytes = _imageCache[widget.imageUrl];
+        _resolvedBytes = _cacheGet(widget.imageUrl);
         _progress = 0;
         _hasStartedDownloading = false;
         _imageFuture = _fetchImage();
@@ -197,10 +219,10 @@ class _ProgressiveImageState extends State<_ProgressiveImage> {
 
   Future<Uint8List?> _fetchImage() async {
     // 1. Check in-memory cache first
-    if (_imageCache.containsKey(widget.imageUrl)) {
-      final bytes = _imageCache[widget.imageUrl];
-      if (mounted) setState(() => _resolvedBytes = bytes);
-      return bytes;
+    final cached = _cacheGet(widget.imageUrl);
+    if (cached != null) {
+      if (mounted) setState(() => _resolvedBytes = cached);
+      return cached;
     }
 
     final uri = Uri.tryParse(widget.imageUrl);
@@ -240,7 +262,7 @@ class _ProgressiveImageState extends State<_ProgressiveImage> {
       }
 
       final bytes = bytesBuilder.takeBytes();
-      _imageCache[widget.imageUrl] = bytes;
+      _cachePut(widget.imageUrl, bytes);
       if (mounted) setState(() => _resolvedBytes = bytes);
       return bytes;
     } catch (e) {

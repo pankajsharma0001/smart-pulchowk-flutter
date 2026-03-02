@@ -276,7 +276,7 @@ class _FavoritesPageState extends State<FavoritesPage>
       ),
       itemCount: _favoriteClubs.length,
       itemBuilder: (context, index) {
-        return ClubCard(club: _favoriteClubs[index]);
+        return RepaintBoundary(child: ClubCard(club: _favoriteClubs[index]));
       },
     );
   }
@@ -298,9 +298,11 @@ class _FavoritesPageState extends State<FavoritesPage>
       itemBuilder: (context, index) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 16),
-          child: EventCard(
-            event: _favoriteEvents[index],
-            type: EventCardType.list,
+          child: RepaintBoundary(
+            child: EventCard(
+              event: _favoriteEvents[index],
+              type: EventCardType.list,
+            ),
           ),
         );
       },

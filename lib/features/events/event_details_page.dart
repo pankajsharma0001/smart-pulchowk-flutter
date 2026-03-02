@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
@@ -341,21 +340,15 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                 stretch: true,
                 leading: Padding(
                   padding: const EdgeInsets.all(8.0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1),
-                          ),
-                        ),
-                        child: const BackButton(color: Colors.white),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.15),
                       ),
                     ),
+                    child: const BackButton(color: Colors.white),
                   ),
                 ),
                 actions: [
@@ -372,35 +365,27 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                           top: 8,
                           bottom: 8,
                         ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.1),
-                                ),
-                              ),
-                              child: IconButton(
-                                icon: Icon(
-                                  isFavorite
-                                      ? Icons.favorite_rounded
-                                      : Icons.favorite_border_rounded,
-                                  color: isFavorite
-                                      ? Colors.redAccent
-                                      : Colors.white,
-                                ),
-                                onPressed: () {
-                                  haptics.selectionClick();
-                                  favorites.toggleEventFavorite(
-                                    widget.event.id,
-                                  );
-                                },
-                              ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.15),
                             ),
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              isFavorite
+                                  ? Icons.favorite_rounded
+                                  : Icons.favorite_border_rounded,
+                              color: isFavorite
+                                  ? Colors.redAccent
+                                  : Colors.white,
+                            ),
+                            onPressed: () {
+                              haptics.selectionClick();
+                              favorites.toggleEventFavorite(widget.event.id);
+                            },
                           ),
                         ),
                       );
@@ -413,63 +398,55 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                         top: 8,
                         bottom: 8,
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.1),
-                              ),
-                            ),
-                            child: PopupMenuButton<String>(
-                              icon: const Icon(
-                                Icons.more_vert_rounded,
-                                color: Colors.white,
-                              ),
-                              onSelected: (value) {
-                                if (value == 'edit') {
-                                  _openEditor();
-                                } else if (value == 'delete') {
-                                  _showDeleteConfirmation();
-                                }
-                              },
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(
-                                  value: 'edit',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.edit_rounded, size: 20),
-                                      SizedBox(width: 12),
-                                      Text('Edit Event'),
-                                    ],
-                                  ),
-                                ),
-                                const PopupMenuItem(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(
-                                        Icons.delete_outline_rounded,
-                                        size: 20,
-                                        color: AppColors.error,
-                                      ),
-                                      SizedBox(width: 12),
-                                      Text(
-                                        'Delete Event',
-                                        style: TextStyle(
-                                          color: AppColors.error,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.4),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.15),
                           ),
+                        ),
+                        child: PopupMenuButton<String>(
+                          icon: const Icon(
+                            Icons.more_vert_rounded,
+                            color: Colors.white,
+                          ),
+                          onSelected: (value) {
+                            if (value == 'edit') {
+                              _openEditor();
+                            } else if (value == 'delete') {
+                              _showDeleteConfirmation();
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'edit',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit_rounded, size: 20),
+                                  SizedBox(width: 12),
+                                  Text('Edit Event'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.delete_outline_rounded,
+                                    size: 20,
+                                    color: AppColors.error,
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    'Delete Event',
+                                    style: TextStyle(color: AppColors.error),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -499,16 +476,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                   ),
                                 ),
                                 Positioned.fill(
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(
-                                      sigmaX: 10,
-                                      sigmaY: 10,
-                                    ),
-                                    child: Container(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                    ),
+                                  child: Container(
+                                    color: Colors.black.withValues(alpha: 0.45),
                                   ),
                                 ),
                                 // Focused Foreground
@@ -591,7 +560,7 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                         decoration: const BoxDecoration(
                                           shape: BoxShape.circle,
                                         ),
-                                        clipBehavior: Clip.antiAlias,
+                                        clipBehavior: Clip.hardEdge,
                                         child: SmartImage(
                                           imageUrl: widget.event.club!.logoUrl,
                                           fit: BoxFit.cover,
@@ -1474,4 +1443,3 @@ class _CountdownTimerState extends State<_CountdownTimer> {
     );
   }
 }
-

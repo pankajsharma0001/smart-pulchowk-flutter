@@ -76,7 +76,7 @@ class ShimmerBookCard extends StatelessWidget {
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
       ),
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: Clip.hardEdge,
       child: ShimmerWrapper(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -127,7 +127,7 @@ class ShimmerEventCard extends StatelessWidget {
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
       ),
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: Clip.hardEdge,
       child: ShimmerWrapper(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -176,7 +176,7 @@ class ShimmerLostFoundCard extends StatelessWidget {
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
       ),
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: Clip.hardEdge,
       child: ShimmerWrapper(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -231,7 +231,7 @@ class ShimmerClubCard extends StatelessWidget {
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
       ),
-      clipBehavior: Clip.antiAlias,
+      clipBehavior: Clip.hardEdge,
       child: ShimmerWrapper(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
