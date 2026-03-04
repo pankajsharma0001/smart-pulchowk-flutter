@@ -774,17 +774,24 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         margin: const EdgeInsets.only(bottom: 12),
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              (isDark ? Colors.white : Colors.black).withValues(alpha: 0.3),
-            ),
+        decoration: BoxDecoration(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.1)
+              : Colors.black.withValues(alpha: 0.05),
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomRight: Radius.circular(16),
+            bottomLeft: Radius.circular(4),
           ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (index) {
+            return _TypingDot(index: index, isDark: isDark);
+          }),
         ),
       ),
     );
@@ -848,6 +855,67 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
           ),
         ],
       ),
+    );
+  }
+}
+
+class _TypingDot extends StatefulWidget {
+  final int index;
+  final bool isDark;
+
+  const _TypingDot({required this.index, required this.isDark});
+
+  @override
+  State<_TypingDot> createState() => _TypingDotState();
+}
+
+class _TypingDotState extends State<_TypingDot>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _animation = Tween<double>(
+      begin: 0,
+      end: -4,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+    Future.delayed(Duration(milliseconds: widget.index * 150), () {
+      if (mounted) _controller.repeat(reverse: true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 2),
+          transform: Matrix4.translationValues(0, _animation.value, 0),
+          width: 5,
+          height: 5,
+          decoration: BoxDecoration(
+            color: (widget.isDark ? Colors.white : Colors.black).withValues(
+              alpha: 0.4,
+            ),
+            shape: BoxShape.circle,
+          ),
+        );
+      },
     );
   }
 }

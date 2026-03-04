@@ -3342,7 +3342,7 @@ class ApiService {
   /// Send a query to the campus navigation chatbot.
   Future<ChatBotResponse> chatBot(String query) async {
     try {
-      final response = await _post(
+      final response = await _authPost(
         AppConstants.chatbotChat,
         body: {'query': query},
       );
