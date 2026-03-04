@@ -30,17 +30,30 @@ class ChatBotLocation {
       role: json['role'] as String? ?? 'destination',
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'building_id': buildingId,
+    'building_name': buildingName,
+    'coordinates': {'lat': lat, 'lng': lng},
+    'service_name': serviceName,
+    'service_location': serviceLocation,
+    'role': role,
+  };
 }
 
 class ChatBotData {
   final String message;
   final List<ChatBotLocation> locations;
   final String action;
+  final String intent;
+  final List<String> followUp;
 
   ChatBotData({
     required this.message,
     required this.locations,
     required this.action,
+    this.intent = 'unknown',
+    this.followUp = const [],
   });
 
   /// True when the response is text-only (no map interaction needed).
@@ -54,12 +67,18 @@ class ChatBotData {
 
   factory ChatBotData.fromJson(Map<String, dynamic> json) {
     final locationsJson = json['locations'] as List<dynamic>? ?? [];
+    final followUpJson = json['follow_up'] as List<dynamic>? ?? [];
     return ChatBotData(
       message: json['message'] as String? ?? '',
       locations: locationsJson
           .map((l) => ChatBotLocation.fromJson(l as Map<String, dynamic>))
           .toList(),
       action: json['action'] as String? ?? 'show_location',
+      intent: json['intent'] as String? ?? 'unknown',
+      followUp: followUpJson
+          .map((e) => e.toString())
+          .where((s) => s.isNotEmpty)
+          .toList(),
     );
   }
 }
@@ -68,12 +87,14 @@ class ChatBotResponse {
   final bool success;
   final ChatBotData? data;
   final String? errorMessage;
+  final String? errorType;
   final bool isQuotaError;
 
   ChatBotResponse({
     required this.success,
     this.data,
     this.errorMessage,
+    this.errorType,
     this.isQuotaError = false,
   });
 
@@ -92,6 +113,7 @@ class ChatBotResponse {
     return ChatBotResponse(
       success: false,
       errorMessage: message ?? 'Something went wrong',
+      errorType: errorType,
       isQuotaError: errorType == 'quota_exceeded',
     );
   }
@@ -103,6 +125,7 @@ class ChatBotMessage {
   final ChatBotMessageRole role;
   final List<ChatBotLocation>? locations;
   final String? action;
+  final List<String> followUp;
   final bool isQuotaError;
   final DateTime timestamp;
 
@@ -111,9 +134,39 @@ class ChatBotMessage {
     required this.role,
     this.locations,
     this.action,
+    this.followUp = const [],
     this.isQuotaError = false,
     DateTime? timestamp,
   }) : timestamp = timestamp ?? DateTime.now();
+
+  Map<String, dynamic> toJson() => {
+    'content': content,
+    'role': role.name,
+    'action': action,
+    'followUp': followUp,
+    'isQuotaError': isQuotaError,
+    'timestamp': timestamp.toIso8601String(),
+  };
+
+  factory ChatBotMessage.fromJson(Map<String, dynamic> json) {
+    return ChatBotMessage(
+      content: json['content'] as String? ?? '',
+      role: ChatBotMessageRole.values.firstWhere(
+        (e) => e.name == json['role'],
+        orElse: () => ChatBotMessageRole.assistant,
+      ),
+      action: json['action'] as String?,
+      followUp:
+          (json['followUp'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          const [],
+      isQuotaError: json['isQuotaError'] as bool? ?? false,
+      timestamp: json['timestamp'] != null
+          ? DateTime.tryParse(json['timestamp'] as String) ?? DateTime.now()
+          : DateTime.now(),
+    );
+  }
 }
 
 enum ChatBotMessageRole { user, assistant, error }

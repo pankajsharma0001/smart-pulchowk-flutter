@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/features/map/models/chatbot_response.dart';
@@ -31,13 +33,41 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
   final List<ChatBotMessage> _messages = [];
   final FocusNode _focusNode = FocusNode();
 
+  static const String _messagesKey = 'chatbot_messages_v1';
+  static const int _maxPersistedMessages = 50;
+
   bool _isOpen = false;
   bool _isLoading = false;
+  bool _hasText = false;
   int _rateLimitCooldown = 0;
   Timer? _cooldownTimer;
 
-  // All available suggestion chips
-  static const List<String> _allSuggestions = [
+  // ── Contextual suggestions ────────────────────────────────────────────────
+  static const List<String> _morningSuggestions = [
+    'Summarize recent notices',
+    'Any upcoming events?',
+    'Exam routine?',
+    'Latest results',
+    'Where is the library?',
+  ];
+
+  static const List<String> _afternoonSuggestions = [
+    'Canteen location',
+    'Any lost items reported?',
+    'List active clubs',
+    'How to sell a book?',
+    'Where is the library?',
+  ];
+
+  static const List<String> _eveningSuggestions = [
+    'Any upcoming events?',
+    'Summarize recent notices',
+    'Find ICTC Building',
+    'Dean Office location',
+    'What can you help with?',
+  ];
+
+  static const List<String> _generalSuggestions = [
     'Summarize recent notices',
     'Any upcoming events?',
     'Where is the library?',
@@ -52,7 +82,6 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
     'Canteen location',
   ];
 
-  // Current 3 random suggestions
   late List<String> _currentSuggestions;
 
   late AnimationController _panelAnimationController;
@@ -69,6 +98,8 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
     if (widget.isPage) {
       _isOpen = true;
     }
+
+    _messageController.addListener(_onTextChanged);
 
     _panelAnimationController = AnimationController(
       duration: const Duration(milliseconds: 350),
@@ -98,10 +129,13 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
     _fabRotationAnimation = Tween<double>(begin: 0, end: 0.5).animate(
       CurvedAnimation(parent: _fabAnimationController, curve: Curves.easeInOut),
     );
+
+    _loadMessages();
   }
 
   @override
   void dispose() {
+    _messageController.removeListener(_onTextChanged);
     _messageController.dispose();
     _scrollController.dispose();
     _focusNode.dispose();
@@ -112,10 +146,59 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
     super.dispose();
   }
 
+  void _onTextChanged() {
+    final hasText = _messageController.text.trim().isNotEmpty;
+    if (hasText != _hasText) {
+      setState(() => _hasText = hasText);
+    }
+  }
+
   void _shuffleSuggestions() {
+    final hour = DateTime.now().hour;
+    List<String> pool;
+    if (hour >= 6 && hour < 12) {
+      pool = _morningSuggestions;
+    } else if (hour >= 12 && hour < 17) {
+      pool = _afternoonSuggestions;
+    } else if (hour >= 17 && hour < 22) {
+      pool = _eveningSuggestions;
+    } else {
+      pool = _generalSuggestions;
+    }
     final random = Random();
-    final shuffled = List<String>.from(_allSuggestions)..shuffle(random);
+    final shuffled = List<String>.from(pool)..shuffle(random);
     _currentSuggestions = shuffled.take(3).toList();
+  }
+
+  // ── Message persistence ─────────────────────────────────────────────────
+  Future<void> _loadMessages() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString(_messagesKey);
+      if (raw != null) {
+        final list = jsonDecode(raw) as List<dynamic>;
+        final loaded = list
+            .map((e) => ChatBotMessage.fromJson(e as Map<String, dynamic>))
+            .toList();
+        if (mounted) {
+          setState(() => _messages.addAll(loaded));
+          _scrollToBottom();
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _saveMessages() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final toSave = _messages.length > _maxPersistedMessages
+          ? _messages.sublist(_messages.length - _maxPersistedMessages)
+          : _messages;
+      await prefs.setString(
+        _messagesKey,
+        jsonEncode(toSave.map((m) => m.toJson()).toList()),
+      );
+    } catch (_) {}
   }
 
   void _toggleChat() {
@@ -169,8 +252,8 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
     });
   }
 
-  Future<void> _sendMessage() async {
-    final query = _messageController.text.trim();
+  Future<void> _sendMessage([String? prefilled]) async {
+    final query = (prefilled ?? _messageController.text).trim();
     if (query.isEmpty || _isLoading || _rateLimitCooldown > 0) return;
 
     _haptics.lightImpact();
@@ -197,6 +280,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
             role: ChatBotMessageRole.assistant,
             locations: response.data!.locations,
             action: response.data!.action,
+            followUp: response.data!.followUp,
           ),
         );
 
@@ -211,12 +295,27 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
         if (isQuotaError) {
           _startCooldown(30);
         }
+
+        String errorMsg;
+        if (isQuotaError) {
+          errorMsg =
+              '⏱️ API limit reached. Please wait ${_rateLimitCooldown > 0 ? _rateLimitCooldown : 30} seconds.';
+        } else if (response.errorType == 'query_too_long') {
+          errorMsg =
+              '✏️ Your message is too long. Please keep it under 500 characters.';
+        } else if (response.errorMessage?.toLowerCase().contains('network') ==
+            true) {
+          errorMsg =
+              '📶 Network error. Please check your connection and try again.';
+        } else {
+          errorMsg =
+              response.errorMessage ??
+              '⚠️ Something went wrong. Please try again.';
+        }
+
         _messages.add(
           ChatBotMessage(
-            content: isQuotaError
-                ? '⏱️ API limit reached. Please wait ${_rateLimitCooldown > 0 ? _rateLimitCooldown : 30} seconds.'
-                : response.errorMessage ??
-                      'Something went wrong. Please try again.',
+            content: errorMsg,
             role: ChatBotMessageRole.error,
             isQuotaError: isQuotaError,
           ),
@@ -224,6 +323,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
       }
     });
     _scrollToBottom();
+    _saveMessages();
   }
 
   void _scrollToBottom() {
@@ -258,11 +358,8 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
     final isKeyboardOpen = viewInsets.bottom > 0;
     final screenHeight = mediaQuery.size.height;
 
-    // Calculate the actual available bottom offset
     final keyboardOffset = isKeyboardOpen ? viewInsets.bottom : 0.0;
 
-    // Calculate available vertical space for the chat panel
-    // Screen Height - Keyboard - Top Padding (Status bar) - FAB height/margins
     final availableHeight =
         screenHeight -
         keyboardOffset -
@@ -450,6 +547,19 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
               ),
             ),
           ),
+          if (_messages.isNotEmpty)
+            IconButton(
+              onPressed: () {
+                setState(() => _messages.clear());
+                _saveMessages();
+              },
+              icon: const Icon(
+                Icons.delete_outline,
+                color: Colors.white70,
+                size: 20,
+              ),
+              tooltip: 'Clear chat',
+            ),
           if (!widget.isPage)
             IconButton(
               onPressed: _toggleChat,
@@ -508,8 +618,53 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
       itemCount: _messages.length + (_isLoading ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == _messages.length) return _buildLoadingIndicator(isDark);
-        return _buildMessageBubble(_messages[index], isDark);
+        final message = _messages[index];
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildMessageBubble(message, isDark),
+            if (message.role == ChatBotMessageRole.assistant &&
+                message.followUp.isNotEmpty)
+              _buildFollowUpChips(message.followUp, isDark),
+          ],
+        );
       },
+    );
+  }
+
+  Widget _buildFollowUpChips(List<String> followUps, bool isDark) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 12),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: followUps.map((text) {
+          return ActionChip(
+            onPressed: () => _sendMessage(text),
+            avatar: Icon(
+              Icons.reply_rounded,
+              size: 14,
+              color: const Color(0xFF667EEA),
+            ),
+            label: Text(
+              text,
+              style: TextStyle(
+                fontSize: 11,
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
+            ),
+            backgroundColor: const Color(0xFF667EEA).withValues(alpha: 0.08),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(
+                color: const Color(0xFF667EEA).withValues(alpha: 0.2),
+              ),
+            ),
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            visualDensity: VisualDensity.compact,
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -533,16 +688,46 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
     );
   }
 
+  // ── Simple markdown rendering ───────────────────────────────────────────
+  List<InlineSpan> _parseMarkdown(String text, Color baseColor) {
+    final spans = <InlineSpan>[];
+    final regex = RegExp(r'\*\*(.+?)\*\*');
+    int lastEnd = 0;
+
+    for (final match in regex.allMatches(text)) {
+      if (match.start > lastEnd) {
+        spans.add(TextSpan(text: text.substring(lastEnd, match.start)));
+      }
+      spans.add(
+        TextSpan(
+          text: match.group(1),
+          style: TextStyle(fontWeight: FontWeight.bold, color: baseColor),
+        ),
+      );
+      lastEnd = match.end;
+    }
+    if (lastEnd < text.length) {
+      spans.add(TextSpan(text: text.substring(lastEnd)));
+    }
+    return spans;
+  }
+
   Widget _buildMessageBubble(ChatBotMessage message, bool isDark) {
     final isUser = message.role == ChatBotMessageRole.user;
     final isError = message.role == ChatBotMessageRole.error;
+
+    final baseColor = isUser
+        ? Colors.white
+        : isError
+        ? Colors.red
+        : (isDark ? Colors.white : Colors.black87);
 
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         margin: const EdgeInsets.only(bottom: 12),
-        constraints: const BoxConstraints(maxWidth: 240),
+        constraints: const BoxConstraints(maxWidth: 280),
         decoration: BoxDecoration(
           color: isUser
               ? const Color(0xFF667EEA)
@@ -560,18 +745,26 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
         ),
         child: Material(
           type: MaterialType.transparency,
-          child: Text(
-            message.content,
-            style: TextStyle(
-              color: isUser
-                  ? Colors.white
-                  : isError
-                  ? Colors.red
-                  : (isDark ? Colors.white : Colors.black87),
-              fontSize: 14,
-              decoration: TextDecoration.none,
-            ),
-          ),
+          child: isUser
+              ? Text(
+                  message.content,
+                  style: TextStyle(
+                    color: baseColor,
+                    fontSize: 14,
+                    decoration: TextDecoration.none,
+                  ),
+                )
+              : RichText(
+                  text: TextSpan(
+                    style: TextStyle(
+                      color: baseColor,
+                      fontSize: 14,
+                      decoration: TextDecoration.none,
+                      height: 1.4,
+                    ),
+                    children: _parseMarkdown(message.content, baseColor),
+                  ),
+                ),
         ),
       ),
     );
@@ -623,6 +816,8 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
               controller: _messageController,
               focusNode: _focusNode,
               onSubmitted: (_) => _sendMessage(),
+              maxLength: 500,
+              maxLines: 1,
               style: TextStyle(
                 fontSize: 14,
                 color: isDark ? Colors.white : Colors.black,
@@ -637,17 +832,18 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
                 ),
                 border: InputBorder.none,
                 isDense: true,
+                counterText: '',
               ),
             ),
           ),
           const SizedBox(width: 8),
           IconButton(
-            onPressed: _sendMessage,
+            onPressed: _hasText && !_isLoading ? () => _sendMessage() : null,
             icon: Icon(
               Icons.send_rounded,
-              color: _messageController.text.trim().isEmpty && !_isLoading
-                  ? (isDark ? Colors.white24 : Colors.black26)
-                  : const Color(0xFF667EEA),
+              color: _hasText && !_isLoading
+                  ? const Color(0xFF667EEA)
+                  : (isDark ? Colors.white24 : Colors.black26),
             ),
           ),
         ],
