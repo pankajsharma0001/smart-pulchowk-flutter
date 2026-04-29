@@ -242,7 +242,11 @@ class _ProfilePageState extends State<ProfilePage>
             // Tab content
             _buildTabContent(isDark, cs),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 120)),
+            SliverToBoxAdapter(
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height * 0.6,
+              ),
+            ),
           ],
         ),
       ),
@@ -1010,10 +1014,10 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Widget _buildEmptySliver(IconData icon, String title, String subtitle) {
-    return SliverFillRemaining(
+    return SliverToBoxAdapter(
       child: Center(
         child: Padding(
-          padding: const EdgeInsets.all(40),
+          padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 80),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1119,13 +1123,13 @@ class _ProfilePageState extends State<ProfilePage>
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 children: [
-                  Skeleton(height: 16, width: 80, borderRadius: 8),
-                  const SizedBox(width: 24),
-                  Skeleton(height: 16, width: 60, borderRadius: 8),
-                  const SizedBox(width: 24),
-                  Skeleton(height: 16, width: 50, borderRadius: 8),
-                  const SizedBox(width: 24),
-                  Skeleton(height: 16, width: 70, borderRadius: 8),
+                  Expanded(child: Skeleton(height: 16, borderRadius: 8)),
+                  const SizedBox(width: 16),
+                  Expanded(child: Skeleton(height: 16, borderRadius: 8)),
+                  const SizedBox(width: 16),
+                  Expanded(child: Skeleton(height: 16, borderRadius: 8)),
+                  const SizedBox(width: 16),
+                  Expanded(child: Skeleton(height: 16, borderRadius: 8)),
                 ],
               ),
             ),
@@ -1504,7 +1508,7 @@ class _HorizontalBookCard extends StatelessWidget {
       ).push(MaterialPageRoute(builder: (_) => BookDetailsPage(listing: book))),
       child: Container(
         width: double.infinity,
-        height: 110,
+        height: 95,
         decoration: BoxDecoration(
           color: isDark ? AppColors.cardDark : AppColors.cardLight,
           borderRadius: AppRadius.mdAll,
@@ -1520,7 +1524,7 @@ class _HorizontalBookCard extends StatelessWidget {
           children: [
             // Image
             SizedBox(
-              width: 90,
+              width: 70,
               height: double.infinity,
               child: book.primaryImageUrl != null
                   ? SmartImage(
@@ -1539,7 +1543,7 @@ class _HorizontalBookCard extends StatelessWidget {
             // Content
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

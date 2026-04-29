@@ -170,17 +170,21 @@ class ClubCard extends StatelessWidget {
                     // Stats Row
                     Row(
                       children: [
-                        _buildStat(
-                          context,
-                          Icons.event_note_rounded,
-                          '${club.upcomingEvents} Events',
+                        Flexible(
+                          child: _buildStat(
+                            context,
+                            Icons.event_note_rounded,
+                            '${club.upcomingEvents} Events',
+                          ),
                         ),
-                        const SizedBox(width: 12),
-                        _buildStat(
-                          context,
-                          Icons.people_rounded,
-                          '${club.totalParticipants} Members',
-                          isPrimary: true,
+                        const SizedBox(width: 8),
+                        Flexible(
+                          child: _buildStat(
+                            context,
+                            Icons.people_rounded,
+                            '${club.totalParticipants} Members',
+                            isPrimary: true,
+                          ),
                         ),
                       ],
                     ),
@@ -239,12 +243,16 @@ class ClubCard extends StatelessWidget {
       children: [
         Icon(icon, size: 12, color: color),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: AppTextStyles.caption.copyWith(
-            color: color,
-            fontSize: 10,
-            fontWeight: isPrimary ? FontWeight.bold : FontWeight.normal,
+        Flexible(
+          child: Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              color: color,
+              fontSize: 10,
+              fontWeight: isPrimary ? FontWeight.bold : FontWeight.normal,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],

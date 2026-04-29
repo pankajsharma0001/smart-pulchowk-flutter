@@ -528,66 +528,72 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                       Row(
                         children: [
                           EventStatusBadge(event: widget.event),
-                          const Spacer(),
+                          const SizedBox(width: 8),
                           if (widget.event.club != null)
-                            InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => ClubDetailsPage(
-                                      club: widget.event.club!,
+                            Flexible(
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ClubDetailsPage(
+                                        club: widget.event.club!,
+                                      ),
                                     ),
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
                                   ),
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(20),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: isDark
-                                    ? AppDecorations.glassDark(borderRadius: 20)
-                                    : AppDecorations.glass(borderRadius: 20),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (widget.event.club!.logoUrl != null) ...[
-                                      Container(
-                                        width: 20,
-                                        height: 20,
-                                        decoration: const BoxDecoration(
-                                          shape: BoxShape.circle,
-                                        ),
-                                        clipBehavior: Clip.hardEdge,
-                                        child: SmartImage(
-                                          imageUrl: widget.event.club!.logoUrl,
-                                          fit: BoxFit.cover,
-                                          shape: BoxShape.circle,
-                                          errorWidget: const Icon(
-                                            Icons.business_rounded,
-                                            size: 14,
-                                            color: AppColors.primary,
+                                  decoration: isDark
+                                      ? AppDecorations.glassDark(borderRadius: 20)
+                                      : AppDecorations.glass(borderRadius: 20),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (widget.event.club!.logoUrl != null) ...[
+                                        Container(
+                                          width: 20,
+                                          height: 20,
+                                          decoration: const BoxDecoration(
+                                            shape: BoxShape.circle,
+                                          ),
+                                          clipBehavior: Clip.hardEdge,
+                                          child: SmartImage(
+                                            imageUrl: widget.event.club!.logoUrl,
+                                            fit: BoxFit.cover,
+                                            shape: BoxShape.circle,
+                                            errorWidget: const Icon(
+                                              Icons.business_rounded,
+                                              size: 14,
+                                              color: AppColors.primary,
+                                            ),
                                           ),
                                         ),
+                                        const SizedBox(width: 6),
+                                      ],
+                                      Flexible(
+                                        child: Text(
+                                          widget.event.club!.name,
+                                          style: AppTextStyles.labelSmall.copyWith(
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
-                                      const SizedBox(width: 6),
-                                    ],
-                                    Text(
-                                      widget.event.club!.name,
-                                      style: AppTextStyles.labelSmall.copyWith(
+                                      const SizedBox(width: 4),
+                                      const Icon(
+                                        Icons.chevron_right_rounded,
+                                        size: 14,
                                         color: AppColors.primary,
-                                        fontWeight: FontWeight.bold,
                                       ),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Icon(
-                                      Icons.chevron_right_rounded,
-                                      size: 14,
-                                      color: AppColors.primary,
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
@@ -799,10 +805,14 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               size: 20,
             ),
             const SizedBox(width: 10),
-            Text(
-              'Admin View — Registration managed by you',
-              style: AppTextStyles.labelMedium.copyWith(
-                color: AppColors.primary,
+            Flexible(
+              child: Text(
+                'Admin View — Registration managed by you',
+                style: AppTextStyles.labelMedium.copyWith(
+                  color: AppColors.primary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -835,13 +845,17 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
               size: 20,
             ),
             const SizedBox(width: 10),
-            Text(
-              widget.event.isCompleted
-                  ? 'Event Ended'
-                  : widget.event.isCancelled
-                  ? 'Event Cancelled'
-                  : 'Registration Closed',
-              style: AppTextStyles.labelMedium.copyWith(color: Colors.grey),
+            Flexible(
+              child: Text(
+                widget.event.isCompleted
+                    ? 'Event Ended'
+                    : widget.event.isCancelled
+                    ? 'Event Cancelled'
+                    : 'Registration Closed',
+                style: AppTextStyles.labelMedium.copyWith(color: Colors.grey),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -1427,15 +1441,12 @@ class _CountdownTimerState extends State<_CountdownTimer> {
         children: [
           const Icon(Icons.timer_outlined, size: 16, color: AppColors.warning),
           const SizedBox(width: 8),
-          Text(
-            'Starts in: ',
-            style: AppTextStyles.labelSmall.copyWith(color: AppColors.warning),
-          ),
-          Text(
-            '${days}d ${hours}h ${minutes}m ${seconds}s',
-            style: AppTextStyles.labelSmall.copyWith(
-              color: AppColors.warning,
-              fontWeight: FontWeight.bold,
+          Flexible(
+            child: Text(
+              'Starts in: ${days}d ${hours}h ${minutes}m ${seconds}s',
+              style: AppTextStyles.labelSmall.copyWith(color: AppColors.warning),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

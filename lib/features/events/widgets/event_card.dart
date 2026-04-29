@@ -307,11 +307,15 @@ class EventCard extends StatelessWidget {
                             : AppColors.textMuted,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        DateFormat(
-                          'EEE, MMM d • h:mm a',
-                        ).format(event.eventStartTime),
-                        style: AppTextStyles.caption,
+                      Expanded(
+                        child: Text(
+                          DateFormat(
+                            'EEE, MMM d • h:mm a',
+                          ).format(event.eventStartTime),
+                          style: AppTextStyles.caption,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ],
                   ),

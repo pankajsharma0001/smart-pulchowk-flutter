@@ -410,13 +410,17 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                                 : AppColors.textMuted,
                           ),
                           const SizedBox(width: 5),
-                          Text(
-                            _book.author,
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: isDark
-                                  ? AppColors.textSecondaryDark
-                                  : AppColors.textSecondary,
-                              fontStyle: FontStyle.italic,
+                          Expanded(
+                            child: Text(
+                              _book.author,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondary,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -719,13 +723,17 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                     children: [
                       Row(
                         children: [
-                          Text(
-                            seller.name,
-                            style: AppTextStyles.h5.copyWith(
-                              color: isDark
-                                  ? AppColors.textPrimaryDark
-                                  : AppColors.textPrimary,
-                              fontWeight: FontWeight.w700,
+                          Flexible(
+                            child: Text(
+                              seller.name,
+                              style: AppTextStyles.h5.copyWith(
+                                color: isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 6),

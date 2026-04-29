@@ -22,6 +22,7 @@ import 'package:smart_pulchowk/features/map/map.dart';
 import 'package:smart_pulchowk/core/widgets/offline_banner.dart';
 import 'package:smart_pulchowk/core/services/connectivity_service.dart';
 import 'package:smart_pulchowk/features/map/services/map_action_service.dart';
+import 'package:smart_pulchowk/features/wifi_login/wifi_login_page.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // MAIN LAYOUT
@@ -67,7 +68,7 @@ class MainLayoutState extends State<MainLayout>
   // Navigator keys for each tab's independent navigation stack
   // We expand this to support all menu features (12 total)
   final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(
-    12,
+    13,
     (_) => GlobalKey<NavigatorState>(),
   );
 
@@ -345,6 +346,8 @@ class MainLayoutState extends State<MainLayout>
         return const LostFoundPage();
       case 10:
         return const SettingsPage();
+      case 12:
+        return const WifiLoginPage();
       case 11:
         return ChatBotWidget(
           isPage: true,
@@ -385,6 +388,8 @@ class MainLayoutState extends State<MainLayout>
         return AppPage.settings;
       case 11:
         return AppPage.campusAssistant;
+      case 12:
+        return AppPage.wifiLogin;
       default:
         return AppPage.home;
     }
@@ -415,6 +420,8 @@ class MainLayoutState extends State<MainLayout>
         return Icons.auto_stories_rounded;
       case 11:
         return Icons.assistant_rounded;
+      case 12:
+        return Icons.wifi_rounded;
     }
 
     // Default role-based icon for main tabs (Home, Map, Books, Profile)
@@ -491,7 +498,7 @@ class MainLayoutState extends State<MainLayout>
                   index: _selectedIndex,
                   isBackNavigation: _isBackNavigation,
                   children: List.generate(
-                    12,
+                    13,
                     (i) => _visitedTabs.contains(i)
                         ? _TabNavigator(
                             key: i == 2 ? ValueKey('role_$_userRole') : null,
@@ -568,7 +575,16 @@ class MainLayoutState extends State<MainLayout>
                       child: AnimatedScale(
                         duration: AppAnimations.fast,
                         scale:
-                            ([2, 5, 6, 7, 8, 9, 10].contains(_selectedIndex) ||
+                            ([
+                                  2,
+                                  5,
+                                  6,
+                                  7,
+                                  8,
+                                  9,
+                                  10,
+                                  12,
+                                ].contains(_selectedIndex) ||
                                 _isMenuOpen)
                             ? 1.1
                             : 1.0,
@@ -907,6 +923,12 @@ class _QuickMenu extends StatelessWidget {
         label: 'Book Market',
         index: 3,
         color: const Color(0xFFF97316),
+      ),
+      _QuickMenuItemData(
+        icon: Icons.wifi_rounded,
+        label: 'WiFi Login',
+        index: 12,
+        color: const Color(0xFF06B6D4),
       ),
     ]);
 

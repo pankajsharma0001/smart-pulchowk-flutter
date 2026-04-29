@@ -300,9 +300,13 @@ class LostFoundCard extends StatelessWidget {
                               : null,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          item.owner!['name'] ?? 'User',
-                          style: AppTextStyles.caption.copyWith(fontSize: 10),
+                        Expanded(
+                          child: Text(
+                            item.owner!['name'] ?? 'User',
+                            style: AppTextStyles.caption.copyWith(fontSize: 10),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ],
                     ),

@@ -414,6 +414,8 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
                         ],
                       ),
                       textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
 
                     if (_club.description != null &&
@@ -436,22 +438,28 @@ class _ClubDetailsPageState extends State<ClubDetailsPage>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildStatChip(
-                          Icons.event_rounded,
-                          '${_club.upcomingEvents}',
-                          'Upcoming',
+                        Flexible(
+                          child: _buildStatChip(
+                            Icons.event_rounded,
+                            '${_club.upcomingEvents}',
+                            'Upcoming',
+                          ),
                         ),
-                        const SizedBox(width: AppSpacing.md),
-                        _buildStatChip(
-                          Icons.check_circle_rounded,
-                          '${_club.completedEvents}',
-                          'Completed',
+                        const SizedBox(width: AppSpacing.sm),
+                        Flexible(
+                          child: _buildStatChip(
+                            Icons.check_circle_rounded,
+                            '${_club.completedEvents}',
+                            'Completed',
+                          ),
                         ),
-                        const SizedBox(width: AppSpacing.md),
-                        _buildStatChip(
-                          Icons.people_rounded,
-                          '${_club.totalParticipants}',
-                          'Members',
+                        const SizedBox(width: AppSpacing.sm),
+                        Flexible(
+                          child: _buildStatChip(
+                            Icons.people_rounded,
+                            '${_club.totalParticipants}',
+                            'Members',
+                          ),
                         ),
                       ],
                     ),

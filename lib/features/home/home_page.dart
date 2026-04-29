@@ -547,6 +547,8 @@ class _HomeSearchBar extends StatelessWidget {
                 style: AppTextStyles.bodyMedium.copyWith(
                   color: isDark ? AppColors.textMutedDark : AppColors.textMuted,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -807,29 +809,44 @@ class _HeroSection extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         // ── Hero Title ──
-        Text(
-          'Your Campus.',
-          style: AppTextStyles.h1.copyWith(
-            fontSize: 40,
-            fontWeight: FontWeight.w900,
-            letterSpacing: -1.5,
-            height: 1.0,
-          ),
-        ),
-        ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [AppColors.primary, AppColors.secondary],
-          ).createShader(ui.Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
-          child: Text(
-            'Unified.',
-            style: AppTextStyles.h1.copyWith(
-              fontSize: 40,
-              fontWeight: FontWeight.w900,
-              letterSpacing: -1.5,
-              height: 1.0,
-              color: Colors.white,
-            ),
-          ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            // Scale hero text based on available width
+            final heroFontSize = (constraints.maxWidth * 0.11).clamp(28.0, 40.0);
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your Campus.',
+                  style: AppTextStyles.h1.copyWith(
+                    fontSize: heroFontSize,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1.5,
+                    height: 1.0,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [AppColors.primary, AppColors.secondary],
+                  ).createShader(ui.Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
+                  child: Text(
+                    'Unified.',
+                    style: AppTextStyles.h1.copyWith(
+                      fontSize: heroFontSize,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1.5,
+                      height: 1.0,
+                      color: Colors.white,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 12),
         Text(
@@ -988,6 +1005,8 @@ class _NextEventCard extends StatelessWidget {
                     style: AppTextStyles.labelLarge.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -997,6 +1016,8 @@ class _NextEventCard extends StatelessWidget {
                           ? AppColors.textSecondaryDark
                           : AppColors.textSecondary,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),

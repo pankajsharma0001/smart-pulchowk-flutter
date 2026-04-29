@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
+import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/features/map/models/chatbot_response.dart';
 
 /// A beautiful floating chatbot widget that provides campus navigation assistance.
@@ -344,7 +345,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
 
     if (widget.isPage) {
       return Container(
-        color: isDark ? const Color(0xFF0D1321) : Colors.grey[50],
+        color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
         child: SafeArea(
           bottom: false,
           child: _buildChatPanel(isDark, double.infinity),
@@ -487,7 +488,9 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
       width: widget.isPage ? double.infinity : 340,
       height: height,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        color: widget.isPage 
+            ? Colors.transparent 
+            : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
         borderRadius: widget.isPage
             ? BorderRadius.zero
             : BorderRadius.circular(24),
@@ -509,7 +512,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
       ),
       child: Column(
         children: [
-          _buildHeader(),
+          _buildHeader(isDark),
           Expanded(child: _buildMessagesList(isDark)),
           _buildInputArea(isDark),
         ],
@@ -517,14 +520,15 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+        color: Colors.transparent,
+        border: Border(
+          bottom: BorderSide(
+            color: (isDark ? AppColors.borderDark : AppColors.borderLight).withValues(alpha: 0.5),
+          ),
         ),
         borderRadius: widget.isPage
             ? BorderRadius.zero
@@ -535,13 +539,13 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
       ),
       child: Row(
         children: [
-          const Icon(Icons.assistant, color: Colors.white, size: 24),
+          const Icon(Icons.assistant, color: AppColors.primary, size: 24),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
               'Smart Pulchowk Assistant',
               style: TextStyle(
-                color: Colors.white,
+                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -553,9 +557,9 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
                 setState(() => _messages.clear());
                 _saveMessages();
               },
-              icon: const Icon(
+              icon: Icon(
                 Icons.delete_outline,
-                color: Colors.white70,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
                 size: 20,
               ),
               tooltip: 'Clear chat',
@@ -563,7 +567,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
           if (!widget.isPage)
             IconButton(
               onPressed: _toggleChat,
-              icon: const Icon(Icons.keyboard_arrow_down, color: Colors.white),
+              icon: Icon(Icons.keyboard_arrow_down, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
             ),
         ],
       ),

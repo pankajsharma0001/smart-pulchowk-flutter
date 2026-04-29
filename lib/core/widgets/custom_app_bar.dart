@@ -28,6 +28,7 @@ enum AppPage {
   lostAndFound,
   settings,
   campusAssistant,
+  wifiLogin,
 }
 
 class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {

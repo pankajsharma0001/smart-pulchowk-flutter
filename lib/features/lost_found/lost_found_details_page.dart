@@ -436,7 +436,9 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
   }
 
   Widget _buildStatusBadges() {
-    return Row(
+    return Wrap(
+      spacing: AppSpacing.sm,
+      runSpacing: AppSpacing.sm,
       children: [
         _buildBadge(
           _item!.itemType.name.toUpperCase(),
@@ -444,15 +446,12 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
               ? AppColors.error
               : AppColors.success,
         ),
-        const SizedBox(width: AppSpacing.sm),
         _buildBadge(_item!.category.name.toUpperCase(), AppColors.primary),
-        if (_item!.status != LostFoundStatus.open) ...[
-          const SizedBox(width: AppSpacing.sm),
+        if (_item!.status != LostFoundStatus.open)
           _buildBadge(
             _item!.status.displayName.toUpperCase(),
             AppColors.secondary,
           ),
-        ],
       ],
     );
   }
@@ -493,23 +492,27 @@ class _LostFoundDetailsPageState extends State<LostFoundDetailsPage> {
       children: [
         Icon(icon, size: 18, color: color ?? AppColors.primary),
         const SizedBox(width: AppSpacing.md),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.textMuted,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.textMuted,
+                ),
               ),
-            ),
-            Text(
-              value,
-              style: AppTextStyles.bodyMedium.copyWith(
-                fontWeight: FontWeight.w600,
-                color: color,
+              Text(
+                value,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
