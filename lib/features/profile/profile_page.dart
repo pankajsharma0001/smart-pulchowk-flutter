@@ -12,6 +12,7 @@ import 'package:smart_pulchowk/features/marketplace/book_details_page.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/features/favorites/favorites_page.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
+import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'dart:ui' as ui;
 
 class ProfilePage extends StatefulWidget {
@@ -62,19 +63,45 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Future<void> _loadData({bool forceRefresh = false}) async {
-    setState(() => _isLoading = _user == null);
+    if (_user == null) setState(() => _isLoading = true);
 
     try {
+      // 1. Instant Cache Load
+      if (!forceRefresh) {
+        final cachedUser = await _api.getCurrentUser(forceRefresh: false);
+        if (cachedUser != null && mounted) {
+          final cachedIsStudent = StorageService.readCache('profile_is_student') as bool? ?? false;
+          final cachedListings = await _api.getMyBookListings(forceRefresh: false);
+          final cachedSaved = await _api.getSavedBooks(forceRefresh: false);
+          final cachedSent = await _api.getMyPurchaseRequests(forceRefresh: false);
+          final cachedIncoming = await _api.getIncomingPurchaseRequests(forceRefresh: false);
+
+          setState(() {
+            _user = cachedUser;
+            _isStudent = cachedIsStudent;
+            _myListings = cachedListings;
+            _savedBooks = cachedSaved;
+            _sentRequests = cachedSent;
+            _incomingRequests = cachedIncoming;
+            if (_tabController.length != _activeTabs.length) {
+              _tabController.dispose();
+              _tabController = TabController(length: _activeTabs.length, vsync: this);
+            }
+            _isLoading = false; // Show UI instantly
+          });
+        }
+      }
+
+      // 2. Background Network Fetch
       final results = await Future.wait([
-        _api.getCurrentUser(forceRefresh: forceRefresh),
-        _api.getMyBookListings(forceRefresh: forceRefresh),
-        _api.getSavedBooks(forceRefresh: forceRefresh),
-        _api.getMyPurchaseRequests(forceRefresh: forceRefresh),
-        _api.getIncomingPurchaseRequests(forceRefresh: forceRefresh),
+        _api.getCurrentUser(forceRefresh: true), // Force fresh data in background
+        _api.getMyBookListings(forceRefresh: true),
+        _api.getSavedBooks(forceRefresh: true),
+        _api.getMyPurchaseRequests(forceRefresh: true),
+        _api.getIncomingPurchaseRequests(forceRefresh: true),
         _api.getStudentProfile(),
       ]);
 
-      // getMyMarketplaceReports returns non-nullable List — fetch separately
       final myReports = await _api.getMyMarketplaceReports();
 
       if (!mounted) return;
@@ -83,13 +110,13 @@ class _ProfilePageState extends State<ProfilePage>
       final studentProfile = results[5] as StudentProfile?;
       final isStudent = studentProfile != null;
 
-      // getMyClassroomSubjects returns Map<String,dynamic>, parse manually
+      // Cache student status for next instant load
+      StorageService.writeCache('profile_is_student', isStudent);
+
       List<Subject> classroomSubjects = [];
       if (isStudent) {
         try {
-          final subjectsMap = await _api.getMyClassroomSubjects(
-            forceRefresh: forceRefresh,
-          );
+          final subjectsMap = await _api.getMyClassroomSubjects(forceRefresh: forceRefresh);
           if (subjectsMap['success'] == true && subjectsMap['data'] != null) {
             final data = subjectsMap['data'] as Map<String, dynamic>?;
             final subjectsList = data?['subjects'] as List? ?? [];
@@ -1142,7 +1169,7 @@ class _ProfilePageState extends State<ProfilePage>
               delegate: SliverChildBuilderDelegate(
                 (context, index) => Container(
                   margin: const EdgeInsets.only(bottom: 12),
-                  height: 110,
+                  height: 95,
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.cardDark : Colors.white,
                     borderRadius: AppRadius.mdAll,
@@ -1150,13 +1177,13 @@ class _ProfilePageState extends State<ProfilePage>
                   child: Row(
                     children: [
                       const Skeleton(
-                        width: 90,
+                        width: 70,
                         height: double.infinity,
                         borderRadius: 0,
                       ),
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
