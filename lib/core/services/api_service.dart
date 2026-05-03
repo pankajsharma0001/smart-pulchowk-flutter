@@ -3340,11 +3340,19 @@ class ApiService {
   // ── ChatBot API ───────────────────────────────────────────────────────────
 
   /// Send a query to the campus navigation chatbot.
-  Future<ChatBotResponse> chatBot(String query) async {
+  /// [conversationHistory] contains the last N messages for multi-turn context.
+  Future<ChatBotResponse> chatBot(
+    String query, {
+    List<Map<String, String>> conversationHistory = const [],
+  }) async {
     try {
       final response = await _authPost(
         AppConstants.chatbotChat,
-        body: {'query': query},
+        body: {
+          'query': query,
+          if (conversationHistory.isNotEmpty)
+            'conversationHistory': conversationHistory,
+        },
       );
 
       if (response.statusCode == 200) {
@@ -3365,3 +3373,4 @@ class ApiService {
     }
   }
 }
+

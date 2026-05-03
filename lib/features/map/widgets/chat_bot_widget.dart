@@ -36,6 +36,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
 
   static const String _messagesKey = 'chatbot_messages_v1';
   static const int _maxPersistedMessages = 50;
+  static const int _maxHistoryMessages = 6;
 
   bool _isOpen = false;
   bool _isLoading = false;
@@ -253,9 +254,28 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
     });
   }
 
+  /// Build conversation history from recent messages for multi-turn context.
+  List<Map<String, String>> _buildConversationHistory() {
+    final recentMessages = _messages
+        .where((m) => m.role != ChatBotMessageRole.error)
+        .toList();
+    final historySlice = recentMessages.length > _maxHistoryMessages
+        ? recentMessages.sublist(recentMessages.length - _maxHistoryMessages)
+        : recentMessages;
+    return historySlice
+        .map((m) => {
+              'role': m.role == ChatBotMessageRole.user ? 'user' : 'assistant',
+              'content': m.content,
+            })
+        .toList();
+  }
+
   Future<void> _sendMessage([String? prefilled]) async {
     final query = (prefilled ?? _messageController.text).trim();
     if (query.isEmpty || _isLoading || _rateLimitCooldown > 0) return;
+
+    // Collect history BEFORE adding the new user message
+    final history = _buildConversationHistory();
 
     _haptics.lightImpact();
     setState(() {
@@ -267,7 +287,10 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
     _messageController.clear();
     _scrollToBottom();
 
-    final response = await _apiService.chatBot(query);
+    final response = await _apiService.chatBot(
+      query,
+      conversationHistory: history,
+    );
 
     if (!mounted) return;
 
@@ -692,28 +715,125 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
     );
   }
 
-  // ── Simple markdown rendering ───────────────────────────────────────────
-  List<InlineSpan> _parseMarkdown(String text, Color baseColor) {
+  // ── Rich markdown rendering ─────────────────────────────────────────────
+  /// Parse inline markdown: **bold** and *italic*
+  List<InlineSpan> _parseInlineMarkdown(String text, Color baseColor) {
     final spans = <InlineSpan>[];
-    final regex = RegExp(r'\*\*(.+?)\*\*');
+    // Match **bold** and *italic* (order matters: bold first)
+    final regex = RegExp(r'\*\*(.+?)\*\*|\*(.+?)\*');
     int lastEnd = 0;
 
     for (final match in regex.allMatches(text)) {
       if (match.start > lastEnd) {
         spans.add(TextSpan(text: text.substring(lastEnd, match.start)));
       }
-      spans.add(
-        TextSpan(
-          text: match.group(1),
-          style: TextStyle(fontWeight: FontWeight.bold, color: baseColor),
-        ),
-      );
+      if (match.group(1) != null) {
+        // **bold**
+        spans.add(
+          TextSpan(
+            text: match.group(1),
+            style: TextStyle(fontWeight: FontWeight.bold, color: baseColor),
+          ),
+        );
+      } else if (match.group(2) != null) {
+        // *italic*
+        spans.add(
+          TextSpan(
+            text: match.group(2),
+            style: TextStyle(fontStyle: FontStyle.italic, color: baseColor),
+          ),
+        );
+      }
       lastEnd = match.end;
     }
     if (lastEnd < text.length) {
       spans.add(TextSpan(text: text.substring(lastEnd)));
     }
     return spans;
+  }
+
+  /// Build a rich text widget that handles block-level markdown (bullets, numbered lists)
+  /// and inline markdown (bold, italic).
+  Widget _buildMarkdownContent(String text, Color baseColor) {
+    final lines = text.split('\n');
+    final widgets = <Widget>[];
+    
+    for (final line in lines) {
+      final trimmed = line.trimLeft();
+      
+      // Bullet list: lines starting with - or •
+      if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
+        final content = trimmed.substring(2);
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(left: 8, top: 2, bottom: 2),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('• ', style: TextStyle(color: baseColor, fontSize: 14, height: 1.4)),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: TextStyle(color: baseColor, fontSize: 14, height: 1.4, decoration: TextDecoration.none),
+                      children: _parseInlineMarkdown(content, baseColor),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      // Numbered list: lines starting with "1. ", "2. ", etc.
+      else if (RegExp(r'^\d+\.\s').hasMatch(trimmed)) {
+        final dotIndex = trimmed.indexOf('. ');
+        final number = trimmed.substring(0, dotIndex + 1);
+        final content = trimmed.substring(dotIndex + 2);
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(left: 8, top: 2, bottom: 2),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('$number ', style: TextStyle(color: baseColor, fontSize: 14, height: 1.4, fontWeight: FontWeight.w600)),
+                Expanded(
+                  child: RichText(
+                    text: TextSpan(
+                      style: TextStyle(color: baseColor, fontSize: 14, height: 1.4, decoration: TextDecoration.none),
+                      children: _parseInlineMarkdown(content, baseColor),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      // Empty line → small spacer
+      else if (trimmed.isEmpty) {
+        widgets.add(const SizedBox(height: 6));
+      }
+      // Normal text with inline markdown
+      else {
+        widgets.add(
+          Padding(
+            padding: const EdgeInsets.only(top: 1, bottom: 1),
+            child: RichText(
+              text: TextSpan(
+                style: TextStyle(color: baseColor, fontSize: 14, height: 1.4, decoration: TextDecoration.none),
+                children: _parseInlineMarkdown(trimmed, baseColor),
+              ),
+            ),
+          ),
+        );
+      }
+    }
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: widgets,
+    );
   }
 
   Widget _buildMessageBubble(ChatBotMessage message, bool isDark) {
@@ -758,17 +878,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
                     decoration: TextDecoration.none,
                   ),
                 )
-              : RichText(
-                  text: TextSpan(
-                    style: TextStyle(
-                      color: baseColor,
-                      fontSize: 14,
-                      decoration: TextDecoration.none,
-                      height: 1.4,
-                    ),
-                    children: _parseMarkdown(message.content, baseColor),
-                  ),
-                ),
+              : _buildMarkdownContent(message.content, baseColor),
         ),
       ),
     );
