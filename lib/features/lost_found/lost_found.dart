@@ -224,15 +224,13 @@ class _LostFoundPageState extends State<LostFoundPage>
           children: [
             _buildCategoryFilter(),
             Expanded(
-              child: RefreshIndicator(
-                onRefresh: _refreshItems,
-                child: _isLoading && _items.isEmpty
-                    ? _buildLoadingState()
-                    : _error != null
-                    ? _buildErrorState()
-                    : _items.isEmpty
-                    ? _buildEmptyState()
-                    : _buildItemList(),
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildTabBody(0),
+                  _buildTabBody(1),
+                  _buildTabBody(2),
+                ],
               ),
             ),
           ],
@@ -260,6 +258,35 @@ class _LostFoundPageState extends State<LostFoundPage>
               ),
       ),
     );
+  }
+
+  Widget _buildTabBody(int index) {
+    // Determine if this specific tab is currently active and loading
+    final bool isCurrentTab = _tabController.index == index;
+    final queryKey = _buildQueryKeyForIndex(index);
+    final cachedItems = _itemsByQuery[queryKey];
+    final bool tabLoading = _isLoading && isCurrentTab;
+    final itemsToShow = isCurrentTab ? _items : (cachedItems ?? []);
+
+    return RefreshIndicator(
+      onRefresh: _refreshItems,
+      child: tabLoading && itemsToShow.isEmpty
+          ? _buildLoadingState()
+          : _error != null && isCurrentTab
+          ? _buildErrorState()
+          : itemsToShow.isEmpty && (!tabLoading || !isCurrentTab)
+          ? _buildEmptyState()
+          : _buildItemList(itemsToShow),
+    );
+  }
+
+  String _buildQueryKeyForIndex(int index) {
+    String itemType = 'all';
+    if (index == 1) itemType = 'lost';
+    if (index == 2) itemType = 'found';
+    final category = _selectedCategory?.name ?? 'all';
+    final query = _searchQuery.trim();
+    return '$itemType|$category|$query';
   }
 
   Widget _buildCategoryFilter() {
@@ -313,7 +340,7 @@ class _LostFoundPageState extends State<LostFoundPage>
     return name[0].toUpperCase() + name.substring(1);
   }
 
-  Widget _buildItemList() {
+  Widget _buildItemList(List<LostFoundItem> items) {
     return GridView.builder(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
@@ -328,18 +355,18 @@ class _LostFoundPageState extends State<LostFoundPage>
         crossAxisSpacing: AppSpacing.md,
         mainAxisSpacing: AppSpacing.md,
       ),
-      itemCount: _items.length,
+      itemCount: items.length,
       itemBuilder: (context, index) {
         return RepaintBoundary(
           child: LostFoundCard(
-            item: _items[index],
+            item: items[index],
             onTap: () {
               FocusScope.of(context).unfocus();
               Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) =>
-                      LostFoundDetailsPage(itemId: _items[index].id),
+                      LostFoundDetailsPage(itemId: items[index].id),
                 ),
               );
             },

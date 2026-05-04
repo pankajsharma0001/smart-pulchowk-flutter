@@ -263,10 +263,12 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
         ? recentMessages.sublist(recentMessages.length - _maxHistoryMessages)
         : recentMessages;
     return historySlice
-        .map((m) => {
-              'role': m.role == ChatBotMessageRole.user ? 'user' : 'assistant',
-              'content': m.content,
-            })
+        .map(
+          (m) => {
+            'role': m.role == ChatBotMessageRole.user ? 'user' : 'assistant',
+            'content': m.content,
+          },
+        )
         .toList();
   }
 
@@ -511,8 +513,8 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
       width: widget.isPage ? double.infinity : 340,
       height: height,
       decoration: BoxDecoration(
-        color: widget.isPage 
-            ? Colors.transparent 
+        color: widget.isPage
+            ? Colors.transparent
             : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
         borderRadius: widget.isPage
             ? BorderRadius.zero
@@ -550,7 +552,8 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
         color: Colors.transparent,
         border: Border(
           bottom: BorderSide(
-            color: (isDark ? AppColors.borderDark : AppColors.borderLight).withValues(alpha: 0.5),
+            color: (isDark ? AppColors.borderDark : AppColors.borderLight)
+                .withValues(alpha: 0.5),
           ),
         ),
         borderRadius: widget.isPage
@@ -568,7 +571,9 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
             child: Text(
               'Smart Pulchowk Assistant',
               style: TextStyle(
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
@@ -582,7 +587,9 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
               },
               icon: Icon(
                 Icons.delete_outline,
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondary,
                 size: 20,
               ),
               tooltip: 'Clear chat',
@@ -590,7 +597,12 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
           if (!widget.isPage)
             IconButton(
               onPressed: _toggleChat,
-              icon: Icon(Icons.keyboard_arrow_down, color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimary),
+              icon: Icon(
+                Icons.keyboard_arrow_down,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimary,
+              ),
             ),
         ],
       ),
@@ -757,10 +769,10 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
   Widget _buildMarkdownContent(String text, Color baseColor) {
     final lines = text.split('\n');
     final widgets = <Widget>[];
-    
+
     for (final line in lines) {
       final trimmed = line.trimLeft();
-      
+
       // Bullet list: lines starting with - or •
       if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
         final content = trimmed.substring(2);
@@ -770,11 +782,19 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('• ', style: TextStyle(color: baseColor, fontSize: 14, height: 1.4)),
+                Text(
+                  '• ',
+                  style: TextStyle(color: baseColor, fontSize: 14, height: 1.4),
+                ),
                 Expanded(
                   child: RichText(
                     text: TextSpan(
-                      style: TextStyle(color: baseColor, fontSize: 14, height: 1.4, decoration: TextDecoration.none),
+                      style: TextStyle(
+                        color: baseColor,
+                        fontSize: 14,
+                        height: 1.4,
+                        decoration: TextDecoration.none,
+                      ),
                       children: _parseInlineMarkdown(content, baseColor),
                     ),
                   ),
@@ -795,11 +815,24 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('$number ', style: TextStyle(color: baseColor, fontSize: 14, height: 1.4, fontWeight: FontWeight.w600)),
+                Text(
+                  '$number ',
+                  style: TextStyle(
+                    color: baseColor,
+                    fontSize: 14,
+                    height: 1.4,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 Expanded(
                   child: RichText(
                     text: TextSpan(
-                      style: TextStyle(color: baseColor, fontSize: 14, height: 1.4, decoration: TextDecoration.none),
+                      style: TextStyle(
+                        color: baseColor,
+                        fontSize: 14,
+                        height: 1.4,
+                        decoration: TextDecoration.none,
+                      ),
                       children: _parseInlineMarkdown(content, baseColor),
                     ),
                   ),
@@ -820,7 +853,12 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
             padding: const EdgeInsets.only(top: 1, bottom: 1),
             child: RichText(
               text: TextSpan(
-                style: TextStyle(color: baseColor, fontSize: 14, height: 1.4, decoration: TextDecoration.none),
+                style: TextStyle(
+                  color: baseColor,
+                  fontSize: 14,
+                  height: 1.4,
+                  decoration: TextDecoration.none,
+                ),
                 children: _parseInlineMarkdown(trimmed, baseColor),
               ),
             ),
@@ -828,7 +866,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
         );
       }
     }
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,

@@ -16,7 +16,7 @@ import 'package:smart_pulchowk/core/models/lost_found.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/features/events/event_details_page.dart';
-import 'package:smart_pulchowk/core/widgets/app_refresher.dart';
+
 import 'package:smart_pulchowk/core/widgets/pdf_viewer.dart';
 import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
 import 'package:smart_pulchowk/core/services/notice_action_service.dart';
@@ -102,8 +102,9 @@ class _HomeContentState extends State<_HomeContent> {
   @override
   Widget build(BuildContext context) {
     return SafeArea(
-      child: AppRefresher(
+      child: RefreshIndicator(
         onRefresh: _handleRefresh,
+        color: AppColors.primary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),

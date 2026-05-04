@@ -14,6 +14,7 @@ import 'package:smart_pulchowk/features/favorites/favorites_page.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/core/services/storage_service.dart';
 import 'dart:ui' as ui;
+import 'package:palette_generator/palette_generator.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -37,6 +38,7 @@ class _ProfilePageState extends State<ProfilePage>
   StudentProfile? _studentProfile;
   List<Subject> _classroomSubjects = [];
   bool _isStudent = false;
+  Color? _extractedColor;
 
   static const _allTabs = [
     'My Listing',
@@ -157,12 +159,39 @@ class _ProfilePageState extends State<ProfilePage>
           user.id,
           forceRefresh: forceRefresh,
         );
-        if (mounted) setState(() => _reputation = rep);
+        if (mounted) {
+          setState(() => _reputation = rep);
+          _updatePalette();
+        }
       }
     } catch (e) {
       debugPrint('Error loading profile data: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _updatePalette() async {
+    final image = _user?.image;
+    if (image == null || image.isEmpty) return;
+
+    final imageUrl = ApiService.processImageUrl(image);
+    if (imageUrl == null) return;
+
+    try {
+      final palette = await PaletteGenerator.fromImageProvider(
+        NetworkImage(imageUrl),
+        maximumColorCount: 20,
+      );
+      if (mounted) {
+        setState(() {
+          _extractedColor = palette.vibrantColor?.color ??
+              palette.dominantColor?.color ??
+              palette.mutedColor?.color;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error generating palette: $e');
     }
   }
 
@@ -207,15 +236,17 @@ class _ProfilePageState extends State<ProfilePage>
     const double bottomHeight = 48.0;
     const double expandedHeight = 320.0;
 
+    final Color baseBgColor = isDark ? AppColors.backgroundDark : AppColors.backgroundLight;
+    final Color adaptiveFullBg = _extractedColor != null 
+        ? Color.alphaBlend(_extractedColor!.withValues(alpha: isDark ? 0.05 : 0.03), baseBgColor)
+        : baseBgColor;
+
     return Scaffold(
-      backgroundColor: isDark
-          ? AppColors.backgroundDark
-          : AppColors.backgroundLight,
+      backgroundColor: adaptiveFullBg,
       body: RefreshIndicator(
         onRefresh: () => _loadData(forceRefresh: true),
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
+        child: NestedScrollView(
+          headerSliverBuilder: (context, innerBoxIsScrolled) => [
             SliverAppBar(
               pinned: true,
               expandedHeight: expandedHeight,
@@ -247,41 +278,38 @@ class _ProfilePageState extends State<ProfilePage>
                   indicatorColor: cs.primary,
                   indicatorWeight: 3,
                   labelColor: cs.primary,
-                  unselectedLabelColor: isDark
-                      ? Colors.white54
-                      : Colors.black54,
+                  unselectedLabelColor: isDark ? Colors.white54 : Colors.black54,
                   labelStyle: AppTextStyles.labelLarge.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                   isScrollable: true,
                   tabAlignment: TabAlignment.center,
                   tabs: tabs.map((t) => Tab(text: t)).toList(),
-                  onTap: (index) => setState(() {}),
                 ),
               ),
             ),
-
-            // Reputation / stats card
             SliverToBoxAdapter(child: _buildStatsCard(isDark, cs)),
-
-            // Tab content
-            _buildTabContent(isDark, cs),
-
-            SliverToBoxAdapter(
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height * 0.6,
-              ),
-            ),
           ],
+          body: TabBarView(
+            controller: _tabController,
+            children: tabs.map((tab) => _buildTabBody(tab, isDark, cs)).toList(),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildTabContent(bool isDark, ColorScheme cs) {
-    final idx = _tabController.index;
-    final tab = _activeTabs[idx];
+  Widget _buildTabBody(String tab, bool isDark, ColorScheme cs) {
+    return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      slivers: [
+        _buildTabContentForTab(tab, isDark, cs),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+      ],
+    );
+  }
 
+  Widget _buildTabContentForTab(String tab, bool isDark, ColorScheme cs) {
     switch (tab) {
       case 'My Listings':
         return _buildListingsGrid(isDark);
@@ -313,8 +341,13 @@ class _ProfilePageState extends State<ProfilePage>
         : (progress * 1.2).clamp(0.0, 1.0);
     final double screenWidth = MediaQuery.of(context).size.width;
 
+    final Color bgColor = isDark ? AppColors.backgroundDark : Colors.white;
+    final Color adaptiveBg = _extractedColor != null 
+        ? Color.alphaBlend(_extractedColor!.withValues(alpha: isDark ? 0.1 : 0.05), bgColor)
+        : bgColor;
+
     return Container(
-      color: (isDark ? AppColors.backgroundDark : Colors.white).withValues(
+      color: adaptiveBg.withValues(
         alpha: bgOpacity,
       ),
       child: Stack(
@@ -326,8 +359,8 @@ class _ProfilePageState extends State<ProfilePage>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    cs.primary.withValues(alpha: isDark ? 0.4 : 0.15),
-                    cs.primary.withValues(alpha: 0),
+                    (_extractedColor ?? cs.primary).withValues(alpha: isDark ? 0.35 : 0.25),
+                    (_extractedColor ?? cs.primary).withValues(alpha: 0),
                   ],
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
