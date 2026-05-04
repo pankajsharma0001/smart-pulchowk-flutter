@@ -10,6 +10,8 @@ import 'package:smart_pulchowk/features/search/search.dart';
 import 'package:smart_pulchowk/core/models/event.dart';
 import 'package:smart_pulchowk/core/models/club.dart';
 import 'package:smart_pulchowk/core/models/notice.dart';
+import 'package:smart_pulchowk/core/models/user.dart';
+import 'package:smart_pulchowk/core/models/classroom.dart';
 import 'package:smart_pulchowk/core/models/lost_found.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
@@ -23,7 +25,7 @@ class HomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Scaffold(
       backgroundColor: Colors.transparent,
-      body: Stack(children: [_MeshBackground(), _HomeContent()]),
+      body: _HomeContent(),
     );
   }
 }
@@ -44,6 +46,9 @@ class _HomeContentState extends State<_HomeContent> {
   late Future<List<Club>> _clubsFuture;
   late Future<NoticeStats?> _noticeStatsFuture;
   late Future<List<LostFoundItem>> _lostFoundFuture;
+  late Future<AppUser?> _userFuture;
+  late Future<StudentProfile?> _studentProfileFuture;
+  late Future<List<Notice>> _noticesFuture;
 
   @override
   void initState() {
@@ -62,6 +67,9 @@ class _HomeContentState extends State<_HomeContent> {
 
     // User count is never cached per user request
     _userCountFuture = api.getActiveUserCount(forceRefresh: true);
+    _userFuture = api.getCurrentUser(forceRefresh: forceRefresh);
+    _studentProfileFuture = api.getStudentProfile();
+    _noticesFuture = api.getNotices(limit: 50, forceRefresh: forceRefresh);
   }
 
   Future<void> _handleRefresh() async {
@@ -81,6 +89,9 @@ class _HomeContentState extends State<_HomeContent> {
       _noticeStatsFuture.catchError((_) => null),
       _lostFoundFuture.catchError((_) => <LostFoundItem>[]),
       _userCountFuture.catchError((_) => 0),
+      _userFuture.catchError((_) => null),
+      _studentProfileFuture.catchError((_) => null),
+      _noticesFuture.catchError((_) => <Notice>[]),
     ]);
   }
 
@@ -114,9 +125,17 @@ class _HomeContentState extends State<_HomeContent> {
               const SizedBox(height: AppSpacing.xl),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: _HeroSection(userCountFuture: _userCountFuture),
+                child: _HeroSection(
+                  userCountFuture: _userCountFuture,
+                  userFuture: _userFuture,
+                ),
               ),
               const SizedBox(height: AppSpacing.xxl),
+              _RecentNoticesSection(
+                noticesFuture: _noticesFuture,
+                studentProfileFuture: _studentProfileFuture,
+              ),
+              const SizedBox(height: AppSpacing.xl),
               _RegisteredEventsSection(enrollmentFuture: _enrollmentFuture),
               const SizedBox(height: AppSpacing.sm),
               _NextEventSection(eventsFuture: _eventsFuture),
@@ -745,7 +764,19 @@ class _ExploreChips extends StatelessWidget {
 
 class _HeroSection extends StatelessWidget {
   final Future<int> userCountFuture;
-  const _HeroSection({required this.userCountFuture});
+  final Future<AppUser?> userFuture;
+  
+  const _HeroSection({
+    required this.userCountFuture,
+    required this.userFuture,
+  });
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning,';
+    if (hour < 17) return 'Good afternoon,';
+    return 'Good evening,';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -809,42 +840,52 @@ class _HeroSection extends StatelessWidget {
         ),
         const SizedBox(height: 18),
         // ── Hero Title ──
-        LayoutBuilder(
-          builder: (context, constraints) {
-            // Scale hero text based on available width
-            final heroFontSize = (constraints.maxWidth * 0.11).clamp(28.0, 40.0);
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Your Campus.',
-                  style: AppTextStyles.h1.copyWith(
-                    fontSize: heroFontSize,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1.5,
-                    height: 1.0,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [AppColors.primary, AppColors.secondary],
-                  ).createShader(ui.Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
-                  child: Text(
-                    'Unified.',
-                    style: AppTextStyles.h1.copyWith(
-                      fontSize: heroFontSize,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1.5,
-                      height: 1.0,
-                      color: Colors.white,
+        FutureBuilder<AppUser?>(
+          future: userFuture,
+          builder: (context, snapshot) {
+            final userName = snapshot.data?.name.split(' ').first ?? 'Student';
+            return LayoutBuilder(
+              builder: (context, constraints) {
+                // Scale hero text based on available width
+                final heroFontSize = (constraints.maxWidth * 0.11).clamp(28.0, 40.0);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _getGreeting(),
+                      style: AppTextStyles.h1.copyWith(
+                        fontSize: heroFontSize * 0.8,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -1.0,
+                        height: 1.0,
+                        color: Theme.of(context).brightness == Brightness.dark
+                            ? Colors.white70
+                            : Colors.black87,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+                    const SizedBox(height: 4),
+                    ShaderMask(
+                      shaderCallback: (bounds) => const LinearGradient(
+                        colors: [AppColors.primary, AppColors.secondary],
+                      ).createShader(ui.Rect.fromLTWH(0, 0, bounds.width, bounds.height)),
+                      child: Text(
+                        '$userName.',
+                        style: AppTextStyles.h1.copyWith(
+                          fontSize: heroFontSize,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1.5,
+                          height: 1.0,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                );
+              },
             );
           },
         ),
@@ -1216,6 +1257,184 @@ class _StatusPingState extends State<_StatusPing>
           ),
         ),
       ],
+    );
+  }
+}
+
+class _RecentNoticesSection extends StatelessWidget {
+  final Future<List<Notice>> noticesFuture;
+  final Future<StudentProfile?> studentProfileFuture;
+
+  const _RecentNoticesSection({
+    required this.noticesFuture,
+    required this.studentProfileFuture,
+  });
+
+  bool _isRelevantToSemester(String text, int semester) {
+    final t = text.toLowerCase();
+    final ordinals = {1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th', 6: '6th', 7: '7th', 8: '8th'};
+    final ordinal = ordinals[semester] ?? '${semester}th';
+    
+    String notation = '';
+    switch (semester) {
+      case 1: notation = 'i/i'; break;
+      case 2: notation = 'i/ii'; break;
+      case 3: notation = 'ii/i'; break;
+      case 4: notation = 'ii/ii'; break;
+      case 5: notation = 'iii/i'; break;
+      case 6: notation = 'iii/ii'; break;
+      case 7: notation = 'iv/i'; break;
+      case 8: notation = 'iv/ii'; break;
+    }
+    
+    return t.contains(ordinal) || 
+           (notation.isNotEmpty && t.contains(notation)) || 
+           t.contains('sem $semester') || 
+           t.contains('semester $semester');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: Future.wait([noticesFuture, studentProfileFuture]),
+      builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+        
+        final notices = (snapshot.data?[0] as List<Notice>?) ?? [];
+        final profile = snapshot.data?[1] as StudentProfile?;
+        final currentSemester = profile?.currentSemester;
+        
+        final relevantNotices = notices.where((n) {
+          if (!n.isNew) return false;
+          
+          final t = n.title.toLowerCase();
+          final l = n.level?.toLowerCase() ?? '';
+          final isUrgent = t.contains('urgent') || t.contains('important') || l.contains('urgent');
+          
+          if (currentSemester == null) return isUrgent;
+          
+          final isForSem = _isRelevantToSemester(t, currentSemester) || _isRelevantToSemester(l, currentSemester);
+          return isUrgent || isForSem;
+        }).toList();
+
+        if (relevantNotices.isEmpty) return const SizedBox.shrink();
+
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: _SectionLabel(label: 'Relevant Notices'),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            SizedBox(
+              height: 120,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+                itemCount: relevantNotices.length,
+                itemBuilder: (context, index) {
+                  final notice = relevantNotices[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: _RecentNoticeCard(notice: notice, isDark: isDark),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _RecentNoticeCard extends StatelessWidget {
+  final Notice notice;
+  final bool isDark;
+
+  const _RecentNoticeCard({required this.notice, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    final date = DateFormat.yMMMMd().format(notice.displayDate);
+    return Container(
+      width: MediaQuery.of(context).size.width * 0.75,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.4),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: (isDark ? AppColors.borderDark : AppColors.borderLight).withValues(alpha: 0.3),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            haptics.lightImpact();
+            MainLayout.of(context)?.setSelectedIndex(4);
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: notice.color.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(notice.icon, size: 16, color: notice.color),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        notice.categoryDisplay,
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: notice.color,
+                          fontWeight: FontWeight.w800,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Text(
+                      date,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textMuted,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  notice.title,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w800,
+                    height: 1.3,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

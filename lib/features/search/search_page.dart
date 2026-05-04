@@ -315,45 +315,32 @@ class _SearchPageState extends State<SearchPage>
           ),
         ),
         Expanded(
-          child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            itemCount: _recentSearches.length,
-            itemBuilder: (context, index) {
-              final query = _recentSearches[index];
-              return ListTile(
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white10
-                        : Colors.black.withValues(alpha: 0.05),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.history_rounded,
-                    size: 18,
-                    color: isDark ? Colors.white60 : Colors.black54,
-                  ),
-                ),
-                title: Text(
-                  query,
-                  style: AppTextStyles.bodyMedium.copyWith(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 12,
+              children: _recentSearches.map((query) {
+                return ActionChip(
+                  label: Text(query),
+                  labelStyle: AppTextStyles.bodyMedium.copyWith(
                     color: isDark ? Colors.white : Colors.black,
                   ),
-                ),
-                trailing: Icon(
-                  Icons.north_west_rounded,
-                  size: 16,
-                  color: isDark ? Colors.white24 : Colors.black26,
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                onTap: () {
-                  _searchController.text = query;
-                  _searchFocusNode.unfocus();
-                  _performSearch(query);
-                },
-              );
-            },
+                  backgroundColor: isDark 
+                      ? Colors.white.withValues(alpha: 0.1) 
+                      : Colors.black.withValues(alpha: 0.05),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  side: BorderSide.none,
+                  onPressed: () {
+                    _searchController.text = query;
+                    _searchFocusNode.unfocus();
+                    _performSearch(query);
+                  },
+                );
+              }).toList(),
+            ),
           ),
         ),
       ],

@@ -2,7 +2,7 @@ name: smart_pulchowk
 description: "Smart Pulchowk - Campus companion app for Pulchowk Campus."
 publish_to: "none"
 
-version: 1.0.0+1
+version: 3.1.5+1
 
 environment:
   sdk: ^3.10.8
