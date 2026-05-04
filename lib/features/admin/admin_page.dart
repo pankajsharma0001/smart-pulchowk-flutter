@@ -45,17 +45,18 @@ class _AdminPageState extends State<AdminPage>
           ),
           bottom: TabBar(
             controller: _tabController,
-            isScrollable: false, // Make tabs fill the row
+            isScrollable: true,
+            tabAlignment: TabAlignment.center,
             labelColor: AppColors.secondary,
             unselectedLabelColor: AppColors.textSecondary.withValues(
               alpha: 0.7,
             ),
             indicatorColor: AppColors.secondary,
             labelStyle: const TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
-            ), // Slightly smaller font for better fit
-            unselectedLabelStyle: const TextStyle(fontSize: 12),
+            ),
+            unselectedLabelStyle: const TextStyle(fontSize: 13),
             tabs: const [
               Tab(text: 'Overview'),
               Tab(text: 'User Roles'),
@@ -147,7 +148,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab>
                   crossAxisCount: 2,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
-                  childAspectRatio: 1.5,
+                  childAspectRatio: 1.3,
                   children: [
                     _buildStatCard(
                       context,
@@ -213,7 +214,7 @@ class _AdminOverviewTabState extends State<AdminOverviewTab>
         : color.withValues(alpha: 0.15);
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceContainerDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -324,7 +325,7 @@ class ShimmerAdminOverview extends StatelessWidget {
             crossAxisCount: 2,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.5,
+            childAspectRatio: 1.3,
             children: List.generate(
               4,
               (index) => Container(

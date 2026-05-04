@@ -67,7 +67,8 @@ class _MarketplaceActivityPageState extends State<MarketplaceActivityPage> {
                 ),
               ),
               TabBar(
-                isScrollable: false,
+                isScrollable: true,
+                tabAlignment: TabAlignment.center,
                 indicatorSize: TabBarIndicatorSize.label,
                 labelStyle: AppTextStyles.labelMedium.copyWith(
                   fontWeight: FontWeight.bold,

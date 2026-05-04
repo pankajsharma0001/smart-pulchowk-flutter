@@ -205,13 +205,13 @@ class _FavoritesPageState extends State<FavoritesPage>
 
   Widget _buildTabs(bool isDark) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      padding: const EdgeInsets.all(4),
+      margin: const EdgeInsets.symmetric(horizontal: 48, vertical: 8),
+      padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(
         color: isDark
             ? Colors.white.withValues(alpha: 0.05)
             : Colors.black.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isDark
               ? Colors.white.withValues(alpha: 0.1)
@@ -226,7 +226,7 @@ class _FavoritesPageState extends State<FavoritesPage>
           color: isDark
               ? AppColors.primary.withValues(alpha: 0.2)
               : Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           boxShadow: isDark
               ? []
               : [
@@ -241,15 +241,17 @@ class _FavoritesPageState extends State<FavoritesPage>
         unselectedLabelColor: isDark
             ? AppColors.textMutedDark
             : AppColors.textMuted,
-        labelStyle: AppTextStyles.labelLarge.copyWith(
+        labelStyle: AppTextStyles.labelSmall.copyWith(
           fontWeight: FontWeight.bold,
+          fontSize: 12,
         ),
-        unselectedLabelStyle: AppTextStyles.labelLarge.copyWith(
-          fontWeight: FontWeight.normal,
+        unselectedLabelStyle: AppTextStyles.labelSmall.copyWith(
+          fontWeight: FontWeight.w500,
+          fontSize: 12,
         ),
         tabs: const [
-          Tab(text: 'Clubs'),
-          Tab(text: 'Events'),
+          Tab(height: 32, text: 'Clubs'),
+          Tab(height: 32, text: 'Events'),
         ],
       ),
     );

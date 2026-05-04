@@ -142,7 +142,7 @@ class ShimmerEventCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Skeleton(height: 14, borderRadius: 6),
+                    Skeleton(height: 14, width: double.infinity, borderRadius: 6),
                     const SizedBox(height: 4),
                     Skeleton(height: 10, width: 100, borderRadius: 5),
                     const Spacer(),
@@ -193,7 +193,7 @@ class ShimmerLostFoundCard extends StatelessWidget {
                   children: [
                     Skeleton(height: 14, width: 100, borderRadius: 6),
                     const SizedBox(height: 6),
-                    Skeleton(height: 10, borderRadius: 5),
+                    Skeleton(height: 10, width: double.infinity, borderRadius: 5),
                     const Spacer(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -260,7 +260,7 @@ class ShimmerClubCard extends StatelessWidget {
                   children: [
                     Skeleton(height: 14, width: 110, borderRadius: 6),
                     const SizedBox(height: 8),
-                    Skeleton(height: 10, borderRadius: 5),
+                    Skeleton(height: 10, width: double.infinity, borderRadius: 5),
                     const SizedBox(height: 4),
                     Skeleton(height: 10, width: 80, borderRadius: 5),
                     const Spacer(),
@@ -308,11 +308,11 @@ class ShimmerInfoCard extends StatelessWidget {
               children: [
                 Skeleton(width: 20, height: 20, shape: BoxShape.circle),
                 const SizedBox(width: 10),
-                Skeleton(width: 100, height: 14, borderRadius: 6),
+                Expanded(child: Skeleton(height: 14, borderRadius: 6)),
               ],
             ),
             const SizedBox(height: 16),
-            Skeleton(height: 10, borderRadius: 5),
+            Skeleton(height: 10, width: double.infinity, borderRadius: 5),
             const SizedBox(height: 6),
             Skeleton(height: 10, width: 200, borderRadius: 5),
             const SizedBox(height: 6),

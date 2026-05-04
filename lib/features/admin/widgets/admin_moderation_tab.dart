@@ -121,14 +121,15 @@ class _AdminModerationTabState extends State<AdminModerationTab>
                   segments: [
                     ButtonSegment(
                       value: 'open',
-                      label: const Text('Open', style: TextStyle(fontSize: 12)),
+                      label: const Text('Open', style: TextStyle(fontSize: 11), softWrap: false),
                       icon: showIcons ? const Icon(Icons.error_outline) : null,
                     ),
                     ButtonSegment(
                       value: 'in_review',
                       label: const Text(
                         'Reviewing',
-                        style: TextStyle(fontSize: 12),
+                        style: TextStyle(fontSize: 11),
+                        softWrap: false,
                       ),
                       icon: showIcons
                           ? const Icon(Icons.pending_outlined)
@@ -138,7 +139,8 @@ class _AdminModerationTabState extends State<AdminModerationTab>
                       value: 'resolved',
                       label: const Text(
                         'Resolved',
-                        style: TextStyle(fontSize: 12),
+                        style: TextStyle(fontSize: 11),
+                        softWrap: false,
                       ),
                       icon: showIcons
                           ? const Icon(Icons.check_circle_outline)

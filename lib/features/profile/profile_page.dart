@@ -253,10 +253,8 @@ class _ProfilePageState extends State<ProfilePage>
                   labelStyle: AppTextStyles.labelLarge.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
-                  isScrollable: _isStudent,
-                  tabAlignment: _isStudent
-                      ? TabAlignment.start
-                      : TabAlignment.fill,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.center,
                   tabs: tabs.map((t) => Tab(text: t)).toList(),
                   onTap: (index) => setState(() {}),
                 ),
