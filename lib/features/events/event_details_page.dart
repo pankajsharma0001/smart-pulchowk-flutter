@@ -391,6 +391,38 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                       );
                     },
                   ),
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      right: 8.0,
+                      top: 8,
+                      bottom: 8,
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.15),
+                        ),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.share_outlined,
+                          color: Colors.white,
+                        ),
+                        onPressed: () {
+                          haptics.selectionClick();
+                          Share.share(
+                            '🔥 *Check out this event: ${widget.event.title}!* 🔥\n\n'
+                            '📍 Venue: ${widget.event.venue ?? "To be announced"}\n'
+                            '📅 Time: ${DateFormat("EEEE, MMMM d, h:mm a").format(widget.event.eventStartTime)}\n\n'
+                            'Join me and other students on Smart Pulchowk: https://smart-pulchowk.vercel.app/event/${widget.event.id}',
+                            subject: 'Event: ${widget.event.title}',
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                   if (_isAdmin)
                     Padding(
                       padding: const EdgeInsets.only(
@@ -549,12 +581,15 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                     vertical: 6,
                                   ),
                                   decoration: isDark
-                                      ? AppDecorations.glassDark(borderRadius: 20)
+                                      ? AppDecorations.glassDark(
+                                          borderRadius: 20,
+                                        )
                                       : AppDecorations.glass(borderRadius: 20),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      if (widget.event.club!.logoUrl != null) ...[
+                                      if (widget.event.club!.logoUrl !=
+                                          null) ...[
                                         Container(
                                           width: 20,
                                           height: 20,
@@ -563,7 +598,8 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                           ),
                                           clipBehavior: Clip.hardEdge,
                                           child: SmartImage(
-                                            imageUrl: widget.event.club!.logoUrl,
+                                            imageUrl:
+                                                widget.event.club!.logoUrl,
                                             fit: BoxFit.cover,
                                             shape: BoxShape.circle,
                                             errorWidget: const Icon(
@@ -578,10 +614,11 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                                       Flexible(
                                         child: Text(
                                           widget.event.club!.name,
-                                          style: AppTextStyles.labelSmall.copyWith(
-                                            color: AppColors.primary,
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                          style: AppTextStyles.labelSmall
+                                              .copyWith(
+                                                color: AppColors.primary,
+                                                fontWeight: FontWeight.bold,
+                                              ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),
@@ -1444,7 +1481,9 @@ class _CountdownTimerState extends State<_CountdownTimer> {
           Flexible(
             child: Text(
               'Starts in: ${days}d ${hours}h ${minutes}m ${seconds}s',
-              style: AppTextStyles.labelSmall.copyWith(color: AppColors.warning),
+              style: AppTextStyles.labelSmall.copyWith(
+                color: AppColors.warning,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

@@ -771,8 +771,9 @@ class _SettingsPageState extends State<SettingsPage>
           ),
         );
 
-        if (confirmed != true || !context.mounted) return;
-
+        if (confirmed != true || !mounted) return;
+        
+        // Capture navigator before possible context invalidation
         final navigator = Navigator.of(context, rootNavigator: true);
 
         showDialog(

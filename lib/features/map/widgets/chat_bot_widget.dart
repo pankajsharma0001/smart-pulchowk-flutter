@@ -370,7 +370,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
 
     if (widget.isPage) {
       return Container(
-        color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+        color: isDark ? AppColors.backgroundDark : AppColors.surfaceLight,
         child: SafeArea(
           bottom: false,
           child: _buildChatPanel(isDark, double.infinity),
@@ -897,7 +897,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
               ? Colors.red.withValues(alpha: 0.1)
               : (isDark
                     ? Colors.white.withValues(alpha: 0.1)
-                    : Colors.black.withValues(alpha: 0.05)),
+                    : AppColors.primary.withValues(alpha: 0.05)),
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -931,7 +931,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
         decoration: BoxDecoration(
           color: isDark
               ? Colors.white.withValues(alpha: 0.1)
-              : Colors.black.withValues(alpha: 0.05),
+              : AppColors.primary.withValues(alpha: 0.05),
           borderRadius: const BorderRadius.only(
             topLeft: Radius.circular(16),
             topRight: Radius.circular(16),
