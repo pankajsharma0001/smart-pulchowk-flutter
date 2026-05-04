@@ -120,7 +120,7 @@ class Notice {
 
   bool get isNew {
     final now = DateTime.now();
-    final difference = now.difference(createdAt);
+    final difference = now.difference(displayDate);
     return difference.inDays <= 7;
   }
 

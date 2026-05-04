@@ -17,6 +17,10 @@ import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 import 'package:smart_pulchowk/features/events/event_details_page.dart';
 import 'package:smart_pulchowk/core/widgets/app_refresher.dart';
+import 'package:smart_pulchowk/core/widgets/pdf_viewer.dart';
+import 'package:smart_pulchowk/core/widgets/image_viewer.dart';
+import 'package:smart_pulchowk/core/services/notice_action_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -1272,25 +1276,39 @@ class _RecentNoticesSection extends StatelessWidget {
 
   bool _isRelevantToSemester(String text, int semester) {
     final t = text.toLowerCase();
+    // Normalize text by removing spaces, commas, dots, dashes, and slashes
+    // This allows matching variations like "III year / I part" seamlessly
+    final normalizedText = t.replaceAll(RegExp(r'[\s,\.\-/]'), '');
+    
     final ordinals = {1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: '5th', 6: '6th', 7: '7th', 8: '8th'};
     final ordinal = ordinals[semester] ?? '${semester}th';
     
+    // Calculate year and part
+    final int yearNum = ((semester - 1) ~/ 2) + 1;
+    final int partNum = ((semester - 1) % 2) + 1;
+    final yearOrdinal = ordinals[yearNum] ?? '${yearNum}th';
+    final partOrdinal = ordinals[partNum] ?? '${partNum}th';
+    final yearPartNumStr = '${yearOrdinal}year${partOrdinal}part';
+    
     String notation = '';
+    String yearPartRoman = '';
     switch (semester) {
-      case 1: notation = 'i/i'; break;
-      case 2: notation = 'i/ii'; break;
-      case 3: notation = 'ii/i'; break;
-      case 4: notation = 'ii/ii'; break;
-      case 5: notation = 'iii/i'; break;
-      case 6: notation = 'iii/ii'; break;
-      case 7: notation = 'iv/i'; break;
-      case 8: notation = 'iv/ii'; break;
+      case 1: notation = 'i/i'; yearPartRoman = 'iyearipart'; break;
+      case 2: notation = 'i/ii'; yearPartRoman = 'iyeariipart'; break;
+      case 3: notation = 'ii/i'; yearPartRoman = 'iiyearipart'; break;
+      case 4: notation = 'ii/ii'; yearPartRoman = 'iiyeariipart'; break;
+      case 5: notation = 'iii/i'; yearPartRoman = 'iiiyearipart'; break;
+      case 6: notation = 'iii/ii'; yearPartRoman = 'iiiyeariipart'; break;
+      case 7: notation = 'iv/i'; yearPartRoman = 'ivyearipart'; break;
+      case 8: notation = 'iv/ii'; yearPartRoman = 'ivyeariipart'; break;
     }
     
     return t.contains(ordinal) || 
            (notation.isNotEmpty && t.contains(notation)) || 
            t.contains('sem $semester') || 
-           t.contains('semester $semester');
+           t.contains('semester $semester') ||
+           (yearPartRoman.isNotEmpty && normalizedText.contains(yearPartRoman)) ||
+           normalizedText.contains(yearPartNumStr);
   }
 
   @override
@@ -1381,7 +1399,33 @@ class _RecentNoticeCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
           onTap: () {
             haptics.lightImpact();
-            MainLayout.of(context)?.setSelectedIndex(4);
+            if (notice.attachmentUrl != null && notice.attachmentUrl!.isNotEmpty) {
+              if (notice.isPdf) {
+                Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        CustomPdfViewer(url: notice.attachmentUrl!, title: notice.title),
+                  ),
+                );
+              } else if (notice.isImage) {
+                Navigator.of(context, rootNavigator: true).push(
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        FullScreenImageViewer(imageUrls: [notice.attachmentUrl!]),
+                  ),
+                );
+              } else {
+                try {
+                  final uri = Uri.parse(notice.attachmentUrl!.trim());
+                  launchUrl(uri, mode: LaunchMode.externalApplication);
+                } catch (e) {
+                  debugPrint('Could not launch ${notice.attachmentUrl}: $e');
+                }
+              }
+            } else {
+              NoticeActionService.instance.triggerAction(noticeId: notice.id);
+              MainLayout.of(context)?.setSelectedIndex(8);
+            }
           },
           child: Padding(
             padding: const EdgeInsets.all(16),

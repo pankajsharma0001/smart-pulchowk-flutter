@@ -267,7 +267,12 @@ class _ClassroomPageState extends State<ClassroomPage>
                 const Color(0xFF10B981), // Emerald
                 Icons.check_circle_outline_rounded,
               ),
-              _buildProgressCard("Semester", progress),
+              _buildProgressCard(
+                _profile?.currentSemester != null
+                    ? "Semester ${_profile!.currentSemester}"
+                    : "Semester",
+                progress,
+              ),
             ],
           ),
         ],

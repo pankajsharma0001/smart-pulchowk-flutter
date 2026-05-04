@@ -180,13 +180,16 @@ class _SellerProfilePageState extends State<SellerProfilePage>
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Text(
-                    widget.sellerName ?? 'Seller Profile',
-                    style: AppTextStyles.h5.copyWith(
-                      color: isDark ? Colors.white : Colors.black,
-                      fontWeight: FontWeight.w900,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      widget.sellerName ?? 'Seller Profile',
+                      style: AppTextStyles.h5.copyWith(
+                        color: isDark ? Colors.white : Colors.black,
+                        fontWeight: FontWeight.w900,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 4),
                   if (widget.isVerified) ...[
@@ -508,13 +511,17 @@ class _ReviewItem extends StatelessWidget {
           const SizedBox(height: 8),
           Row(
             children: [
-              Text(
-                'by ${rating.rater?.name ?? 'Verified Buyer'}',
-                style: AppTextStyles.caption.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondary,
+              Flexible(
+                child: Text(
+                  'by ${rating.rater?.name ?? 'Verified Buyer'}',
+                  style: AppTextStyles.caption.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               if (rating.listing != null) ...[

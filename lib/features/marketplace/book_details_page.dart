@@ -274,7 +274,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
           slivers: [
             // ── PREMIUM IMAGE GALLERY ──────────────────────────────────────
             SliverAppBar(
-              expandedHeight: 440,
+              expandedHeight: 380,
               pinned: true,
               stretch: true,
               backgroundColor: isDark
@@ -394,7 +394,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                           color: isDark
                               ? AppColors.textPrimaryDark
                               : AppColors.textPrimary,
-                          fontSize: 26,
+                          fontSize: 20,
                           letterSpacing: -0.5,
                           height: 1.2,
                         ),
@@ -466,7 +466,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                                   style: AppTextStyles.h2.copyWith(
                                     color: cs.primary,
                                     fontWeight: FontWeight.w800,
-                                    fontSize: 28,
+                                    fontSize: 24,
                                     letterSpacing: -0.5,
                                   ),
                                 ),
@@ -682,7 +682,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDark ? AppColors.cardDark : Colors.white,
         borderRadius: AppRadius.lgAll,
@@ -724,16 +724,18 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                       Row(
                         children: [
                           Flexible(
-                            child: Text(
-                              seller.name,
-                              style: AppTextStyles.h5.copyWith(
-                                color: isDark
-                                    ? AppColors.textPrimaryDark
-                                    : AppColors.textPrimary,
-                                fontWeight: FontWeight.w700,
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                seller.name,
+                                style: AppTextStyles.h5.copyWith(
+                                  color: isDark
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimary,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -1113,9 +1115,9 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     return Container(
       padding: EdgeInsets.fromLTRB(
         20,
+        16,
         20,
-        20,
-        24 + MediaQuery.of(context).padding.bottom,
+        16 + MediaQuery.of(context).padding.bottom,
       ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
@@ -1179,7 +1181,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          minimumSize: const Size(double.infinity, 56),
+          minimumSize: const Size(double.infinity, 48),
           shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
         ),
       );
@@ -1208,7 +1210,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  minimumSize: const Size(0, 56),
+                  minimumSize: const Size(0, 48),
                   shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
                 ),
               ),
@@ -1226,7 +1228,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                   foregroundColor: Colors.orange,
                   side: const BorderSide(color: Colors.orange),
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  minimumSize: const Size(0, 56),
+                  minimumSize: const Size(0, 48),
                   shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
                 ),
               ),
@@ -1264,14 +1266,14 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
         _sendPurchaseRequest();
       },
       icon: const Icon(Icons.shopping_cart_checkout_rounded, size: 20),
-      label: const Text('SEND PURCHASE REQUEST'),
+      label: const Text('SEND REQUEST'),
       style: FilledButton.styleFrom(
         backgroundColor: cs.primary,
         foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        minimumSize: const Size(double.infinity, 56),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        minimumSize: const Size(double.infinity, 48),
         shape: RoundedRectangleBorder(borderRadius: AppRadius.lgAll),
-        elevation: 8,
+        elevation: 4,
         shadowColor: cs.primary.withValues(alpha: 0.4),
       ),
     );
@@ -1449,12 +1451,16 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text(
-                'Contact ${seller.name}',
-                style: AppTextStyles.h5.copyWith(
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimary,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Contact ${seller.name}',
+                  style: AppTextStyles.h5.copyWith(
+                    color: isDark
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimary,
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
