@@ -179,6 +179,21 @@ class _LocationDetailsSheetState extends State<LocationDetailsSheet> {
 
                         return Column(
                           children: [
+                            // Render all images offstage to force them to preload
+                            // This ensures smooth swiping without loading delays
+                            if (imageUrls.length > 1)
+                              Offstage(
+                                child: Stack(
+                                  children: imageUrls
+                                      .map((url) => SmartImage(
+                                            imageUrl: url,
+                                            width: double.infinity,
+                                            height: 200,
+                                            fit: BoxFit.cover,
+                                          ))
+                                      .toList(),
+                                ),
+                              ),
                             SizedBox(
                               height: 200,
                               child: ClipRRect(
