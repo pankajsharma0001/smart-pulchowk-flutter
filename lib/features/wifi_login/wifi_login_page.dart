@@ -1,9 +1,14 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/services/haptic_service.dart';
 import 'package:smart_pulchowk/features/wifi_login/wifi_login_service.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:http/http.dart' as http;
 
 class WifiLoginPage extends StatefulWidget {
   const WifiLoginPage({super.key});
@@ -27,6 +32,11 @@ class _WifiLoginPageState extends State<WifiLoginPage>
   String? _apkName;
   List<BuildStep> _steps = [];
   Timer? _pollTimer;
+
+  // Download state
+  bool _isDownloading = false;
+  double _downloadProgress = 0.0;
+  String? _localApkPath;
 
   // Animations
   late AnimationController _pulseController;
@@ -153,35 +163,93 @@ class _WifiLoginPageState extends State<WifiLoginPage>
     if (_downloadUrl == null) return;
     haptics.mediumImpact();
 
-    try {
-      final uri = Uri.parse(_downloadUrl!);
-      final launched = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
-      if (!launched && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Could not open download link. Trying in browser...'),
-            backgroundColor: AppColors.primary,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          ),
-        );
-        // Fallback: try in-app browser
-        await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    // If already downloaded and file exists, trigger share sheet directly
+    if (_localApkPath != null) {
+      final file = File(_localApkPath!);
+      if (await file.exists()) {
+        try {
+          await Share.shareXFiles(
+            [XFile(_localApkPath!)],
+            text: 'Install the Campus WiFi Auto-Login APK',
+          );
+          return;
+        } catch (e) {
+          debugPrint('WifiLoginPage: Share error: $e');
+        }
       }
+    }
+
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0.0;
+    });
+
+    try {
+      final client = http.Client();
+      final request = http.Request('GET', Uri.parse(_downloadUrl!));
+      final response = await client.send(request);
+
+      if (response.statusCode != 200) {
+        throw Exception('Server returned status code ${response.statusCode}');
+      }
+
+      final totalBytes = response.contentLength ?? 0;
+      var downloadedBytes = 0;
+      final chunks = <List<int>>[];
+
+      await for (final chunk in response.stream) {
+        chunks.add(chunk);
+        downloadedBytes += chunk.length;
+        if (mounted && totalBytes > 0) {
+          setState(() {
+            _downloadProgress = downloadedBytes / totalBytes;
+          });
+        }
+      }
+
+      final bytes = Uint8List(downloadedBytes);
+      var offset = 0;
+      for (final chunk in chunks) {
+        bytes.setRange(offset, offset + chunk.length, chunk);
+        offset += chunk.length;
+      }
+
+      final tempDir = await getTemporaryDirectory();
+      final apkName = _apkName ?? 'pcampus-login.apk';
+      final file = File('${tempDir.path}/$apkName');
+      await file.writeAsBytes(bytes);
+
+      if (!mounted) return;
+      haptics.success();
+      setState(() {
+        _isDownloading = false;
+        _downloadProgress = 1.0;
+        _localApkPath = file.path;
+      });
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Install the Campus WiFi Auto-Login APK',
+      );
     } catch (e) {
       debugPrint('WifiLoginPage: Download error: $e');
       if (mounted) {
+        setState(() {
+          _isDownloading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Download failed: $e'),
+            content: Text('Download failed: $e. Opening in browser...'),
             backgroundColor: const Color(0xFFEF4444),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
+        // Fallback: try opening in external browser
+        try {
+          final uri = Uri.parse(_downloadUrl!);
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+        } catch (_) {}
       }
     }
   }
@@ -198,6 +266,9 @@ class _WifiLoginPageState extends State<WifiLoginPage>
       _downloadUrl = null;
       _apkName = null;
       _steps = [];
+      _isDownloading = false;
+      _downloadProgress = 0.0;
+      _localApkPath = null;
     });
   }
 
@@ -263,6 +334,9 @@ class _WifiLoginPageState extends State<WifiLoginPage>
                 onDownload: _downloadApk,
                 onReset: _resetBuild,
                 isDark: isDark,
+                isDownloading: _isDownloading,
+                downloadProgress: _downloadProgress,
+                localApkPath: _localApkPath,
               ),
 
             // ── Build Error with Retry ──
@@ -859,12 +933,18 @@ class _BuildComplete extends StatelessWidget {
   final VoidCallback onDownload;
   final VoidCallback onReset;
   final bool isDark;
+  final bool isDownloading;
+  final double downloadProgress;
+  final String? localApkPath;
 
   const _BuildComplete({
     required this.apkName,
     required this.onDownload,
     required this.onReset,
     required this.isDark,
+    required this.isDownloading,
+    required this.downloadProgress,
+    required this.localApkPath,
   });
 
   @override
@@ -918,38 +998,97 @@ class _BuildComplete extends StatelessWidget {
           ),
           const SizedBox(height: 24),
 
-          // Download button
-          InkWell(
-            onTap: onDownload,
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
+          // Download / Share action
+          if (isDownloading)
+            Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.success, Color(0xFF059669)],
-                ),
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.05)
+                    : Colors.grey.withValues(alpha: 0.06),
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: AppShadows.glow(AppColors.success),
+                border: Border.all(
+                  color: (isDark ? AppColors.borderDark : AppColors.borderLight)
+                      .withValues(alpha: 0.5),
+                ),
               ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              child: Column(
                 children: [
-                  Icon(Icons.download_rounded, color: Colors.white, size: 22),
-                  SizedBox(width: 10),
-                  Text(
-                    'Download APK',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.3,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Downloading...',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white70 : Colors.black87,
+                        ),
+                      ),
+                      Text(
+                        '${(downloadProgress * 100).toStringAsFixed(0)}%',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.success,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: downloadProgress > 0 ? downloadProgress : null,
+                      backgroundColor: isDark
+                          ? Colors.white.withValues(alpha: 0.1)
+                          : Colors.black.withValues(alpha: 0.05),
+                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.success),
+                      minHeight: 6,
                     ),
                   ),
                 ],
               ),
+            )
+          else
+            InkWell(
+              onTap: onDownload,
+              borderRadius: BorderRadius.circular(14),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: localApkPath != null
+                        ? [AppColors.primary, AppColors.secondary]
+                        : [AppColors.success, const Color(0xFF059669)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: AppShadows.glow(
+                    localApkPath != null ? AppColors.primary : AppColors.success,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      localApkPath != null ? Icons.share_rounded : Icons.download_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      localApkPath != null ? 'Share / Install APK' : 'Download APK',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
 
           const SizedBox(height: 12),
 
