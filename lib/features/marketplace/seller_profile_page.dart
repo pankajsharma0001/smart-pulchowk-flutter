@@ -489,7 +489,7 @@ class _ReviewItem extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                DateFormat('MMM d, yyyy').format(rating.createdAt),
+                '${DateFormat('MMM d, yyyy').format(rating.createdAt)}${rating.updatedAt.difference(rating.createdAt).inSeconds.abs() > 5 ? ' (edited)' : ''}',
                 style: AppTextStyles.overline.copyWith(
                   color: Colors.grey,
                   fontSize: 10,

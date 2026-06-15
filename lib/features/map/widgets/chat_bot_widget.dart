@@ -370,7 +370,7 @@ class _ChatBotWidgetState extends State<ChatBotWidget>
 
     if (widget.isPage) {
       return Container(
-        color: isDark ? AppColors.backgroundDark : AppColors.surfaceLight,
+        color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
         child: SafeArea(
           bottom: false,
           child: _buildChatPanel(isDark, double.infinity),

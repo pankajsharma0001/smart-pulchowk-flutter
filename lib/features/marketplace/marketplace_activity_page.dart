@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smart_pulchowk/features/home/main_layout.dart';
 import 'package:smart_pulchowk/core/widgets/smart_image.dart';
 import 'package:smart_pulchowk/core/models/book_listing.dart';
+import 'package:smart_pulchowk/core/models/trust.dart';
 import 'package:smart_pulchowk/core/services/api_service.dart';
 import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:intl/intl.dart';
@@ -109,7 +110,9 @@ class _SellingView extends StatefulWidget {
   State<_SellingView> createState() => _SellingViewState();
 }
 
-class _SellingViewState extends State<_SellingView> {
+class _SellingViewState extends State<_SellingView> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   final ApiService _api = ApiService();
   List<BookListing> _listings = [];
   bool _isLoading = true;
@@ -117,7 +120,7 @@ class _SellingViewState extends State<_SellingView> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _load(forceRefresh: true);
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
@@ -138,6 +141,7 @@ class _SellingViewState extends State<_SellingView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     if (_isLoading) return _buildListingSkeleton(isDark);
     if (_listings.isEmpty) {
@@ -160,8 +164,7 @@ class _SellingViewState extends State<_SellingView> {
           book: _listings[i],
           isDark: isDark,
           onTap: () async {
-            final changed = await Navigator.push<bool>(
-              context,
+            final changed = await Navigator.of(context, rootNavigator: true).push<bool>(
               MaterialPageRoute(
                 builder: (_) => BookDetailsPage(listing: _listings[i]),
               ),
@@ -319,7 +322,9 @@ class _InquiriesView extends StatefulWidget {
   State<_InquiriesView> createState() => _InquiriesViewState();
 }
 
-class _InquiriesViewState extends State<_InquiriesView> {
+class _InquiriesViewState extends State<_InquiriesView> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   final ApiService _api = ApiService();
   List<BookPurchaseRequest> _requests = [];
   bool _isLoading = true;
@@ -334,7 +339,7 @@ class _InquiriesViewState extends State<_InquiriesView> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _load(forceRefresh: true);
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
@@ -352,6 +357,11 @@ class _InquiriesViewState extends State<_InquiriesView> {
         _requests = results;
         _isLoading = false;
       });
+
+      // DEBUG: log actual statuses to help diagnose stale-status issue
+      for (final r in results) {
+        debugPrint('INQUIRY #${r.id}: status=${r.status.value}, bookStatus=${r.listing?.status}, title=${r.listing?.title}');
+      }
 
       if (widget.initialRequestId != null && !_hasScrolled) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToRequest());
@@ -380,7 +390,8 @@ class _InquiriesViewState extends State<_InquiriesView> {
     );
     if (!mounted) return;
     if (res['success'] == true) {
-      _load(forceRefresh: true);
+      await _load(forceRefresh: true);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(accept ? 'Accepted request' : 'Rejected request'),
@@ -493,6 +504,7 @@ class _InquiriesViewState extends State<_InquiriesView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     if (_isLoading) return _buildInquirySkeleton(isDark);
     if (_requests.isEmpty) {
@@ -616,7 +628,7 @@ class _InquiryCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final book = request.listing;
     final buyer = request.buyer;
-    final dateStr = DateFormat('MMM d, h:mm a').format(request.createdAt);
+    final dateStr = DateFormat('MMM d, h:mm a').format(request.createdAt.toLocal());
 
     return GestureDetector(
       onLongPress: onLongPress,
@@ -694,15 +706,14 @@ class _InquiryCard extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                _StatusBadge(status: request.status),
+                _StatusBadge(status: request.status, bookStatus: book?.status),
               ],
             ),
             const SizedBox(height: 12),
             GestureDetector(
               onTap: () {
                 if (book != null) {
-                  Navigator.push(
-                    context,
+                  Navigator.of(context, rootNavigator: true).push(
                     MaterialPageRoute(
                       builder: (_) => BookDetailsPage(listing: book),
                     ),
@@ -792,7 +803,7 @@ class _InquiryCard extends StatelessWidget {
                 ),
               ),
             ],
-            if (request.status == RequestStatus.pending && !isSelected) ...[
+            if (request.status == RequestStatus.pending && !isSelected && request.listing?.status != BookStatus.sold) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -831,11 +842,14 @@ class _RequestsView extends StatefulWidget {
   State<_RequestsView> createState() => _RequestsViewState();
 }
 
-class _RequestsViewState extends State<_RequestsView> {
+class _RequestsViewState extends State<_RequestsView> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   final ApiService _api = ApiService();
   List<BookPurchaseRequest> _requests = [];
   bool _isLoading = true;
   final Set<int> _selectedIds = {};
+  Map<int, SellerRating?> _existingRatings = {};
 
   // Deep-linking
   final Map<int, GlobalKey> _requestKeys = {};
@@ -846,7 +860,7 @@ class _RequestsViewState extends State<_RequestsView> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _load(forceRefresh: true);
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
@@ -856,12 +870,45 @@ class _RequestsViewState extends State<_RequestsView> {
       if (!mounted) return;
     }
     setState(() => _isLoading = true);
-    final results = await _api.getMyPurchaseRequests(
-      forceRefresh: forceRefresh,
+    final results = await Future.wait([
+      _api.getMyPurchaseRequests(forceRefresh: forceRefresh),
+      _api.getDbUserId(),
+    ]);
+
+    final requests = results[0] as List<BookPurchaseRequest>;
+    final currentUserId = results[1] as String?;
+
+    // Fetch reputations in parallel to find existing ratings
+    final reputations = await Future.wait(
+      requests.map((r) {
+        final sellerId = r.listing?.sellerId;
+        if (sellerId != null && sellerId.isNotEmpty) {
+          return _api.getSellerReputation(sellerId, forceRefresh: forceRefresh);
+        }
+        return Future.value(null);
+      }),
     );
+
+    final Map<int, SellerRating?> existingRatings = {};
+    if (currentUserId != null) {
+      for (int i = 0; i < requests.length; i++) {
+        final r = requests[i];
+        final rep = reputations[i];
+        if (rep != null) {
+          for (final rating in rep.recentRatings) {
+            if (rating.listingId == r.listingId && rating.raterId == currentUserId) {
+              existingRatings[r.id] = rating;
+              break;
+            }
+          }
+        }
+      }
+    }
+
     if (mounted) {
       setState(() {
-        _requests = results;
+        _requests = requests;
+        _existingRatings = existingRatings;
         _isLoading = false;
         _selectedIds.clear();
       });
@@ -1144,26 +1191,40 @@ class _RequestsViewState extends State<_RequestsView> {
   }
 
   void _rateSeller(BookPurchaseRequest r) async {
+    final existing = _existingRatings[r.id];
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) =>
-          RatingDialog(sellerName: r.listing?.seller?.name ?? 'Seller'),
+      builder: (ctx) => RatingDialog(
+        sellerName: r.listing?.seller?.name ?? 'Seller',
+        initialRating: existing?.rating,
+        initialReview: existing?.review,
+      ),
     );
 
     if (result != null && mounted) {
-      final res = await _api.rateSeller(
-        sellerId: r.listing?.sellerId ?? '',
-        listingId: r.listingId,
-        rating: result['rating'] as int,
-        review: result['review'] as String?,
-      );
+      final res = existing != null
+          ? await _api.updateSellerRating(
+              sellerId: r.listing?.sellerId ?? '',
+              listingId: r.listingId,
+              rating: result['rating'] as int,
+              review: result['review'] as String?,
+            )
+          : await _api.rateSeller(
+              sellerId: r.listing?.sellerId ?? '',
+              listingId: r.listingId,
+              rating: result['rating'] as int,
+              review: result['review'] as String?,
+            );
 
       if (mounted) {
         _snack(
           res['success'] == true
-              ? 'Rating submitted!'
+              ? (existing != null ? 'Rating updated!' : 'Rating submitted!')
               : (res['message'] ?? 'Failed to rate'),
         );
+        if (res['success'] == true) {
+          _load(forceRefresh: true);
+        }
       }
     }
   }
@@ -1276,6 +1337,7 @@ class _RequestsViewState extends State<_RequestsView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     if (_isLoading) return _buildRequestSkeleton(isDark);
     if (_requests.isEmpty) {
@@ -1332,8 +1394,9 @@ class _RequestsViewState extends State<_RequestsView> {
                   isDark: isDark,
                   isSelected: isSelected,
                   isHighlighted: widget.initialRequestId == r.id,
+                  hasRated: _existingRatings[r.id] != null,
                   onCancel:
-                      (_isSelectionMode || r.status != RequestStatus.pending)
+                      (_isSelectionMode || r.status != RequestStatus.pending || r.listing?.status == BookStatus.sold)
                       ? null
                       : () => _cancel(r),
                   onDelete: _isSelectionMode ? null : () => _delete(r),
@@ -1385,7 +1448,9 @@ class _SavedView extends StatefulWidget {
   State<_SavedView> createState() => _SavedViewState();
 }
 
-class _SavedViewState extends State<_SavedView> {
+class _SavedViewState extends State<_SavedView> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
   final ApiService _api = ApiService();
   List<SavedBook> _saved = [];
   bool _isLoading = true;
@@ -1393,7 +1458,7 @@ class _SavedViewState extends State<_SavedView> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _load(forceRefresh: true);
   }
 
   Future<void> _load({bool forceRefresh = false}) async {
@@ -1414,6 +1479,7 @@ class _SavedViewState extends State<_SavedView> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     if (_isLoading) return _buildSavedSkeleton(isDark);
     if (_saved.isEmpty) {
@@ -1453,8 +1519,7 @@ class _SavedViewState extends State<_SavedView> {
                 _load();
               }
             },
-            onTap: () => Navigator.push(
-              context,
+            onTap: () => Navigator.of(context, rootNavigator: true).push(
               MaterialPageRoute(builder: (_) => BookDetailsPage(listing: book)),
             ),
           );
@@ -1695,21 +1760,47 @@ class _ListingCard extends StatelessWidget {
 
 class _StatusBadge extends StatelessWidget {
   final RequestStatus status;
-  const _StatusBadge({required this.status});
+  final BookStatus? bookStatus;
+  const _StatusBadge({required this.status, this.bookStatus});
   @override
   Widget build(BuildContext context) {
+    final isSold = bookStatus == BookStatus.sold;
+
+    // When book is sold and request is pending — show SOLD only
+    if (isSold && status == RequestStatus.pending) {
+      return _badge('SOLD', Colors.red);
+    }
+
+    // When book is sold and request is accepted/rejected — show both badges
+    if (isSold && (status == RequestStatus.accepted || status == RequestStatus.rejected)) {
+      Color c = status == RequestStatus.accepted ? Colors.green : Colors.red;
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _badge('SOLD', Colors.red),
+          const SizedBox(width: 4),
+          _badge(status.label.toUpperCase(), c),
+        ],
+      );
+    }
+
+    // Default: just show request status
     Color c = AppColors.info;
     if (status == RequestStatus.accepted) c = Colors.green;
     if (status == RequestStatus.rejected) c = Colors.red;
+    return _badge(status.label.toUpperCase(), c);
+  }
+
+  Widget _badge(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: c.withValues(alpha: 0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: AppRadius.fullAll,
       ),
       child: Text(
-        status.label.toUpperCase(),
-        style: TextStyle(color: c, fontSize: 9, fontWeight: FontWeight.bold),
+        text,
+        style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -1820,6 +1911,7 @@ class _RequestCard extends StatelessWidget {
   final bool isHighlighted;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final bool hasRated;
 
   const _RequestCard({
     required this.request,
@@ -1832,6 +1924,7 @@ class _RequestCard extends StatelessWidget {
     this.isHighlighted = false,
     this.onTap,
     this.onLongPress,
+    this.hasRated = false,
   });
 
   @override
@@ -1881,8 +1974,7 @@ class _RequestCard extends StatelessWidget {
                   child: GestureDetector(
                     onTap: () {
                       if (book != null) {
-                        Navigator.push(
-                          context,
+                        Navigator.of(context, rootNavigator: true).push(
                           MaterialPageRoute(
                             builder: (_) => BookDetailsPage(listing: book),
                           ),
@@ -2026,10 +2118,13 @@ class _RequestCard extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(height: 4),
-                                      _StatusBadge(status: request.status),
+                                      _StatusBadge(
+                                        status: request.status,
+                                        bookStatus: book?.status,
+                                      ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        'Requested ${DateFormat('MMM d, yyyy').format(request.createdAt)}',
+                                        'Requested ${DateFormat('MMM d, yyyy').format(request.createdAt.toLocal())}',
                                         style: AppTextStyles.overline.copyWith(
                                           fontSize: 10,
                                           color: isDark
@@ -2136,13 +2231,13 @@ class _RequestCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     TextButton.icon(
                       onPressed: onRateSeller,
-                      icon: const Icon(
-                        Icons.star_outline_rounded,
+                      icon: Icon(
+                        hasRated ? Icons.star_rounded : Icons.star_outline_rounded,
                         size: 16,
                         color: Colors.orange,
                       ),
                       label: Text(
-                        'Rate Seller',
+                        hasRated ? 'Edit Rating' : 'Rate Seller',
                         style: AppTextStyles.labelSmall.copyWith(
                           color: Colors.orange,
                           fontWeight: FontWeight.bold,
@@ -2185,8 +2280,15 @@ class _RequestCard extends StatelessWidget {
 
 class RatingDialog extends StatefulWidget {
   final String sellerName;
+  final int? initialRating;
+  final String? initialReview;
 
-  const RatingDialog({super.key, required this.sellerName});
+  const RatingDialog({
+    super.key,
+    required this.sellerName,
+    this.initialRating,
+    this.initialReview,
+  });
 
   @override
   State<RatingDialog> createState() => RatingDialogState();
@@ -2197,6 +2299,17 @@ class RatingDialogState extends State<RatingDialog> {
   final TextEditingController _reviewController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialRating != null) {
+      _rating = widget.initialRating!;
+    }
+    if (widget.initialReview != null) {
+      _reviewController.text = widget.initialReview!;
+    }
+  }
+
+  @override
   void dispose() {
     _reviewController.dispose();
     super.dispose();
@@ -2205,7 +2318,7 @@ class RatingDialogState extends State<RatingDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('Rate ${widget.sellerName}'),
+      title: Text(widget.initialRating != null ? 'Edit Rating for ${widget.sellerName}' : 'Rate ${widget.sellerName}'),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,

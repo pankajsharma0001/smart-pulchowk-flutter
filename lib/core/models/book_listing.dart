@@ -17,8 +17,9 @@ enum BookCondition {
   String get backendValue => value;
 
   static BookCondition fromString(String? value) {
+    final lower = value?.toLowerCase();
     return BookCondition.values.firstWhere(
-      (e) => e.value == value,
+      (e) => e.value == lower,
       orElse: () => BookCondition.good,
     );
   }
@@ -36,8 +37,9 @@ enum BookStatus {
   final String label;
 
   static BookStatus fromString(String? value) {
+    final lower = value?.toLowerCase();
     return BookStatus.values.firstWhere(
-      (e) => e.value == value,
+      (e) => e.value == lower,
       orElse: () => BookStatus.available,
     );
   }
@@ -502,8 +504,9 @@ enum RequestStatus {
   final String label;
 
   static RequestStatus fromString(String? value) {
+    final lower = value?.toLowerCase();
     return RequestStatus.values.firstWhere(
-      (e) => e.value == value,
+      (e) => e.value == lower,
       orElse: () => RequestStatus.pending,
     );
   }

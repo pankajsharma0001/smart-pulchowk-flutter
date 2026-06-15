@@ -33,6 +33,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
   late BookListing _book;
   BookPurchaseRequest? _myRequest;
   SellerReputation? _sellerReputation;
+  String? _currentUserId;
   bool _isSaved = false;
   bool _isLoadingRequest = true;
   bool _didChange = false;
@@ -67,30 +68,49 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
       _isLoadingRequest = false;
     }
 
-    _loadDetails();
+    _loadDetails(forceRefresh: true);
   }
 
   Future<void> _loadDetails({bool forceRefresh = false}) async {
-    // Always force-refresh request status: it's time-sensitive (seller may have
-    // accepted/rejected on their device and the buyer must see it immediately).
-    final results = await Future.wait([
+    // 1. Fetch detailed book listing and request status
+    final initialResults = await Future.wait([
       _api.getBookListingById(_book.id, forceRefresh: forceRefresh),
       _api.getPurchaseRequestStatus(_book.id, forceRefresh: true),
-      if (_book.seller?.id != null)
-        _api.getSellerReputation(_book.seller!.id.toString())
-      else
-        Future.value(null),
+      _api.getDbUserId(),
     ]);
+
+    BookListing? detailedBook = initialResults[0] as BookListing?;
+    final myRequest = initialResults[1] as BookPurchaseRequest?;
+    final currentUserId = initialResults[2] as String?;
+
+    // 2. Determine seller ID (either from detailed book or fallback)
+    final sellerId = detailedBook?.seller?.id ?? _book.seller?.id;
+    SellerReputation? reputation;
+    if (sellerId != null && sellerId.isNotEmpty) {
+      reputation = await _api.getSellerReputation(sellerId, forceRefresh: forceRefresh);
+    }
 
     if (mounted) {
       setState(() {
-        if (results[0] != null) _book = results[0] as BookListing;
-        _myRequest = results[1] as BookPurchaseRequest?;
-        _sellerReputation = results[2] as SellerReputation?;
+        if (detailedBook != null) _book = detailedBook;
+        _myRequest = myRequest;
+        _sellerReputation = reputation;
+        _currentUserId = currentUserId;
         _isSaved = _book.isSaved;
         _isLoadingRequest = false;
       });
     }
+  }
+
+  SellerRating? get _existingRating {
+    if (_sellerReputation != null && _currentUserId != null) {
+      for (final rating in _sellerReputation!.recentRatings) {
+        if (rating.listingId == _book.id && rating.raterId == _currentUserId) {
+          return rating;
+        }
+      }
+    }
+    return null;
   }
 
   Future<void> _toggleSave() async {
@@ -620,7 +640,7 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
     ColorScheme cs,
     SellerReputation? reputation,
   ) {
-    final seller = widget.listing.seller;
+    final seller = _book.seller;
     if (seller == null) return const SizedBox.shrink();
 
     if (reputation == null && _isLoadingRequest) {
@@ -1222,8 +1242,12 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
                   HapticFeedback.lightImpact();
                   _rateSeller(_myRequest!);
                 },
-                icon: const Icon(Icons.star_outline_rounded, size: 20),
-                label: const Text('RATE'),
+                icon: Icon(
+                  _existingRating != null ? Icons.star_rounded : Icons.star_outline_rounded,
+                  size: 20,
+                  color: Colors.orange,
+                ),
+                label: Text(_existingRating != null ? 'EDIT RATING' : 'RATE'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.orange,
                   side: const BorderSide(color: Colors.orange),
@@ -1651,26 +1675,40 @@ class _BookDetailsPageState extends State<BookDetailsPage> {
   }
 
   void _rateSeller(BookPurchaseRequest r) async {
+    final existing = _existingRating;
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) =>
-          RatingDialog(sellerName: r.listing?.seller?.name ?? 'Seller'),
+      builder: (ctx) => RatingDialog(
+        sellerName: r.listing?.seller?.name ?? 'Seller',
+        initialRating: existing?.rating,
+        initialReview: existing?.review,
+      ),
     );
 
     if (result != null && mounted) {
-      final res = await _api.rateSeller(
-        sellerId: r.listing?.sellerId ?? '',
-        listingId: r.listingId,
-        rating: result['rating'] as int,
-        review: result['review'] as String?,
-      );
+      final res = existing != null
+          ? await _api.updateSellerRating(
+              sellerId: r.listing?.sellerId ?? '',
+              listingId: r.listingId,
+              rating: result['rating'] as int,
+              review: result['review'] as String?,
+            )
+          : await _api.rateSeller(
+              sellerId: r.listing?.sellerId ?? '',
+              listingId: r.listingId,
+              rating: result['rating'] as int,
+              review: result['review'] as String?,
+            );
 
       if (mounted) {
         _showSnackBar(
           res['success'] == true
-              ? 'Rating submitted!'
+              ? (existing != null ? 'Rating updated!' : 'Rating submitted!')
               : (res['message'] ?? 'Failed to rate'),
         );
+        if (res['success'] == true) {
+          _loadDetails(forceRefresh: true);
+        }
       }
     }
   }

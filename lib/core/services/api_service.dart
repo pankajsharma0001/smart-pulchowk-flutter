@@ -1223,6 +1223,29 @@ class ApiService {
     }
   }
 
+  /// Update an existing seller rating for a specific listing.
+  Future<Map<String, dynamic>> updateSellerRating({
+    required String sellerId,
+    required int listingId,
+    required int rating,
+    String? review,
+  }) async {
+    try {
+      final response = await _authPut(
+        '/books/trust/sellers/$sellerId/rate',
+        body: {'listingId': listingId, 'rating': rating, 'review': review}
+          ..removeWhere((k, v) => v == null),
+      );
+      final json = jsonDecode(response.body);
+      if (json['success'] == true) {
+        _invalidateCache('${AppConstants.cacheSellerReputation}$sellerId');
+      }
+      return json;
+    } catch (e) {
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
   /// Block a user in the marketplace.
   Future<Map<String, dynamic>> blockMarketplaceUser(
     String userId, {

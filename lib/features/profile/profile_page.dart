@@ -154,6 +154,14 @@ class _ProfilePageState extends State<ProfilePage>
         }
       });
 
+      // DEBUG: trace actual request statuses
+      for (final r in _sentRequests) {
+        debugPrint('PROFILE SENT #${r.id}: status=${r.status.value}, bookStatus=${r.listing?.status}, title=${r.listing?.title}');
+      }
+      for (final r in _incomingRequests) {
+        debugPrint('PROFILE INCOMING #${r.id}: status=${r.status.value}, bookStatus=${r.listing?.status}, title=${r.listing?.title}');
+      }
+
       if (user != null) {
         final rep = await _api.getSellerReputation(
           user.id,
@@ -1102,69 +1110,159 @@ class _ProfilePageState extends State<ProfilePage>
   }
 
   Widget _buildShimmerLoading(bool isDark) {
+    final double statusBarHeight = MediaQuery.of(context).padding.top;
+
     return ShimmerWrapper(
       child: CustomScrollView(
         slivers: [
-          // Header shimmer
+          // Header shimmer (matches _buildFlexibleHeader expanded height)
           SliverToBoxAdapter(
             child: Container(
-              height: 270,
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+              height: 320 + statusBarHeight,
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.backgroundDark : Colors.white,
+                gradient: LinearGradient(
+                  colors: [
+                    AppColors.primary.withValues(alpha: isDark ? 0.35 : 0.25),
+                    AppColors.primary.withValues(alpha: 0),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: Stack(
                 children: [
-                  const Skeleton(height: 88, width: 88, borderRadius: 44),
-                  const SizedBox(height: 16),
-                  const Skeleton(height: 24, width: 150),
-                  const SizedBox(height: 8),
-                  const Skeleton(height: 14, width: 200),
-                  const SizedBox(height: 12),
-                  // Role badge skeleton
-                  Skeleton(
-                    height: 22,
-                    width: 70,
-                    borderRadius: 11,
-                    margin: const EdgeInsets.symmetric(horizontal: 5),
+                  // Favorites button placeholder
+                  Positioned(
+                    top: statusBarHeight,
+                    right: 48,
+                    child: IconButton(
+                      icon: const Icon(Icons.favorite_border_rounded),
+                      onPressed: null,
+                    ),
+                  ),
+                  // Settings button placeholder
+                  Positioned(
+                    top: statusBarHeight,
+                    right: 8,
+                    child: IconButton(
+                      icon: const Icon(Icons.settings_outlined),
+                      onPressed: null,
+                    ),
+                  ),
+                  // Avatar and texts
+                  Align(
+                    alignment: Alignment.center,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(height: statusBarHeight),
+                        const Skeleton(height: 120, width: 120, borderRadius: 60),
+                        const SizedBox(height: 16),
+                        const Skeleton(height: 24, width: 150),
+                        const SizedBox(height: 8),
+                        const Skeleton(height: 14, width: 200),
+                        const SizedBox(height: 12),
+                        // Role badge skeleton
+                        const Skeleton(
+                          height: 22,
+                          width: 70,
+                          borderRadius: 11,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
 
-          // Stats card shimmer
+          // Stats card shimmer (matches _buildStatsCard)
           SliverToBoxAdapter(
             child: Container(
-              margin: const EdgeInsets.all(16),
+              margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               padding: const EdgeInsets.all(20),
-              height: 130,
               decoration: BoxDecoration(
-                color: isDark ? AppColors.cardDark : Colors.white,
+                color: (isDark ? AppColors.cardDark : Colors.white).withValues(
+                  alpha: 0.9,
+                ),
                 borderRadius: AppRadius.lgAll,
+                border: Border.all(
+                  color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: List.generate(
-                      4,
-                      (index) => const Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      const Column(
                         children: [
                           Skeleton(
-                            height: 40,
-                            width: 40,
+                            height: 36,
+                            width: 36,
                             shape: BoxShape.circle,
                           ),
-                          SizedBox(height: 8),
-                          Skeleton(height: 14, width: 30),
+                          SizedBox(height: 6),
+                          Skeleton(height: 18, width: 30),
+                          Skeleton(height: 10, width: 40),
                         ],
                       ),
-                    ),
+                      _buildStatDivider(),
+                      const Column(
+                        children: [
+                          Skeleton(
+                            height: 36,
+                            width: 36,
+                            shape: BoxShape.circle,
+                          ),
+                          SizedBox(height: 6),
+                          Skeleton(height: 18, width: 30),
+                          Skeleton(height: 10, width: 40),
+                        ],
+                      ),
+                      _buildStatDivider(),
+                      const Column(
+                        children: [
+                          Skeleton(
+                            height: 36,
+                            width: 36,
+                            shape: BoxShape.circle,
+                          ),
+                          SizedBox(height: 6),
+                          Skeleton(height: 18, width: 30),
+                          Skeleton(height: 10, width: 40),
+                        ],
+                      ),
+                      _buildStatDivider(),
+                      const Column(
+                        children: [
+                          Skeleton(
+                            height: 36,
+                            width: 36,
+                            shape: BoxShape.circle,
+                          ),
+                          SizedBox(height: 6),
+                          Skeleton(height: 18, width: 30),
+                          Skeleton(height: 10, width: 40),
+                        ],
+                      ),
+                    ],
                   ),
-                  const Spacer(),
+                  const SizedBox(height: 16),
+                  const Divider(height: 1, thickness: 0.5),
+                  const SizedBox(height: 12),
                   // Member since skeleton
                   const Row(
                     children: [
-                      Skeleton(height: 12, width: 12, shape: BoxShape.circle),
+                      Skeleton(height: 13, width: 13, shape: BoxShape.circle),
                       SizedBox(width: 8),
                       Skeleton(height: 12, width: 140),
                     ],
@@ -1178,7 +1276,15 @@ class _ProfilePageState extends State<ProfilePage>
           SliverToBoxAdapter(
             child: Container(
               height: 48,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? AppColors.borderDark : AppColors.borderSubtleLight,
+                    width: 1,
+                  ),
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               child: Row(
                 children: [
                   Expanded(child: Skeleton(height: 16, borderRadius: 8)),
@@ -1193,17 +1299,21 @@ class _ProfilePageState extends State<ProfilePage>
             ),
           ),
 
-          // Body shimmer (Horizontal cards)
+          // Body shimmer (Horizontal cards matching _HorizontalBookCard)
           SliverPadding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             sliver: SliverList(
               delegate: SliverChildBuilderDelegate(
                 (context, index) => Container(
                   margin: const EdgeInsets.only(bottom: 12),
                   height: 95,
                   decoration: BoxDecoration(
-                    color: isDark ? AppColors.cardDark : Colors.white,
+                    color: isDark ? AppColors.cardDark : AppColors.cardLight,
                     borderRadius: AppRadius.mdAll,
+                    border: Border.all(
+                      color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                    ),
+                    boxShadow: isDark ? null : AppShadows.xs,
                   ),
                   child: Row(
                     children: [
@@ -1222,7 +1332,7 @@ class _ProfilePageState extends State<ProfilePage>
                                 children: [
                                   const Skeleton(height: 14, width: 120),
                                   const Spacer(),
-                                  Skeleton(
+                                  const Skeleton(
                                     height: 14,
                                     width: 60,
                                     borderRadius: 4,
@@ -1232,13 +1342,13 @@ class _ProfilePageState extends State<ProfilePage>
                               const Spacer(),
                               Row(
                                 children: [
-                                  Skeleton(
+                                  const Skeleton(
                                     height: 16,
                                     width: 50,
                                     borderRadius: 4,
                                   ),
                                   const SizedBox(width: 8),
-                                  Skeleton(
+                                  const Skeleton(
                                     height: 16,
                                     width: 50,
                                     borderRadius: 4,
@@ -1293,7 +1403,7 @@ class _PurchaseRequestCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final listing = request.listing;
-    final statusColor = _statusColor(request.status);
+    final isSold = listing?.status == BookStatus.sold;
 
     return GestureDetector(
       onTap: listing != null
@@ -1385,30 +1495,19 @@ class _PurchaseRequestCard extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: statusColor.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Text(
-                    request.status.label,
-                    style: AppTextStyles.caption.copyWith(
-                      color: statusColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 10,
-                    ),
-                  ),
+                // Always show the actual request status
+                _buildBadge(
+                  _statusColor(request.status),
+                  request.status.label.toUpperCase(),
                 ),
+                // Also show SOLD badge if the book is sold
+                if (isSold) ...[
+                  const SizedBox(height: 4),
+                  _buildBadge(Colors.red, 'SOLD'),
+                ],
                 const SizedBox(height: 4),
                 Text(
-                  DateFormat('MMM d').format(request.createdAt),
+                  DateFormat('MMM d').format(request.createdAt.toLocal()),
                   style: AppTextStyles.caption.copyWith(
                     color: Colors.grey,
                     fontSize: 10,
@@ -1417,6 +1516,25 @@ class _PurchaseRequestCard extends StatelessWidget {
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadge(Color color, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        text,
+        style: AppTextStyles.caption.copyWith(
+          color: color,
+          fontWeight: FontWeight.bold,
+          fontSize: 10,
         ),
       ),
     );
@@ -1472,7 +1590,7 @@ class _ReviewItem extends StatelessWidget {
               ),
               const Spacer(),
               Text(
-                DateFormat('MMM d, yyyy').format(rating.createdAt),
+                '${DateFormat('MMM d, yyyy').format(rating.createdAt)}${rating.updatedAt.difference(rating.createdAt).inSeconds.abs() > 5 ? ' (edited)' : ''}',
                 style: AppTextStyles.overline.copyWith(
                   color: Colors.grey,
                   fontSize: 10,
