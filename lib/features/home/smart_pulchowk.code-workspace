@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "../../.."
+		},
+		{
+			"path": "../../../../Pulchowk-X/frontend"
+		},
+		{
+			"path": "../../../../Pulchowk-X/backend"
+		}
+	],
+	"settings": {}
+}
