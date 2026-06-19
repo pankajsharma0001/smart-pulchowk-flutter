@@ -58,6 +58,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1004167085921-vb1v9sqq2qhsg47vs89v1qurlup9t9ph.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pankajsharma.smart_pulchowk",
+            "certificate_hash": "2c8489d2723bfe6cfec8cdfec271a1a2a7b9e70a"
+          }
+        },
+        {
           "client_id": "1004167085921-bf50vb9v2090tofgipesrs4e64r6lt60.apps.googleusercontent.com",
           "client_type": 3
         }
