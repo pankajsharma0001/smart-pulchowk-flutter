@@ -27,6 +27,7 @@ class _AdminUsersTabState extends State<AdminUsersTab>
     'student',
     'teacher',
     'admin',
+    'super_admin',
     'notice_manager',
     'guest',
   ];
@@ -53,6 +54,15 @@ class _AdminUsersTabState extends State<AdminUsersTab>
   }
 
   Future<void> _updateRole(AdminUser user, String newRole) async {
+    if (user.role == 'super_admin') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Super Admin account permissions cannot be modified.'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
     if (user.role == newRole) return;
 
     setState(() => _busyUserId = user.id);
@@ -247,17 +257,23 @@ class _AdminUsersTabState extends State<AdminUsersTab>
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: isDark
-                                      ? AppColors.surfaceContainerHighDark
-                                      : AppColors.surfaceContainerLight,
+                                  color: user.role == 'super_admin'
+                                      ? const Color(0xFFF59E0B).withValues(alpha: 0.2)
+                                      : (isDark
+                                          ? AppColors.surfaceContainerHighDark
+                                          : AppColors.surfaceContainerLight),
                                   borderRadius: BorderRadius.circular(4),
+                                  border: user.role == 'super_admin'
+                                      ? Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.5))
+                                      : null,
                                 ),
                                 child: Text(
-                                  user.role.toUpperCase(),
-                                  style: const TextStyle(
+                                  user.role == 'super_admin' ? 'SUPER ADMIN' : user.role.toUpperCase(),
+                                  style: TextStyle(
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 0.5,
+                                    color: user.role == 'super_admin' ? const Color(0xFFF59E0B) : null,
                                   ),
                                 ),
                               ),
@@ -307,60 +323,75 @@ class _AdminUsersTabState extends State<AdminUsersTab>
   }
 
   void _showRolePicker(AdminUser user) {
+    if (user.role == 'super_admin') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Super Admin account permissions cannot be modified.'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Update Role:',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Row(
+                      children: [
+                        const Text(
+                          'Update Role:',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          user.name,
+                          style: const TextStyle(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  ..._roleOptions.map(
+                    (role) => ListTile(
+                      leading: Icon(
+                        Icons.person_outline,
+                        color: user.role == role ? AppColors.secondary : null,
                       ),
-                    ),
-                    const Spacer(),
-                    Text(
-                      user.name,
-                      style: const TextStyle(color: AppColors.textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              ..._roleOptions.map(
-                (role) => ListTile(
-                  leading: Icon(
-                    Icons.person_outline,
-                    color: user.role == role ? AppColors.secondary : null,
-                  ),
-                  title: Text(
-                    role[0].toUpperCase() + role.substring(1),
-                    style: TextStyle(
-                      fontWeight: user.role == role ? FontWeight.bold : null,
-                      color: user.role == role ? AppColors.secondary : null,
+                      title: Text(
+                        role[0].toUpperCase() + role.substring(1),
+                        style: TextStyle(
+                          fontWeight: user.role == role ? FontWeight.bold : null,
+                          color: user.role == role ? AppColors.secondary : null,
+                        ),
+                      ),
+                      trailing: user.role == role
+                          ? const Icon(Icons.check, color: AppColors.secondary)
+                          : null,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _updateRole(user, role);
+                      },
                     ),
                   ),
-                  trailing: user.role == role
-                      ? const Icon(Icons.check, color: AppColors.secondary)
-                      : null,
-                  onTap: () {
-                    Navigator.pop(context);
-                    _updateRole(user, role);
-                  },
-                ),
+                ],
               ),
-            ],
+            ),
           ),
         );
       },

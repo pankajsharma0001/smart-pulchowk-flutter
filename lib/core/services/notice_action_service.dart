@@ -19,9 +19,23 @@ class NoticeActionService {
   /// Stream of notice actions to be handled by the NoticesPage.
   Stream<NoticeAction> get actionStream => _actionController.stream;
 
+  String? pendingCategory;
+  int? pendingNoticeId;
+
   /// Emits a new notice action.
   void triggerAction({int? noticeId, String? category}) {
+    pendingCategory = category;
+    pendingNoticeId = noticeId;
     _actionController.add(NoticeAction(noticeId: noticeId, category: category));
+  }
+
+  /// Consumes the pending action if available.
+  void consumePendingAction(Function(String? category, int? noticeId) callback) {
+    if (pendingCategory != null || pendingNoticeId != null) {
+      callback(pendingCategory, pendingNoticeId);
+      pendingCategory = null;
+      pendingNoticeId = null;
+    }
   }
 
   void dispose() {

@@ -233,6 +233,48 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
   }
 
+  Future<void> _clearAll() async {
+    haptics.heavyImpact();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Clear All Notifications?'),
+        content: const Text(
+          'Are you sure you want to clear all notifications? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFFEF4444),
+            ),
+            child: const Text('Clear All'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() {
+      _notifications.clear();
+    });
+
+    await _api.clearAllNotifications();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All notifications cleared'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   Future<void> _markRead(InAppNotification notification) async {
     if (notification.isRead) return;
     final success = await _api.markNotificationRead(notification.id);
@@ -308,13 +350,21 @@ class _NotificationsPageState extends State<NotificationsPage> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         actions: [
-          if (_notifications.any((n) => !n.isRead))
-            TextButton.icon(
-              onPressed: _markAllRead,
-              icon: const Icon(Icons.done_all_rounded, size: 20),
-              label: const Text('Mark all read'),
-              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+          if (_notifications.isNotEmpty) ...[
+            if (_notifications.any((n) => !n.isRead))
+              IconButton(
+                onPressed: _markAllRead,
+                icon: const Icon(Icons.done_all_rounded, size: 20),
+                tooltip: 'Mark all read',
+                color: AppColors.primary,
+              ),
+            IconButton(
+              onPressed: _clearAll,
+              icon: const Icon(Icons.delete_sweep_rounded, size: 20),
+              tooltip: 'Clear all notifications',
+              color: const Color(0xFFEF4444),
             ),
+          ],
           const SizedBox(width: 8),
         ],
       ),

@@ -8,6 +8,7 @@ import 'package:smart_pulchowk/features/wifi_login/wifi_login_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:http/http.dart' as http;
 
 class WifiLoginPage extends StatefulWidget {
@@ -163,19 +164,12 @@ class _WifiLoginPageState extends State<WifiLoginPage>
     if (_downloadUrl == null) return;
     haptics.mediumImpact();
 
-    // If already downloaded and file exists, trigger share sheet directly
+    // If already downloaded and file exists, trigger choice sheet directly
     if (_localApkPath != null) {
       final file = File(_localApkPath!);
       if (await file.exists()) {
-        try {
-          await Share.shareXFiles(
-            [XFile(_localApkPath!)],
-            text: 'Install the Campus WiFi Auto-Login APK',
-          );
-          return;
-        } catch (e) {
-          debugPrint('WifiLoginPage: Share error: $e');
-        }
+        _showApkOptionsSheet(_localApkPath!);
+        return;
       }
     }
 
@@ -227,10 +221,7 @@ class _WifiLoginPageState extends State<WifiLoginPage>
         _localApkPath = file.path;
       });
 
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Install the Campus WiFi Auto-Login APK',
-      );
+      _showApkOptionsSheet(file.path);
     } catch (e) {
       debugPrint('WifiLoginPage: Download error: $e');
       if (mounted) {
@@ -248,9 +239,140 @@ class _WifiLoginPageState extends State<WifiLoginPage>
         // Fallback: try opening in external browser
         try {
           final uri = Uri.parse(_downloadUrl!);
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          }
         } catch (_) {}
       }
+    }
+  }
+
+  void _showApkOptionsSheet(String apkPath) {
+    showModalBottomSheet(
+      context: context,
+      useRootNavigator: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Save or Share APK',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.share_rounded, color: AppColors.primary),
+                ),
+                title: const Text('Share APK', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('Share via nearby share, WhatsApp, Bluetooth, etc.'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  Share.shareXFiles(
+                    [XFile(apkPath)],
+                    text: 'Install the Campus WiFi Auto-Login APK',
+                  );
+                },
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: AppColors.success.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.save_alt_rounded, color: AppColors.success),
+                ),
+                title: const Text('Save to Device', style: TextStyle(fontWeight: FontWeight.w700)),
+                subtitle: const Text('Save APK to your Downloads directory'),
+                onTap: () async {
+                  Navigator.pop(ctx);
+                  await _saveApkToDevice(apkPath);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _saveApkToDevice(String sourcePath) async {
+    try {
+      final apkName = _apkName ?? 'pcampus-login.apk';
+      final sourceFile = File(sourcePath);
+      String? savedPath;
+
+      if (Platform.isAndroid) {
+        // Try requesting storage permission first for public Downloads directory access
+        final status = await Permission.storage.request();
+        if (status.isGranted || await Permission.manageExternalStorage.isGranted) {
+          final downloadDir = Directory('/storage/emulated/0/Download');
+          if (await downloadDir.exists()) {
+            try {
+              final targetFile = File('${downloadDir.path}/$apkName');
+              await sourceFile.copy(targetFile.path);
+              savedPath = targetFile.path;
+            } catch (e) {
+              debugPrint('WifiLoginPage: Direct Download write failed, falling back: $e');
+            }
+          }
+        }
+      }
+
+      // Fallback: save to app external storage or documents directory (always granted)
+      if (savedPath == null) {
+        Directory? extDir;
+        if (Platform.isAndroid) {
+          extDir = await getExternalStorageDirectory();
+        }
+        extDir ??= await getDownloadsDirectory() ?? await getApplicationDocumentsDirectory();
+        final targetFile = File('${extDir.path}/$apkName');
+        await sourceFile.copy(targetFile.path);
+        savedPath = targetFile.path;
+      }
+
+      if (!mounted) return;
+      haptics.success();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('APK saved successfully to:\n$savedPath'),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    } catch (e) {
+      debugPrint('WifiLoginPage: Save error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save APK: $e'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 

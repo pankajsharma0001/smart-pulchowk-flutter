@@ -15,10 +15,16 @@ import 'package:smart_pulchowk/core/widgets/pdf_viewer.dart';
 class ClassroomPage extends StatefulWidget {
   final String userRole;
   final String? initialAssignmentId;
+  final int initialTabIndex;
+
+  // Static notifier for switching tabs dynamically
+  static final ValueNotifier<int?> tabNotifier = ValueNotifier<int?>(null);
+
   const ClassroomPage({
     super.key,
     this.userRole = 'student',
     this.initialAssignmentId,
+    this.initialTabIndex = 0,
   });
 
   @override
@@ -45,14 +51,29 @@ class _ClassroomPageState extends State<ClassroomPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTabIndex,
+    );
     _loadData();
+    ClassroomPage.tabNotifier.addListener(_handleTabNotification);
   }
 
   @override
   void dispose() {
+    ClassroomPage.tabNotifier.removeListener(_handleTabNotification);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _handleTabNotification() {
+    final targetTab = ClassroomPage.tabNotifier.value;
+    if (targetTab != null && mounted) {
+      _tabController.animateTo(targetTab);
+      // Reset after consumption
+      ClassroomPage.tabNotifier.value = null;
+    }
   }
 
   Future<void> _loadData({bool forceRefresh = false}) async {

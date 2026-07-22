@@ -88,6 +88,11 @@ class _NoticesPageState extends State<NoticesPage> {
       });
       _loadData();
     });
+
+    NoticeActionService.instance.consumePendingAction((category, noticeId) {
+      if (category != null) _selectedCategory = category;
+      if (noticeId != null) _highlightNoticeId = noticeId;
+    });
   }
 
   @override

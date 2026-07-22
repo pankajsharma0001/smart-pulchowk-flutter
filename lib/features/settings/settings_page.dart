@@ -278,13 +278,13 @@ class _SettingsPageState extends State<SettingsPage>
     final user = AuthService.currentUser;
 
     return Scaffold(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           'Settings',
           style: AppTextStyles.h3.copyWith(fontWeight: FontWeight.w900),
         ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         centerTitle: false,
       ),
@@ -681,25 +681,8 @@ class _SettingsPageState extends State<SettingsPage>
               haptics.selectionClick();
               Navigator.push(
                 context,
-                PageRouteBuilder(
-                  pageBuilder: (_, animation, secondaryAnimation) =>
-                      const HelpCenterPage(),
-                  transitionsBuilder:
-                      (_, animation, secondaryAnimation, child) {
-                        final offsetTween = Tween<Offset>(
-                          begin: const Offset(0, 0.04),
-                          end: Offset.zero,
-                        ).chain(CurveTween(curve: Curves.easeOutCubic));
-                        return FadeTransition(
-                          opacity: animation,
-                          child: SlideTransition(
-                            position: animation.drive(offsetTween),
-                            child: child,
-                          ),
-                        );
-                      },
-                  transitionDuration: const Duration(milliseconds: 260),
-                  reverseTransitionDuration: const Duration(milliseconds: 220),
+                MaterialPageRoute(
+                  builder: (context) => const HelpCenterPage(),
                 ),
               );
             },

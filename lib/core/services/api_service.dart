@@ -1455,6 +1455,7 @@ class ApiService {
     bool forceRefresh = false,
   }) async {
     final uid = FirebaseAuth.instance.currentUser?.uid ?? 'guest';
+    final userCreationTime = FirebaseAuth.instance.currentUser?.metadata.creationTime;
     final result = await ApiService._cachedFetch<List<InAppNotification>>(
       key: 'notifications_list_${uid}_${limit}_$offset',
       ttl: const Duration(minutes: 5),
@@ -1473,6 +1474,7 @@ class ApiService {
       },
       parser: (data) => (data as List)
           .map((e) => InAppNotification.fromJson(e as Map<String, dynamic>))
+          .where((n) => userCreationTime == null || !n.createdAt.isBefore(userCreationTime))
           .toList(),
     );
     return result ?? [];
@@ -1536,6 +1538,22 @@ class ApiService {
     } catch (e) {
       debugPrint('Error marking all notifications read: $e');
       return false;
+    }
+  }
+
+  /// Clear all notifications.
+  Future<bool> clearAllNotifications() async {
+    try {
+      var response = await _authDelete('/notifications/clear-all');
+      if (response.statusCode == 404 || response.statusCode == 405) {
+        response = await _authPost('/notifications/clear-all');
+      }
+      _invalidateCachePrefix('notifications_');
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      debugPrint('Error clearing all notifications: $e');
+      _invalidateCachePrefix('notifications_');
+      return true;
     }
   }
 
@@ -1875,7 +1893,9 @@ class ApiService {
         ? '?${Uri(queryParameters: queryParams).query}'
         : '';
 
-    return await _cachedFetch<List<Notice>>(
+    final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
+
+    final rawNotices = await _cachedFetch<List<Notice>>(
           key: '${AppConstants.cacheNoticesList}$queryString',
           ttl: AppConstants.cacheExpiry,
           forceRefresh: forceRefresh,
@@ -1896,6 +1916,9 @@ class ApiService {
               .toList(),
         ) ??
         [];
+
+    // Do not show notices older than 6 months
+    return rawNotices.where((notice) => !notice.createdAt.isBefore(sixMonthsAgo)).toList();
   }
 
   /// Get notice stats

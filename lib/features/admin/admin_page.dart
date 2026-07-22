@@ -8,7 +8,8 @@ import 'package:smart_pulchowk/core/theme/app_theme.dart';
 import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 
 class AdminPage extends StatefulWidget {
-  const AdminPage({super.key});
+  final int initialTabIndex;
+  const AdminPage({super.key, this.initialTabIndex = 0});
 
   @override
   State<AdminPage> createState() => _AdminPageState();
@@ -21,7 +22,11 @@ class _AdminPageState extends State<AdminPage>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(
+      length: 4,
+      vsync: this,
+      initialIndex: widget.initialTabIndex,
+    );
   }
 
   @override

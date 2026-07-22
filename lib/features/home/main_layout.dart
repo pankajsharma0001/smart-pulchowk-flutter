@@ -65,6 +65,9 @@ class MainLayoutState extends State<MainLayout>
   /// Expose the current selected tab index.
   int get currentIndex => _selectedIndex;
 
+  /// Expose the current user role.
+  String get userRole => _userRole;
+
   // Navigator keys for each tab's independent navigation stack
   // We expand this to support all menu features (12 total)
   final List<GlobalKey<NavigatorState>> _navigatorKeys = List.generate(
@@ -661,8 +664,8 @@ class _BottomNavBar extends StatelessWidget {
     final barHeight = 65.0 + bottomPadding;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final backgroundColor = isDark
-        ? const Color(0xFF0D1321).withValues(alpha: 0.92)
-        : Colors.white.withValues(alpha: 0.95);
+        ? const Color(0xFF0D1321)
+        : Colors.white;
     final borderColor = isDark
         ? const Color(0xFF1E293B)
         : Colors.black.withValues(alpha: 0.05);
@@ -842,8 +845,8 @@ class _QuickMenu extends StatelessWidget {
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           color: isDark
-                              ? const Color(0xFF1E293B).withValues(alpha: 0.85)
-                              : Colors.white.withValues(alpha: 0.85),
+                              ? const Color(0xFF1E293B)
+                              : Colors.white,
                           borderRadius: BorderRadius.circular(32),
                           border: Border.all(
                             color: Colors.white.withValues(alpha: 0.1),
