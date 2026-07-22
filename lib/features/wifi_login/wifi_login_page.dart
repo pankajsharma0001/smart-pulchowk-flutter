@@ -287,9 +287,11 @@ class _WifiLoginPageState extends State<WifiLoginPage>
                 subtitle: const Text('Share via nearby share, WhatsApp, Bluetooth, etc.'),
                 onTap: () {
                   Navigator.pop(ctx);
-                  Share.shareXFiles(
-                    [XFile(apkPath)],
-                    text: 'Install the Campus WiFi Auto-Login APK',
+                  SharePlus.instance.share(
+                    ShareParams(
+                      files: [XFile(apkPath)],
+                      text: 'Install the Campus WiFi Auto-Login APK',
+                    ),
                   );
                 },
               ),

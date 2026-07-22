@@ -412,12 +412,15 @@ class _EventDetailsPageState extends State<EventDetailsPage> {
                         ),
                         onPressed: () {
                           haptics.selectionClick();
-                          Share.share(
-                            '🔥 *Check out this event: ${widget.event.title}!* 🔥\n\n'
-                            '📍 Venue: ${widget.event.venue ?? "To be announced"}\n'
-                            '📅 Time: ${DateFormat("EEEE, MMMM d, h:mm a").format(widget.event.eventStartTime)}\n\n'
-                            'Join me and other students on Smart Pulchowk: https://smart-pulchowk.vercel.app/event/${widget.event.id}',
-                            subject: 'Event: ${widget.event.title}',
+                          SharePlus.instance.share(
+                            ShareParams(
+                              text:
+                                  '🔥 *Check out this event: ${widget.event.title}!* 🔥\n\n'
+                                  '📍 Venue: ${widget.event.venue ?? "To be announced"}\n'
+                                  '📅 Time: ${DateFormat("EEEE, MMMM d, h:mm a").format(widget.event.eventStartTime)}\n\n'
+                                  'Join me and other students on Smart Pulchowk: https://smart-pulchowk.vercel.app/event/${widget.event.id}',
+                              subject: 'Event: ${widget.event.title}',
+                            ),
                           );
                         },
                       ),

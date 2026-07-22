@@ -516,12 +516,7 @@ class _WelcomeBannerState extends State<_WelcomeBanner> {
   );
   int _currentPageIndex = 0;
 
-  // Gesture tracking for full-card horizontal swipe
-  double _dragStartX = 0;
 
-  void _onHorizontalDragStart(DragStartDetails d) {
-    _dragStartX = d.localPosition.dx;
-  }
 
   void _onHorizontalDragEnd(DragEndDetails d) {
     final velocity = d.primaryVelocity ?? 0;
@@ -571,7 +566,6 @@ class _WelcomeBannerState extends State<_WelcomeBanner> {
       padding: const EdgeInsets.all(16),
       // GestureDetector covers the entire card (including image) for swipe detection
       child: GestureDetector(
-        onHorizontalDragStart: _onHorizontalDragStart,
         onHorizontalDragEnd: _onHorizontalDragEnd,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,

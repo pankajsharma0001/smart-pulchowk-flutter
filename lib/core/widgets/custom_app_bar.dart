@@ -469,12 +469,15 @@ class _UserAvatarState extends State<_UserAvatar> {
             label: 'Share App',
             onTap: () async {
               haptics.selectionClick();
-              await Share.share(
-                '🚀 *Smart Pulchowk: Your Ultimate Campus Companion!* 🚀\n\n'
-                'Stay updated with live notices, upcoming events, classroom schedules, '
-                'campus maps, and more – all in one place!\n\n'
-                '👉 Download now: https://smart-pulchowk.vercel.app',
-                subject: 'Check out the Smart Pulchowk App!',
+              await SharePlus.instance.share(
+                ShareParams(
+                  text:
+                      '🚀 *Smart Pulchowk: Your Ultimate Campus Companion!* 🚀\n\n'
+                      'Stay updated with live notices, upcoming events, classroom schedules, '
+                      'campus maps, and more – all in one place!\n\n'
+                      '👉 Download now: https://smart-pulchowk.vercel.app',
+                  subject: 'Check out the Smart Pulchowk App!',
+                ),
               );
             },
           ),

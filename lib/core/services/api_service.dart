@@ -2577,9 +2577,12 @@ class ApiService {
         );
         await file.writeAsBytes(response.bodyBytes);
         final xFile = XFile(file.path);
-        await Share.shareXFiles([
-          xFile,
-        ], text: 'Event Registrations (Event #$eventId)');
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [xFile],
+            text: 'Event Registrations (Event #$eventId)',
+          ),
+        );
         return {'success': true};
       }
       return {
@@ -2617,9 +2620,12 @@ class ApiService {
         final file = File('${tempDir.path}/submissions_$assignmentId.$ext');
         await file.writeAsBytes(response.bodyBytes);
         final xFile = XFile(file.path);
-        await Share.shareXFiles([
-          xFile,
-        ], text: 'Assignment Submissions (ID: $assignmentId)');
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [xFile],
+            text: 'Assignment Submissions (ID: $assignmentId)',
+          ),
+        );
         return {'success': true};
       }
       return {
