@@ -103,7 +103,11 @@ class _SellBookPageState extends State<SellBookPage> {
   }
 
   Future<void> _pickImages() async {
-    final images = await _picker.pickMultiImage(imageQuality: 80);
+    final images = await _picker.pickMultiImage(
+      maxWidth: 1920,
+      maxHeight: 1920,
+      imageQuality: 85,
+    );
     if (images.isNotEmpty && mounted) {
       setState(() {
         _imagePaths.addAll(images.map((e) => e.path));
@@ -748,7 +752,11 @@ class _SellBookPageState extends State<SellBookPage> {
                             color: Colors.white.withValues(alpha: 0.1),
                           ),
                           image: DecorationImage(
-                            image: FileImage(File(entry.value)),
+                            image: ResizeImage(
+                              FileImage(File(entry.value)),
+                              width: 360,
+                              height: 360,
+                            ),
                             fit: BoxFit.cover,
                           ),
                         ),

@@ -188,7 +188,11 @@ class _ProfilePageState extends State<ProfilePage>
 
     try {
       final palette = await PaletteGenerator.fromImageProvider(
-        NetworkImage(imageUrl),
+        ResizeImage(
+          NetworkImage(imageUrl),
+          width: 200,
+          height: 200,
+        ),
         maximumColorCount: 20,
       );
       if (mounted) {

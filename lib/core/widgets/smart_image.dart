@@ -60,6 +60,11 @@ class SmartImage extends StatelessWidget {
     final isSocial = ApiService.isSocialMediaDomain(url);
     final headers = isSocial ? null : AppConstants.imageHeaders;
 
+    final isFiniteHeight = height != null && height!.isFinite && height! > 0;
+    final dpr = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 2.0;
+    final memWidth = isFiniteWidth ? (width! * dpr).round() : null;
+    final memHeight = isFiniteHeight ? (height! * dpr).round() : null;
+
     return ClipRRect(
       borderRadius: shape == BoxShape.circle
           ? BorderRadius.zero
@@ -85,6 +90,8 @@ class SmartImage extends StatelessWidget {
                 httpHeaders: headers,
                 width: width,
                 height: height,
+                memCacheWidth: memWidth,
+                memCacheHeight: memHeight,
                 fit: fit,
                 fadeInDuration: Duration.zero,
                 fadeOutDuration: Duration.zero,

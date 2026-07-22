@@ -42,7 +42,12 @@ class _ReportLostFoundPageState extends State<ReportLostFoundPage> {
 
   Future<void> _pickImage(ImageSource source) async {
     try {
-      final XFile? image = await _picker.pickImage(source: source);
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
       if (image != null) {
         setState(() {
           _images.add(image);
@@ -348,7 +353,12 @@ class _ReportLostFoundPageState extends State<ReportLostFoundPage> {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(AppRadius.lg),
-            child: Image.file(File(_images[index].path), fit: BoxFit.cover),
+            child: Image.file(
+              File(_images[index].path),
+              fit: BoxFit.cover,
+              cacheWidth: 300,
+              cacheHeight: 300,
+            ),
           ),
           Positioned(
             right: 4,

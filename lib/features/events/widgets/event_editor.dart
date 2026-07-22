@@ -204,7 +204,12 @@ class _EventEditorState extends State<EventEditor> {
 
   Future<void> _pickBanner() async {
     haptics.selectionClick();
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
+    final XFile? image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1920,
+      maxHeight: 1920,
+      imageQuality: 85,
+    );
     if (image != null) {
       setState(() => _pickedBannerPath = image.path);
     }
@@ -666,6 +671,8 @@ class _EventEditorState extends State<EventEditor> {
                         ? Image.file(
                             File(_pickedBannerPath!),
                             fit: BoxFit.cover,
+                            cacheWidth: 800,
+                            cacheHeight: 400,
                           )
                         : Image.network(_currentBannerUrl!, fit: BoxFit.cover),
                     Container(color: Colors.black.withValues(alpha: 0.3)),
