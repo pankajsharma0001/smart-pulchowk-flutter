@@ -74,6 +74,10 @@ class _NoticesPageState extends State<NoticesPage> {
     if (widget.initialNoticeId != null) {
       _highlightNoticeId = widget.initialNoticeId;
     }
+    NoticeActionService.instance.consumePendingAction((category, noticeId) {
+      if (category != null) _selectedCategory = category;
+      if (noticeId != null) _highlightNoticeId = noticeId;
+    });
     _loadData();
     _scrollController.addListener(_onScroll);
 
@@ -87,11 +91,6 @@ class _NoticesPageState extends State<NoticesPage> {
         if (action.noticeId != null) _highlightNoticeId = action.noticeId;
       });
       _loadData();
-    });
-
-    NoticeActionService.instance.consumePendingAction((category, noticeId) {
-      if (category != null) _selectedCategory = category;
-      if (noticeId != null) _highlightNoticeId = noticeId;
     });
   }
 

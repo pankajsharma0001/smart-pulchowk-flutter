@@ -9,6 +9,8 @@ import 'package:smart_pulchowk/core/widgets/shimmer_loading.dart';
 
 class AdminPage extends StatefulWidget {
   final int initialTabIndex;
+  static final ValueNotifier<int?> tabNotifier = ValueNotifier<int?>(null);
+
   const AdminPage({super.key, this.initialTabIndex = 0});
 
   @override
@@ -27,12 +29,22 @@ class _AdminPageState extends State<AdminPage>
       vsync: this,
       initialIndex: widget.initialTabIndex,
     );
+    AdminPage.tabNotifier.addListener(_handleTabNotification);
   }
 
   @override
   void dispose() {
+    AdminPage.tabNotifier.removeListener(_handleTabNotification);
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _handleTabNotification() {
+    final targetTab = AdminPage.tabNotifier.value;
+    if (targetTab != null && mounted) {
+      _tabController.animateTo(targetTab);
+      AdminPage.tabNotifier.value = null;
+    }
   }
 
   @override

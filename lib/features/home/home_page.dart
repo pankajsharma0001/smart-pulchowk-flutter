@@ -22,8 +22,9 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:smart_pulchowk/features/calendar/calendar.dart';
 import 'package:smart_pulchowk/features/settings/help_center_page.dart';
 import 'package:smart_pulchowk/features/notices/notice_editor.dart';
-import 'package:smart_pulchowk/features/events/widgets/event_editor.dart';
 import 'package:smart_pulchowk/features/marketplace/marketplace_activity_page.dart';
+import 'package:smart_pulchowk/features/marketplace/chat_list_page.dart';
+import 'package:smart_pulchowk/features/classroom/classroom_page.dart';
 import 'package:smart_pulchowk/features/admin/admin_page.dart';
 
 class HomePage extends StatelessWidget {
@@ -1215,27 +1216,23 @@ class _QuickAccessGrid extends StatelessWidget {
           onTap: () => MainLayout.of(context)?.setSelectedIndex(7),
         ),
         _QuickAccessItem(
-          icon: Icons.note_add_rounded,
-          label: 'Create Notice',
+          icon: Icons.block_rounded,
+          label: 'Blocks',
           color: const Color(0xFFF59E0B),
           onTap: () {
             haptics.selectionClick();
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const NoticeEditor()),
-            );
+            AdminPage.tabNotifier.value = 3;
+            MainLayout.of(context)?.setSelectedIndex(7);
           },
         ),
         _QuickAccessItem(
-          icon: Icons.add_box_rounded,
-          label: 'Create Event',
+          icon: Icons.gavel_rounded,
+          label: 'Moderation',
           color: const Color(0xFFEC4899),
           onTap: () {
             haptics.selectionClick();
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const EventEditor()),
-            );
+            AdminPage.tabNotifier.value = 2;
+            MainLayout.of(context)?.setSelectedIndex(7);
           },
         ),
         _QuickAccessItem(
@@ -1305,44 +1302,36 @@ class _QuickAccessGrid extends StatelessWidget {
           },
         ),
         _QuickAccessItem(
-          icon: Icons.schedule_rounded,
-          label: 'Class Routine',
-          color: const Color(0xFF6366F1),
-          onTap: () => MainLayout.of(context)?.setSelectedIndex(2),
-        ),
-        _QuickAccessItem(
-          icon: Icons.quiz_rounded,
-          label: 'Exam Routine',
-          color: const Color(0xFFEF4444),
+          icon: Icons.assessment_rounded,
+          label: 'Results',
+          color: const Color(0xFF8B5CF6),
           onTap: () {
-            NoticeActionService.instance.triggerAction(
-              category: 'exam_routines',
-            );
+            NoticeActionService.instance.triggerAction(category: 'results');
             MainLayout.of(context)?.setSelectedIndex(8);
           },
         ),
         _QuickAccessItem(
-          icon: Icons.add_box_rounded,
-          label: 'Create Event',
+          icon: Icons.search_rounded,
+          label: 'Lost & Found',
           color: const Color(0xFFEC4899),
-          onTap: () {
-            haptics.selectionClick();
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const EventEditor()),
-            );
-          },
+          onTap: () => MainLayout.of(context)?.setSelectedIndex(9),
         ),
         _QuickAccessItem(
-          icon: Icons.wifi_rounded,
-          label: 'WiFi Login',
-          color: const Color(0xFF06B6D4),
-          onTap: () => MainLayout.of(context)?.setSelectedIndex(12),
+          icon: Icons.auto_stories_rounded,
+          label: 'Book Market',
+          color: const Color(0xFFF97316),
+          onTap: () => MainLayout.of(context)?.setSelectedIndex(3),
+        ),
+        _QuickAccessItem(
+          icon: Icons.groups_rounded,
+          label: 'Clubs Info',
+          color: const Color(0xFF10B981),
+          onTap: () => MainLayout.of(context)?.setSelectedIndex(5),
         ),
         _QuickAccessItem(
           icon: Icons.calendar_month_rounded,
           label: 'Event Calendar',
-          color: const Color(0xFF10B981),
+          color: const Color(0xFF6366F1),
           onTap: () {
             haptics.selectionClick();
             Navigator.push(
@@ -1350,12 +1339,6 @@ class _QuickAccessGrid extends StatelessWidget {
               MaterialPageRoute(builder: (context) => const CalendarPage()),
             );
           },
-        ),
-        _QuickAccessItem(
-          icon: Icons.auto_stories_rounded,
-          label: 'Book Market',
-          color: const Color(0xFFF97316),
-          onTap: () => MainLayout.of(context)?.setSelectedIndex(3),
         ),
         _QuickAccessItem(
           icon: Icons.support_agent_rounded,
@@ -1370,16 +1353,82 @@ class _QuickAccessGrid extends StatelessWidget {
           },
         ),
       ];
+    } else if (r == 'guest') {
+      return [
+        _QuickAccessItem(
+          icon: Icons.groups_rounded,
+          label: 'Explore Clubs',
+          color: const Color(0xFF10B981),
+          onTap: () {
+            haptics.selectionClick();
+            MainLayout.of(context)?.setSelectedIndex(5);
+          },
+        ),
+        _QuickAccessItem(
+          icon: Icons.auto_stories_rounded,
+          label: 'Book Market',
+          color: const Color(0xFFF97316),
+          onTap: () {
+            haptics.selectionClick();
+            MainLayout.of(context)?.setSelectedIndex(3);
+          },
+        ),
+        _QuickAccessItem(
+          icon: Icons.calendar_month_rounded,
+          label: 'Event Calendar',
+          color: const Color(0xFFEC4899),
+          onTap: () {
+            haptics.selectionClick();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const CalendarPage()),
+            );
+          },
+        ),
+        _QuickAccessItem(
+          icon: Icons.search_rounded,
+          label: 'Lost & Found',
+          color: const Color(0xFF8B5CF6),
+          onTap: () {
+            haptics.selectionClick();
+            MainLayout.of(context)?.setSelectedIndex(9);
+          },
+        ),
+        _QuickAccessItem(
+          icon: Icons.wifi_rounded,
+          label: 'WiFi Login',
+          color: const Color(0xFF06B6D4),
+          onTap: () {
+            haptics.selectionClick();
+            MainLayout.of(context)?.setSelectedIndex(12);
+          },
+        ),
+        _QuickAccessItem(
+          icon: Icons.support_agent_rounded,
+          label: 'Help & Support',
+          color: const Color(0xFF64748B),
+          onTap: () {
+            haptics.selectionClick();
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const HelpCenterPage()),
+            );
+          },
+        ),
+      ];
     } else {
       // Default: student
       return [
         _QuickAccessItem(
-          icon: Icons.schedule_rounded,
-          label: 'Class Routine',
+          icon: Icons.chat_rounded,
+          label: 'Messages',
           color: const Color(0xFF6366F1),
           onTap: () {
             haptics.selectionClick();
-            MainLayout.of(context)?.setSelectedIndex(2);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ChatListPage()),
+            );
           },
         ),
         _QuickAccessItem(
@@ -1388,16 +1437,22 @@ class _QuickAccessGrid extends StatelessWidget {
           color: const Color(0xFF10B981),
           onTap: () {
             haptics.selectionClick();
+            ClassroomPage.tabNotifier.value = 0;
             MainLayout.of(context)?.setSelectedIndex(2);
           },
         ),
         _QuickAccessItem(
-          icon: Icons.menu_book_rounded,
-          label: 'My Subjects',
+          icon: Icons.storefront_rounded,
+          label: 'Marketplace',
           color: const Color(0xFF0EA5E9),
           onTap: () {
             haptics.selectionClick();
-            MainLayout.of(context)?.setSelectedIndex(2);
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const MarketplaceActivityPage(),
+              ),
+            );
           },
         ),
         _QuickAccessItem(
@@ -1435,12 +1490,12 @@ class _QuickAccessGrid extends StatelessWidget {
           },
         ),
         _QuickAccessItem(
-          icon: Icons.wifi_rounded,
-          label: 'WiFi Login',
+          icon: Icons.search_rounded,
+          label: 'Lost & Found',
           color: const Color(0xFF06B6D4),
           onTap: () {
             haptics.selectionClick();
-            MainLayout.of(context)?.setSelectedIndex(12);
+            MainLayout.of(context)?.setSelectedIndex(9);
           },
         ),
         _QuickAccessItem(
